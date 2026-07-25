@@ -1,5 +1,8 @@
-# Native Streamlit theme — "Validrow v3" look (Figma redesign).
-# Warm cream canvas, bright sky-blue primary, Inter throughout.
+# Native Streamlit theme — Validrow design system.
+#
+# This file is the source of truth for every value Streamlit can theme natively.
+# The :root block in app.py mirrors these for the custom HTML layer and adds
+# only what has no config key. If a value lives in both places, change it HERE.
 
 [server]
 # Serve the self-hosted Inter font from frontend/static/ at /app/static/.
@@ -7,19 +10,81 @@ enableStaticServing = true
 
 [theme]
 base = "light"
-primaryColor = "#2e8fff"
-backgroundColor = "#f6f7f9"
-secondaryBackgroundColor = "#ffffff"
-textColor = "#1c1d22"
-linkColor = "#1f7bf0"
-# Self-hosted Inter (one variable file covers weights 100–900) — applied
-# natively across every Streamlit component, so no CDN and no CSS fights.
+
+# --- accent -----------------------------------------------------------------
+# #1560d0 rather than the old #2e8fff: white labels on the lighter blue managed
+# only 3.24:1. This one reaches 5.81:1 and is already in the palette.
+primaryColor = "#1560d0"
+linkColor = "#1560d0"
+linkUnderline = false
+
+# --- surfaces ---------------------------------------------------------------
+# Streamlit's "background" is the page canvas; "secondary" is the raised
+# surface it uses for cards, the sidebar and inset widgets.
+backgroundColor = "#f6f7f9"           # n50  canvas
+secondaryBackgroundColor = "#ffffff"  # n0   elevated surface
+textColor = "#3a3c44"                 # n800 body text, 11.0:1
+borderColor = "#e3e5ea"               # n200 structural hairline
+dataframeBorderColor = "#e3e5ea"
+dataframeHeaderBackgroundColor = "#f6f7f9"
+codeBackgroundColor = "#f1f2f5"
+
+# --- semantic status colors -------------------------------------------------
+# The four primary verdicts. Same hues as before, saturation pulled down and
+# lightness to the middle so they sit calmly against the neutral ramp. One
+# colour per status serves both the dot and its label, so every one clears
+# 4.5:1 as text — and therefore 3:1 as a mark — on #ffffff, #f6f7f9 and #f1f2f5:
+#   deliverable   #16744a  5.78:1      undeliverable #c43c2f  5.21:1
+#   risky         #9a6410  4.99:1      unknown       #6c707a  4.96:1
+greenColor = "#16744a"
+orangeColor = "#9a6410"
+redColor = "#c43c2f"
+grayColor = "#6c707a"
+greenTextColor = "#16744a"
+orangeTextColor = "#9a6410"
+redTextColor = "#c43c2f"
+grayTextColor = "#6c707a"
+greenBackgroundColor = "#eef7f2"
+orangeBackgroundColor = "#f9f3e9"
+redBackgroundColor = "#fbeeec"
+grayBackgroundColor = "#f1f2f5"
+blueColor = "#1560d0"
+blueBackgroundColor = "#eaf3ff"
+
+# --- charts -----------------------------------------------------------------
+# Exactly the four status colours, in taxonomy order, so a chart that falls
+# back to the default sequence still maps to the status the user just learned.
+chartCategoricalColors = ["#16744a", "#9a6410", "#c43c2f", "#6c707a"]
+chartSequentialColors = [
+  "#eaf3ff", "#d3e4fb", "#b8d2f7", "#8fb8f1", "#639beb",
+  "#3b7fe0", "#1f6bd6", "#1560d0", "#124fac", "#0d3d85",
+]
+
+# --- type -------------------------------------------------------------------
+# Self-hosted Inter (one variable file covers 100–900), applied natively to
+# every component — no CDN, no CSS fights. Sizes are rem against a 14px base
+# and map onto the named scale in app.py (title / heading / …).
 font = "Inter"
+headingFont = "Inter"
 codeFont = "monospace"
-baseRadius = "0.62rem"
-borderColor = "#ecedf1"
+baseFontSize = 14
+baseFontWeight = 400
+headingFontSizes = ["1.7143rem", "1.5rem", "1.0714rem", "1rem", "0.9286rem", "0.8571rem"]
+headingFontWeights = [640, 630, 620, 600, 600, 600]
+codeFontSize = "0.9286rem"
+
+# --- geometry ---------------------------------------------------------------
+baseRadius = "0.4286rem"   # 6px — inputs, buttons, small marks
+buttonRadius = "0.4286rem"
 showWidgetBorder = true
-baseFontSize = 15
+showSidebarBorder = true
+
+# --- sidebar ----------------------------------------------------------------
+# A flat canvas tint replaces the old vertical gradient.
+[theme.sidebar]
+backgroundColor = "#fbfbfc"
+secondaryBackgroundColor = "#f1f2f5"
+borderColor = "#ecedf1"
 
 # Inter variable font (one file covers weights 100–900).
 [[theme.fontFaces]]

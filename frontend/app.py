@@ -37,24 +37,95 @@ import streamlit as st
 DEFAULT_API = "http://127.0.0.1:8000"
 
 # --------------------------------------------------------------------------- #
-# Design tokens — Validrow v3 (Figma)
+# Design tokens
 # --------------------------------------------------------------------------- #
-# Warm cream surfaces, bright sky-blue accent, status as dot + coloured label.
-STATUS = {
-    "valid":      {"txt": "#067647", "dot": "#12b76a", "soft": "#e6f5ee", "label": "Valid"},
-    "risky":      {"txt": "#b54708", "dot": "#f79009", "soft": "#fdf1e2", "label": "Risky"},
-    "invalid":    {"txt": "#b42318", "dot": "#f04438", "soft": "#fdeceb", "label": "Invalid"},
-    "unknown":    {"txt": "#57534b", "dot": "#a8a29e", "soft": "#f2f0ec", "label": "Unknown"},
-    "disposable": {"txt": "#b42318", "dot": "#f04438", "soft": "#fdeceb", "label": "Disposable"},
-    "spam_trap":  {"txt": "#912018", "dot": "#d92d20", "soft": "#fdeceb", "label": "Spam trap"},
-}
-STATUS_COLORS = {k: v["txt"] for k, v in STATUS.items()}
-STATUS_DOT = {k: v["dot"] for k, v in STATUS.items()}
-STATUS_SOFT = {k: v["soft"] for k, v in STATUS.items()}
-STATUS_LABEL = {k: v["label"] for k, v in STATUS.items()}
-STATUS_ORDER = ["valid", "risky", "unknown", "invalid", "disposable", "spam_trap"]
+# Colours that Streamlit can theme natively live in .streamlit/config.toml and
+# are mirrored here (and in the :root block) for the custom HTML layer. Change
+# a value in config.toml first, then mirror it — never the other way round.
+#
+# Neutral ramp — 12 steps. Text steps are contrast-verified against #ffffff,
+# #f6f7f9 (canvas) and #f1f2f5 (hover surface); the worst case is listed.
+N0 = "#ffffff"       # elevated surface
+N50 = "#f6f7f9"      # page canvas
+N100 = "#f1f2f5"     # hover / inset surface
+N150 = "#ecedf1"     # divider inside a component
+N200 = "#e3e5ea"     # structural border
+N300 = "#d3d6dd"     # border, hover/emphasis
+N400 = "#b0b4bd"     # disabled text and marks only
+N500 = "#878b95"     # decorative marks only — never text (3.05:1)
+N600 = "#6c707a"     # tertiary text            (4.43:1)
+N700 = "#5b5f68"     # secondary text           (5.72:1)
+N800 = "#3a3c44"     # body text                (9.82:1)
+N900 = "#14151a"     # headings / primary numerals
 
-BLUE = "#2e90fa"
+BLUE = "#1560d0"     # single accent — 5.81:1 against white, so labels pass AA
+BLUE_HOVER = "#124fac"
+BLUE_SOFT = "#eaf3ff"
+
+# --- Status taxonomy -------------------------------------------------------- #
+# Four primary verdicts, one colour each, one shape (a small filled dot plus a
+# text label). The label always carries the meaning; colour only reinforces it.
+#
+# The engine emits six status values. `disposable` and `spam_trap` are not
+# separate verdicts — they are *reasons* an address is undeliverable — so they
+# resolve to the Undeliverable colour and label and surface their specificity as
+# secondary grey sub-reason text. Nothing about the underlying values changes:
+# STATUS_ORDER, the API payloads, the export columns and every filter still see
+# all six keys.
+PRIMARY = {
+    "deliverable":   {"c": "#16744a", "soft": "#eef7f2", "label": "Deliverable"},
+    "risky":         {"c": "#9a6410", "soft": "#f9f3e9", "label": "Risky"},
+    "undeliverable": {"c": "#c43c2f", "soft": "#fbeeec", "label": "Undeliverable"},
+    "unknown":       {"c": N600,      "soft": N100,      "label": "Unknown"},
+}
+# engine status -> primary verdict
+VERDICT_OF = {
+    "valid": "deliverable",
+    "risky": "risky",
+    "invalid": "undeliverable",
+    "disposable": "undeliverable",
+    "spam_trap": "undeliverable",
+    "unknown": "unknown",
+}
+# The extra specificity carried by the two non-verdict statuses, shown as
+# secondary text rather than as its own colour.
+SUB_REASON = {"disposable": "Disposable domain", "spam_trap": "Spam trap"}
+
+
+def verdict(status) -> str:
+    """Map an engine status onto one of the four primary verdicts."""
+    return VERDICT_OF.get(str(status), "unknown")
+
+
+def status_color(status) -> str:
+    return PRIMARY[verdict(status)]["c"]
+
+
+def status_soft(status) -> str:
+    return PRIMARY[verdict(status)]["soft"]
+
+
+def status_label(status) -> str:
+    return PRIMARY[verdict(status)]["label"]
+
+
+# Kept as dict-shaped views so existing call sites keep working.
+STATUS_COLORS = {k: status_color(k) for k in VERDICT_OF}
+STATUS_DOT = STATUS_COLORS
+STATUS_SOFT = {k: status_soft(k) for k in VERDICT_OF}
+STATUS_LABEL = {k: status_label(k) for k in VERDICT_OF}
+STATUS = {k: {"txt": status_color(k), "dot": status_color(k),
+              "soft": status_soft(k), "label": status_label(k)} for k in VERDICT_OF}
+STATUS_ORDER = ["valid", "risky", "unknown", "invalid", "disposable", "spam_trap"]
+# Chart/legend order: the four verdicts, best to worst, no duplicates.
+VERDICT_ORDER = ["deliverable", "risky", "unknown", "undeliverable"]
+
+# --- Chart neutrals --------------------------------------------------------- #
+# One ramp for every chart on every screen. (Two ramps used to be in play — a
+# cool one and a warm leftover — so charts side by side disagreed.)
+AX_LABEL = N600      # axis labels are text: must pass 4.5:1
+AX_LINE = N200
+AX_GRID = N150
 
 # Inline SVG icons (Lucide-style) — no emoji as structural icons.
 IC = {
@@ -82,6 +153,7 @@ IC = {
     "plus": '<path d="M12 5v14M5 12h14"/>',
     "arrow": '<path d="M5 12h14M13 6l6 6-6 6"/>',
     "trendup": '<path d="M7 17 17 7"/><path d="M9 7h8v8"/>',
+    "trenddown": '<path d="M7 7 17 17"/><path d="M17 9v8H9"/>',
     "download": '<path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
     "upload": '<path d="M12 21V9m0 0 4 4m-4-4-4 4"/><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/>',
     "file": '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
@@ -122,7 +194,14 @@ def icon(name: str, size: int = 18, stroke: float = 1.9, cls: str = "") -> str:
 
 st.set_page_config(
     page_title="Validrow",
-    page_icon="✅",
+    # An inline SVG check-circle rather than an emoji, so the favicon matches
+    # the one icon set used everywhere else.
+    page_icon=(
+        "data:image/svg+xml,"
+        "%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' "
+        "stroke='%231560d0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'"
+        "%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8.5 12 2.5 2.5 4.5-5'/%3E%3C/svg%3E"
+    ),
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -142,386 +221,496 @@ def inject_css() -> None:
         """
         <style>
           /* ============================================================
-             Validrow — premium UI system (crafted, product-grade)
+             Validrow design system
+             ------------------------------------------------------------
+             Every value below is a token. Nothing in this stylesheet may
+             hard-code a colour, size, radius, shadow or duration — if a
+             component needs a value that isn't here, add the token.
+             Colours that config.toml can set are mirrored, not redefined.
              ============================================================ */
           :root {
-            /* accent */
-            --blue:#2e8fff; --blue-2:#1f7bf0; --blue-dark:#1560d0; --blue-soft:#eaf3ff;
-            --blue-ghost:#f2f7ff;
-            /* neutral ramp (cool, crisp) */
-            --ink:#14151a; --body:#3a3c44; --muted:#61646e; --faint:#878b95; --faintest:#b0b4bd;
-            --line:#ecedf1; --line-2:#f2f3f6; --line-strong:#e3e5ea; --input-line:#dcdee4;
-            --surface:#ffffff; --surface-2:#f6f7f9; --surface-3:#f1f2f5; --bg:#f6f7f9;
-            /* semantic */
-            --green:#17b877; --green-txt:#0a7d4e; --green-soft:#e7f7ef;
-            --amber:#f79009; --amber-txt:#b45309; --amber-soft:#fef2e0;
-            --red:#f0483e; --red-txt:#c0362c; --red-soft:#fdece9;
-            --gray:#9aa0ad; --gray-soft:#f0f1f4;
-            /* geometry */
-            --r-lg:16px; --r:13px; --r-sm:10px; --r-xs:8px;
-            /* elevation — soft, layered, product-grade */
-            --sh-xs:0 1px 2px rgba(20,21,26,.04);
-            --sh-sm:0 1px 2px rgba(20,21,26,.05), 0 1px 3px -1px rgba(20,21,26,.04);
-            --sh:0 2px 4px -1px rgba(20,21,26,.05), 0 10px 22px -8px rgba(20,21,26,.09);
-            --sh-lg:0 8px 24px -6px rgba(20,21,26,.10), 0 28px 56px -18px rgba(20,21,26,.16);
-            --ring:0 0 0 3.5px rgba(46,143,255,.14);
-            --ease:cubic-bezier(.32,.72,0,1);
-            font-feature-settings:'liga' 1,'calt' 1,'ss01' 1,'cv11' 1,'tnum' 0;
+            /* --- accent: one colour, three states -------------------- */
+            --blue:#1560d0; --blue-hover:#124fac; --blue-soft:#eaf3ff;
+
+            /* --- neutral ramp: 12 steps ------------------------------ */
+            --n0:#ffffff;   --n50:#f6f7f9;  --n100:#f1f2f5; --n150:#ecedf1;
+            --n200:#e3e5ea; --n300:#d3d6dd; --n400:#b0b4bd; --n500:#878b95;
+            --n600:#6c707a; --n700:#5b5f68; --n800:#3a3c44; --n900:#14151a;
+
+            /* --- named roles (use these, not the ramp steps) --------- */
+            --text-1:var(--n900);   /* headings, primary numerals        */
+            --text-2:var(--n800);   /* body                    9.8:1    */
+            --text-3:var(--n700);   /* secondary               5.7:1    */
+            --text-4:var(--n600);   /* tertiary, captions      4.4:1    */
+            --text-disabled:var(--n400);
+            --mark:var(--n500);     /* decorative icons — never text    */
+            --divider:var(--n150);  /* line inside a component          */
+            --border:var(--n200);   /* line around a component          */
+            --border-hover:var(--n300);
+            --surface:var(--n0);    /* card / elevated                  */
+            --surface-hover:var(--n50);
+            --surface-inset:var(--n100);
+            --canvas:var(--n50);
+
+            /* --- status: four verdicts, one colour each -------------- */
+            --st-ok:#16744a;   --st-ok-soft:#eef7f2;
+            --st-risk:#9a6410; --st-risk-soft:#f9f3e9;
+            --st-bad:#c43c2f;  --st-bad-soft:#fbeeec;
+            --st-unk:var(--n600); --st-unk-soft:var(--n100);
+
+            /* --- spacing: 4px scale --------------------------------- */
+            --s1:4px;  --s2:8px;  --s3:12px; --s4:16px; --s5:20px;
+            --s6:24px; --s8:32px; --s10:40px; --s12:48px; --s16:64px;
+
+            /* --- type scale: 8 named styles ------------------------- */
+            --fs-display:30px; --fw-display:640; --tr-display:-.022em;
+            --fs-title:24px;   --fw-title:640;   --tr-title:-.018em;
+            --fs-heading:15px; --fw-heading:620; --tr-heading:-.008em;
+            --fs-body:14px;    --fw-body:400;
+            --fs-sm:13px;
+            --fs-label:12px;   --fw-label:550;
+            --fs-caption:11px; --fw-caption:560; --tr-caption:.04em;
+            --lh-tight:1.2; --lh-snug:1.35; --lh-body:1.55;
+
+            /* --- radii: 3 values ------------------------------------ */
+            --r-sm:6px;    /* inputs, buttons, small marks              */
+            --r-md:10px;   /* cards, panels                             */
+            --r-pill:999px;
+
+            /* --- elevation: 3 levels, border-led -------------------- */
+            --e0:none;                                    /* border only */
+            --e1:0 1px 2px rgba(20,21,26,.04);            /* resting card */
+            --e2:0 4px 12px -2px rgba(20,21,26,.07),
+                 0 1px 2px rgba(20,21,26,.04);            /* overlay     */
+            --ring:0 0 0 3px rgba(21,96,208,.28);         /* focus       */
+
+            /* --- motion: one duration set, one curve ---------------- */
+            --t-fast:120ms; --t:200ms; --t-slow:300ms;
+            --ease:cubic-bezier(.2,0,.13,1);
+
+            /* Tabular figures ON globally. This app sells numeric
+               precision; proportional digits made columns of numbers
+               fail to align. Opt *out* per-element if ever needed. */
+            font-feature-settings:'liga' 1,'calt' 1,'ss01' 1,'cv11' 1,'tnum' 1;
             -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
             text-rendering:optimizeLegibility;
           }
 
-          .stApp{ background:
-            radial-gradient(900px 480px at 100% -6%, rgba(46,143,255,.05), rgba(46,143,255,0) 55%),
-            radial-gradient(700px 420px at -4% 0%, rgba(23,184,119,.035), rgba(23,184,119,0) 50%),
-            var(--bg);
-            background-attachment:fixed; }
-          .block-container{ padding:2rem 2.8rem 5.5rem; max-width:1260px; }
+          .stApp{ background:var(--canvas); }
+          .block-container{ padding:var(--s8) var(--s10) var(--s16); max-width:1240px; }
           #MainMenu, header[data-testid="stHeader"], footer{ visibility:hidden; height:0; }
           .num{ font-variant-numeric:tabular-nums; }
-          ::selection{ background:rgba(46,143,255,.16); }
-          * { scrollbar-width:thin; scrollbar-color:#d7d9df transparent; }
+          ::selection{ background:var(--blue-soft); }
+          * { scrollbar-width:thin; scrollbar-color:var(--n300) transparent; }
           *::-webkit-scrollbar{ width:9px; height:9px; }
-          *::-webkit-scrollbar-thumb{ background:#d9dbe1; border-radius:20px; border:2px solid transparent;
-            background-clip:content-box; }
-          *::-webkit-scrollbar-thumb:hover{ background:#c3c6ce; background-clip:content-box; }
+          *::-webkit-scrollbar-thumb{ background:var(--n300); border-radius:var(--r-pill);
+            border:2px solid transparent; background-clip:content-box; }
+          *::-webkit-scrollbar-thumb:hover{ background:var(--n400); background-clip:content-box; }
 
-          .main .block-container > div{ animation:rise .5s var(--ease) both; }
-          @keyframes rise{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:none;} }
-
-          h1{ font-weight:800 !important; letter-spacing:-1.2px; font-size:2.35rem !important;
-            color:var(--ink); }
-          h2{ font-weight:720 !important; letter-spacing:-.5px; color:var(--ink); }
-          h3{ font-weight:670 !important; letter-spacing:-.3px; color:var(--ink); }
+          h1{ font-weight:var(--fw-title) !important; letter-spacing:var(--tr-title);
+            font-size:var(--fs-title) !important; color:var(--text-1);
+            line-height:var(--lh-tight); }
+          h2{ font-weight:var(--fw-heading) !important; letter-spacing:var(--tr-heading);
+            color:var(--text-1); }
+          h3, h4, h5{ font-weight:var(--fw-heading) !important;
+            letter-spacing:var(--tr-heading); color:var(--text-1); }
           a{ text-decoration:none; }
 
+          /* Focus: visible on every interactive surface, keyboard only.
+             Never `outline:none` on its own. */
+          a:focus-visible, button:focus-visible, summary:focus-visible,
+          [role="button"]:focus-visible, input:focus-visible, select:focus-visible{
+            outline:2px solid var(--blue); outline-offset:2px; border-radius:var(--r-sm); }
+
           /* ---------- Sidebar ---------- */
-          section[data-testid="stSidebar"]{ background:
-            linear-gradient(180deg,#fcfcfd,#f8f9fb 40%);
-            border-right:1px solid var(--line); width:274px !important;
-            box-shadow:1px 0 0 rgba(20,21,26,.01); }
-          section[data-testid="stSidebar"] > div{ padding-top:1.4rem; }
-          .brand{ display:flex; align-items:center; gap:9px; padding:0 8px 2px; }
-          .brand .mark{ width:26px; height:26px; border-radius:8px; flex:0 0 26px; display:grid;
-            place-items:center; color:#fff;
-            background:linear-gradient(145deg,#57a6ff,#2e8fff 60%,#1f7bf0);
-            box-shadow:0 3px 8px -1px rgba(46,143,255,.5), inset 0 1px 0 rgba(255,255,255,.35); }
-          .brand-word{ font-size:20px; font-weight:800; letter-spacing:-.9px; line-height:1; 
-            color:var(--ink); }
-          .brand-word b{ color:var(--blue); font-weight:800; }
-          .searchbox{ display:flex; align-items:center; gap:9px; border:1px solid var(--input-line);
-            background:var(--surface); border-radius:var(--r-sm); padding:9px 11px; margin:18px 8px 6px;
-            box-shadow:var(--sh-xs); transition:border-color .16s var(--ease), box-shadow .16s var(--ease); }
-          .searchbox:hover{ border-color:#cfd2d9; box-shadow:var(--sh-sm); }
-          .searchbox svg{ color:var(--faint); flex:0 0 16px; }
-          .searchbox .ph{ color:var(--faint); font-size:13.5px; }
-          .searchbox .kbd{ margin-left:auto; color:var(--faint); font-size:11px; font-weight:600;
-            border:1px solid var(--line-strong); border-radius:6px; padding:1px 6px; 
-              background:var(--surface-2);
-            box-shadow:0 1px 0 rgba(20,21,26,.03); }
-          .side-label{ font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
-            color:var(--faintest); margin:18px 14px 7px; }
-          .nav{ position:relative; display:flex; align-items:center; gap:11px; padding:8px 12px;
-            border-radius:var(--r-sm); color:var(--body) !important; font-size:13.5px; font-weight:550;
-            text-decoration:none !important; margin:1px 8px;
-            transition:background .16s var(--ease), color .16s var(--ease), transform .1s var(--ease); }
-          .nav:hover{ background:var(--surface-3); color:var(--ink) !important; }
-          .nav:active{ transform:scale(.99); }
+          section[data-testid="stSidebar"]{ width:264px !important; }
+          section[data-testid="stSidebar"] > div{ padding-top:var(--s5); }
+          .brand{ display:flex; align-items:center; gap:var(--s2); padding:0 var(--s2) var(--s1); }
+          .brand .mark{ width:24px; height:24px; border-radius:var(--r-sm); flex:0 0 24px;
+            display:grid; place-items:center; color:var(--n0); background:var(--blue); }
+          .brand-word{ font-size:var(--fs-heading); font-weight:640; letter-spacing:var(--tr-title);
+            line-height:1; color:var(--text-1); }
+          .brand-word b{ color:var(--blue); font-weight:640; }
+          .searchbox{ display:flex; align-items:center; gap:var(--s2);
+            border:1px solid var(--border); background:var(--surface); border-radius:var(--r-sm);
+            padding:var(--s2) var(--s3); margin:var(--s5) var(--s2) var(--s1);
+            transition:border-color var(--t-fast) var(--ease); }
+          .searchbox:hover{ border-color:var(--border-hover); }
+          .searchbox svg{ color:var(--mark); flex:0 0 16px; }
+          .searchbox .ph{ color:var(--text-4); font-size:var(--fs-sm); }
+          .searchbox .kbd{ margin-left:auto; color:var(--text-4); font-size:var(--fs-caption);
+            font-weight:var(--fw-label); border:1px solid var(--border); border-radius:var(--r-sm);
+            padding:1px var(--s1); background:var(--surface-inset); }
+
+          /* One definition of "small uppercase label" — was four. */
+          .eyebrow, .side-label{ font-size:var(--fs-caption); font-weight:var(--fw-caption);
+            letter-spacing:var(--tr-caption); text-transform:uppercase; color:var(--text-4); }
+          .side-label{ margin:var(--s5) var(--s3) var(--s2); }
+
+          .nav{ position:relative; display:flex; align-items:center; gap:var(--s3);
+            padding:var(--s2) var(--s3); border-radius:var(--r-sm); color:var(--text-2) !important;
+            font-size:var(--fs-sm); font-weight:500; text-decoration:none !important;
+            margin:1px var(--s2);
+            transition:background var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+          .nav:hover{ background:var(--surface-inset); color:var(--text-1) !important; }
           .nav-btn{ display:inline-flex !important; width:auto; }
-          .nav-out{ border:1px solid var(--line-strong); background:var(--surface); }
-          .nav.active{ background:linear-gradient(90deg,var(--blue-soft),var(--blue-ghost));
-            color:var(--blue-dark) !important; font-weight:640;
-            box-shadow:inset 0 0 0 1px rgba(46,143,255,.14); }
-          .nav.active::before{ content:""; position:absolute; left:-8px; top:50%; transform:translateY(-50%);
-            width:3px; height:18px; border-radius:0 4px 4px 0; background:var(--blue);
-            box-shadow:0 0 8px rgba(46,143,255,.5); }
-          .nav svg{ color:var(--faint); flex:0 0 19px; transition:color .16s var(--ease); }
+          .nav-out{ border:1px solid var(--border); background:var(--surface); }
+          .nav.active{ background:var(--blue-soft); color:var(--blue) !important; font-weight:600; }
+          .nav.active::before{ content:""; position:absolute; left:calc(-1 * var(--s2)); top:50%;
+            transform:translateY(-50%); width:3px; height:18px; border-radius:0 3px 3px 0;
+            background:var(--blue); }
+          .nav svg{ color:var(--mark); flex:0 0 18px; transition:color var(--t-fast) var(--ease); }
+          .nav:hover svg{ color:var(--text-3); }
           .nav.active svg{ color:var(--blue); }
-          .nav .badge-n{ margin-left:auto; background:var(--surface-3); color:var(--muted); 
-            border-radius:20px;
-            font-size:11px; font-weight:650; padding:1px 7px; min-width:19px; text-align:center; }
-          .nav.active .badge-n{ background:#d8e9ff; color:var(--blue-dark); }
-          .side-foot{ border-top:1px solid var(--line); margin:6px 10px 0; padding:13px 4px 4px;
-            display:flex; align-items:center; gap:10px; }
-          .avatar{ width:38px; height:38px; flex:0 0 38px; border-radius:50%; display:grid; 
-            place-items:center;
-            color:#fff; font-weight:700; font-size:13px;
-            background:linear-gradient(145deg,#57a6ff,#2e8fff 60%,#1f7bf0);
-            box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 2px 6px -1px rgba(46,143,255,.4); }
-          .side-foot .nm{ font-size:13.5px; font-weight:650; color:var(--ink); line-height:1.2; }
-          .side-foot .em{ font-size:12px; color:var(--faint); }
-          .side-foot .lo{ margin-left:auto; color:var(--faintest); display:inline-flex;
-            transition:color .16s var(--ease); }
-          .side-foot .lo:hover{ color:var(--muted); }
+          .nav .badge-n{ margin-left:auto; background:var(--surface-inset); color:var(--text-3);
+            border-radius:var(--r-pill); font-size:var(--fs-caption); font-weight:var(--fw-label);
+            padding:1px var(--s2); min-width:19px; text-align:center; }
+          .nav.active .badge-n{ background:var(--n0); color:var(--blue); }
+          .side-foot{ border-top:1px solid var(--divider); margin:var(--s2) var(--s3) 0;
+            padding:var(--s3) var(--s1) var(--s1); display:flex; align-items:center; gap:var(--s3); }
+          .avatar{ width:32px; height:32px; flex:0 0 32px; border-radius:var(--r-pill); display:grid;
+            place-items:center; color:var(--text-3); font-weight:600; font-size:var(--fs-label);
+            background:var(--surface-inset); border:1px solid var(--border); }
+          .side-foot .nm{ font-size:var(--fs-sm); font-weight:600; color:var(--text-1);
+            line-height:var(--lh-tight); }
+          .side-foot .em{ font-size:var(--fs-label); color:var(--text-4); }
+          .side-foot .lo{ margin-left:auto; color:var(--mark); display:inline-flex;
+            transition:color var(--t-fast) var(--ease); }
+          .side-foot .lo:hover{ color:var(--text-3); }
 
-          .pill{ display:inline-flex; align-items:center; gap:6px; border-radius:20px;
-            padding:3px 10px; font-size:11.5px; font-weight:650; }
-          .p-ok{ background:var(--green-soft); color:var(--green-txt); }
-          .p-off{ background:var(--surface-3); color:var(--muted); }
-          .p-err{ background:var(--red-soft); color:var(--red-txt); }
-          .p-info{ background:var(--blue-soft); color:var(--blue-dark); }
-          .p-warn{ background:var(--amber-soft); color:var(--amber-txt); }
+          /* ---------- Pills (non-status meta only) ---------- */
+          .pill{ display:inline-flex; align-items:center; gap:var(--s1);
+            border-radius:var(--r-pill); padding:2px var(--s2); font-size:var(--fs-caption);
+            font-weight:var(--fw-label); }
+          .p-ok{ background:var(--st-ok-soft); color:var(--st-ok); }
+          .p-off{ background:var(--surface-inset); color:var(--text-3); }
+          .p-err{ background:var(--st-bad-soft); color:var(--st-bad); }
+          .p-info{ background:var(--blue-soft); color:var(--blue); }
+          .p-warn{ background:var(--st-risk-soft); color:var(--st-risk); }
 
-          .dot{ width:7px; height:7px; border-radius:50%; flex:0 0 7px; display:inline-block; }
-          @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
-          .dot-live{ position:relative; animation:pulse 1.9s var(--ease) infinite; }
+          .dot{ width:7px; height:7px; border-radius:var(--r-pill); flex:0 0 7px;
+            display:inline-block; }
+          @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.45; } }
+          .dot-live{ position:relative; animation:pulse 2s var(--ease) infinite; }
 
           /* ---------- Page header ---------- */
-          .phead{ display:flex; align-items:flex-start; gap:16px; margin:2px 0 28px; }
+          .phead{ display:flex; align-items:flex-start; gap:var(--s4); margin:0 0 var(--s6); }
           .phead h1{ margin:0; }
-          .phead .sub{ color:var(--muted); font-size:14.5px; margin-top:8px; max-width:80ch;
-            line-height:1.55; }
-          .phead .sp{ margin-left:auto; display:flex; align-items:center; gap:9px; }
-          .chip-btn{ display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line-strong);
-            background:var(--surface); border-radius:var(--r-sm); padding:9px 14px; font-size:13px;
-            font-weight:600; color:var(--body) !important; text-decoration:none !important;
-            box-shadow:var(--sh-xs);
-            transition:border-color .16s var(--ease), box-shadow .16s var(--ease),
-              transform .1s var(--ease); }
-          .chip-btn:hover{ border-color:#cfd2d9; box-shadow:var(--sh-sm); color:var(--ink) !important; }
-          .chip-btn:active{ transform:translateY(1px); }
-          .chip-btn svg{ color:var(--faint); }
-          .btn-primary{ background:linear-gradient(180deg,#3f9aff,#2e8fff); border-color:#2482f2;
-            color:#fff !important;
-            box-shadow:0 1px 2px rgba(46,143,255,.45), 0 8px 18px -6px rgba(46,143,255,.6),
-              inset 0 1px 0 rgba(255,255,255,.25); }
-          .btn-primary:hover{ background:linear-gradient(180deg,#2e8fff,#1f7bf0); border-color:#1f7bf0;
-            color:#fff !important; }
-          .btn-primary svg{ color:#fff; }
+          .phead .sub{ color:var(--text-3); font-size:var(--fs-body); margin-top:var(--s2);
+            max-width:76ch; line-height:var(--lh-body); }
+          .phead .sp{ margin-left:auto; display:flex; align-items:center; gap:var(--s2);
+            flex-wrap:wrap; justify-content:flex-end; }
+
+          /* ---------- Buttons: one height app-wide (34px) ---------- */
+          .chip-btn{ display:inline-flex; align-items:center; gap:var(--s2); height:34px;
+            box-sizing:border-box; border:1px solid var(--border); background:var(--surface);
+            border-radius:var(--r-sm); padding:0 var(--s3); font-size:var(--fs-sm);
+            font-weight:var(--fw-label); color:var(--text-2) !important;
+            text-decoration:none !important; white-space:nowrap;
+            transition:background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+          .chip-btn:hover{ border-color:var(--border-hover); background:var(--surface-hover);
+            color:var(--text-1) !important; }
+          .chip-btn svg{ color:var(--mark); }
+          /* Optical padding: a trailing icon needs slightly less trailing space. */
+          .chip-btn svg:last-child{ margin-right:-2px; }
+          .btn-primary{ background:var(--blue); border-color:var(--blue);
+            color:var(--n0) !important; }
+          .btn-primary:hover{ background:var(--blue-hover); border-color:var(--blue-hover);
+            color:var(--n0) !important; }
+          .btn-primary svg{ color:var(--n0); }
 
           /* ---------- Stat cards ---------- */
-          .cards{ display:grid; gap:18px; margin-bottom:22px; }
+          .cards{ display:grid; gap:var(--s4); margin-bottom:var(--s5); }
           .c3{ grid-template-columns:repeat(3,1fr); } .c4{ grid-template-columns:repeat(4,1fr); }
           .c6{ grid-template-columns:repeat(6,1fr); } .c2{ grid-template-columns:repeat(2,1fr); }
           @media (max-width:1100px){ .c3,.c4,.c6{ grid-template-columns:repeat(2,1fr);} }
-          .stat{ position:relative; background:var(--surface); border:1px solid var(--line);
-            border-radius:var(--r-lg); padding:22px 24px; box-shadow:var(--sh-sm); overflow:hidden;
-            transition:box-shadow .22s var(--ease), transform .22s var(--ease),
-              border-color .22s var(--ease); }
-          .stat::after{ content:""; position:absolute; inset:0 0 auto 0; height:1px;
-            background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent); opacity:.6; }
-          .stat:hover{ box-shadow:var(--sh); transform:translateY(-3px); border-color:var(--line-strong); }
-          .stat.brd{ border-left-width:4px; padding-left:22px; }
-          .stat .l{ font-size:11.5px; color:var(--faint); font-weight:680; display:flex; align-items:center;
-            gap:8px; letter-spacing:.06em; text-transform:uppercase; }
-          .stat .l .g{ margin-left:auto; color:var(--faintest); display:inline-flex; opacity:.55;
-            transition:opacity .16s var(--ease); }
-          .stat:hover .l .g{ opacity:.9; }
-          .stat .v{ font-size:46px; font-weight:820; letter-spacing:-2.4px; margin-top:14px; line-height:.95;
-            color:var(--ink); font-variant-numeric:tabular-nums; display:flex; align-items:baseline;
-            gap:11px; }
-          .stat .v .d{ font-size:12.5px; font-weight:700; display:inline-flex; align-items:center; gap:2px;
-            padding:3px 9px 3px 7px; border-radius:20px; letter-spacing:-.1px; transform:translateY(-3px); }
-          .stat .v .d.up{ color:var(--green-txt); background:var(--green-soft); }
-          .stat .v .d.dn{ color:var(--red-txt); background:var(--red-soft); }
-          .stat .foot{ font-size:12.5px; color:var(--faint); margin-top:11px; }
-          .stat .spark{ margin-top:16px; height:60px; margin-left:-4px; margin-right:-4px; }
-          .stat.brd .v{ font-size:34px; margin-top:10px; letter-spacing:-1.4px; }
-          /* Hero KPI — bold gradient accent block */
-          .stat.hero{ background:
-            radial-gradient(120% 140% at 100% 0%, #4aa0ff 0%, #2e8fff 45%, #1f7bf0 100%);
-            border:0; color:#fff; box-shadow:0 10px 30px -8px rgba(46,143,255,.55),
-              0 2px 6px rgba(46,143,255,.35), inset 0 1px 0 rgba(255,255,255,.25); }
-          .stat.hero::after{ display:none; }
-          .stat.hero:hover{ box-shadow:0 16px 40px -8px rgba(46,143,255,.6),
-            0 2px 6px rgba(46,143,255,.4); }
-          .stat.hero .l{ color:rgba(255,255,255,.82); }
-          .stat.hero .l .g{ color:rgba(255,255,255,.7); }
-          .stat.hero .v{ color:#fff; }
-          .stat.hero .v .d.up{ color:#fff; background:rgba(255,255,255,.22); }
-          .stat.hero .foot{ color:rgba(255,255,255,.82); }
+          @media (max-width:640px){ .c2,.c3,.c4,.c6{ grid-template-columns:1fr;} }
+          /* Border-led, not shadow-led. No lift on hover — these aren't buttons. */
+          .stat{ position:relative; background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--r-md); padding:var(--s5); box-shadow:var(--e1); }
+          .stat.brd{ border-left-width:3px; padding-left:calc(var(--s5) - 2px); }
+          .stat .l{ font-size:var(--fs-caption); color:var(--text-4);
+            font-weight:var(--fw-caption); display:flex; align-items:center; gap:var(--s2);
+            letter-spacing:var(--tr-caption); text-transform:uppercase; }
+          .stat .l .g{ margin-left:auto; color:var(--n400); display:inline-flex; }
+          .stat .v{ font-size:var(--fs-display); font-weight:var(--fw-display);
+            letter-spacing:var(--tr-display); margin-top:var(--s3); line-height:var(--lh-tight);
+            color:var(--text-1); font-variant-numeric:tabular-nums; display:flex;
+            align-items:baseline; gap:var(--s2); flex-wrap:wrap; }
+          .stat .v .d{ font-size:var(--fs-label); font-weight:var(--fw-label);
+            display:inline-flex; align-items:center; gap:2px; padding:2px var(--s2);
+            border-radius:var(--r-pill); }
+          .stat .v .d.up{ color:var(--st-ok); background:var(--st-ok-soft); }
+          .stat .v .d.dn{ color:var(--st-bad); background:var(--st-bad-soft); }
+          .stat .v .d.flat{ color:var(--text-3); background:var(--surface-inset); }
+          .stat .foot{ font-size:var(--fs-label); color:var(--text-4); margin-top:var(--s2); }
+          .stat .spark{ margin-top:var(--s4); height:48px; }
 
           /* ---------- Cards (raw HTML) ---------- */
-          .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
-            box-shadow:var(--sh-sm); overflow:hidden; }
-          .card-h{ padding:17px 22px; display:flex; align-items:center; gap:11px; }
-          .card-h.bd{ border-bottom:1px solid var(--line-2); }
-          .card-h h4{ font-size:14.5px; font-weight:700; margin:0; letter-spacing:-.25px; color:var(--ink); }
-          .card-h .cnt{ background:var(--blue-soft); color:var(--blue-dark); border-radius:20px;
-            font-size:11.5px; font-weight:660; padding:2px 9px; }
-          .card-h .sp{ margin-left:auto; display:flex; align-items:center; gap:10px; }
-          .card-b{ padding:20px 22px; }
+          .card{ background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--r-md); box-shadow:var(--e1); overflow:hidden; }
+          .card-h{ padding:var(--s4) var(--s5); display:flex; align-items:center; gap:var(--s3); }
+          .card-h.bd{ border-bottom:1px solid var(--divider); }
+          .card-h h4{ font-size:var(--fs-heading); font-weight:var(--fw-heading); margin:0;
+            letter-spacing:var(--tr-heading); color:var(--text-1); }
+          .card-h .cnt{ background:var(--surface-inset); color:var(--text-3);
+            border-radius:var(--r-pill); font-size:var(--fs-label); font-weight:var(--fw-label);
+            padding:2px var(--s2); font-variant-numeric:tabular-nums; }
+          .card-h .sp{ margin-left:auto; display:flex; align-items:center; gap:var(--s2); }
+          .card-b{ padding:var(--s5); }
 
-          /* ---------- Status tag + score bar ---------- */
-          .stag{ display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:600;
-            letter-spacing:-.1px; }
-          .stag .d{ width:7px; height:7px; border-radius:50%;
-            box-shadow:0 0 0 3px rgba(0,0,0,.025); }
-          .sbar{ display:inline-flex; align-items:center; gap:11px; }
-          .sbar .track{ width:118px; height:6px; border-radius:20px; background:var(--surface-3);
-            overflow:hidden; box-shadow:inset 0 0 0 1px rgba(20,21,26,.02); }
-          .sbar .track i{ display:block; height:100%; border-radius:20px; }
-          .sbar .n{ font-size:13px; font-weight:660; color:var(--ink); font-variant-numeric:tabular-nums;
-            min-width:24px; }
-          .tag{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted);
-            font-weight:520; }
+          /* ---------- Status indicator ----------
+             ONE definition, consumed everywhere: results table, summary card,
+             chart legend, single-check verdict, export preview. A small filled
+             dot plus a text label. The label carries the meaning; the dot only
+             reinforces it, so this stays readable with no colour perception at
+             all. Never a saturated pill, never an icon, never colour alone. */
+          .stag{ display:inline-flex; align-items:baseline; gap:var(--s2);
+            font-size:var(--fs-sm); font-weight:var(--fw-label); white-space:nowrap; }
+          .stag .d{ width:7px; height:7px; border-radius:var(--r-pill); flex:0 0 7px;
+            transform:translateY(-1px); }
+          /* Sub-reason: secondary grey text, never its own hue. */
+          .sreason{ font-size:var(--fs-label); color:var(--text-4); font-weight:400; }
 
-          /* ---------- v3 email/results table ---------- */
+          .sbar{ display:inline-flex; align-items:center; gap:var(--s3); }
+          .sbar .track{ width:96px; height:5px; border-radius:var(--r-pill);
+            background:var(--surface-inset); overflow:hidden; }
+          .sbar .track i{ display:block; height:100%; border-radius:var(--r-pill); }
+          .sbar .n{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-2);
+            font-variant-numeric:tabular-nums; min-width:22px; text-align:right; }
+          .tag{ display:inline-flex; align-items:center; gap:var(--s1); font-size:var(--fs-label);
+            color:var(--text-3); font-weight:400; }
+
+          /* ---------- HTML table (list views) ----------
+             Fixed row height, sticky header, ellipsis truncation, numerals
+             right-aligned. Hover changes surface only — never the border, which
+             would jitter the whole row by 1px. */
           .vt{ width:100%; }
-          .vt-head, .vt-row{ display:grid; align-items:center; gap:14px; padding:0 12px; }
-          .vt-head{ height:38px; border-bottom:1px solid var(--line); margin-bottom:2px; }
-          .vt-head span{ font-size:11px; font-weight:650; letter-spacing:.06em; text-transform:uppercase;
-            color:var(--faintest); }
-          .vt-row{ height:58px; border-radius:var(--r-sm); text-decoration:none !important;
-            color:inherit !important; box-shadow:inset 0 -1px 0 var(--line-2);
-            transition:background .14s var(--ease), box-shadow .14s var(--ease); }
+          .vt-scroll{ overflow-x:auto; overflow-y:visible; }
+          .vt-head, .vt-row{ display:grid; align-items:center; gap:var(--s4);
+            padding:0 var(--s3); }
+          .vt-head{ height:34px; border-bottom:1px solid var(--border);
+            position:sticky; top:0; z-index:2; background:var(--surface); }
+          .vt-head span{ font-size:var(--fs-caption); font-weight:var(--fw-caption);
+            letter-spacing:var(--tr-caption); text-transform:uppercase; color:var(--text-4);
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+          .vt-row{ height:52px; text-decoration:none !important; color:inherit !important;
+            box-shadow:inset 0 -1px 0 var(--divider);
+            transition:background var(--t-fast) var(--ease); }
           .vt-row:last-child{ box-shadow:none; }
-          .vt-row:hover{ background:var(--surface-2); box-shadow:none; }
-          .vt .em{ font-size:13.5px; font-weight:600; color:var(--ink); letter-spacing:-.1px; }
-          .vt .muted{ font-size:13px; color:var(--faint); }
-          .avatar-sm{ width:36px; height:36px; flex:0 0 36px; border-radius:50%; display:grid;
-            place-items:center; color:#fff; font-weight:700; font-size:12.5px;
-            box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 1px 3px rgba(20,21,26,.16); }
-          .name-cell{ display:flex; align-items:center; gap:12px; }
-          .name-cell .nm{ font-size:13.5px; font-weight:620; color:var(--ink); letter-spacing:-.1px; }
-          .name-cell .sub{ font-size:12px; color:var(--faint); }
+          .vt-row:hover{ background:var(--surface-hover); }
+          /* Every cell truncates rather than wrapping: a 60-character address
+             must not change the row height. */
+          .vt-head > span, .vt-row > div{ min-width:0; overflow:hidden;
+            text-overflow:ellipsis; white-space:nowrap; }
+          .vt .num-cell, .vt-head .num-cell{ text-align:right;
+            font-variant-numeric:tabular-nums; }
+          .vt .em{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-1); }
+          .vt .muted{ font-size:var(--fs-sm); color:var(--text-4); }
+          .avatar-sm{ width:28px; height:28px; flex:0 0 28px; border-radius:var(--r-pill);
+            display:grid; place-items:center; color:var(--text-3); font-weight:600;
+            font-size:var(--fs-caption); background:var(--surface-inset);
+            border:1px solid var(--border); }
+          .name-cell{ display:flex; align-items:center; gap:var(--s3); min-width:0; }
+          .name-cell > div{ min-width:0; }
+          .name-cell .nm, .name-cell .sub{ overflow:hidden; text-overflow:ellipsis;
+            white-space:nowrap; }
+          .name-cell .nm{ font-size:var(--fs-sm); font-weight:var(--fw-label);
+            color:var(--text-1); }
+          .name-cell .sub{ font-size:var(--fs-label); color:var(--text-4); }
+
+          /* Skeleton rows at the real row height, so nothing shifts on load. */
+          .vt-skel{ height:52px; display:flex; align-items:center; padding:0 var(--s3);
+            box-shadow:inset 0 -1px 0 var(--divider); }
+          .vt-skel i{ display:block; height:9px; border-radius:var(--r-pill);
+            background:var(--surface-inset); }
+          @keyframes shimmer{ 0%,100%{ opacity:1 } 50%{ opacity:.45 } }
+          .vt-skel i{ animation:shimmer 1.4s var(--ease) infinite; }
 
           /* ---------- Stepper ---------- */
-          .stepper{ display:flex; align-items:center; gap:0; }
-          .step{ display:flex; align-items:center; gap:10px; }
-          .step .n{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
-            flex:0 0 26px; font-size:12px; font-weight:700; transition:all .2s var(--ease); }
-          .step.done .n{ background:linear-gradient(180deg,#1fc286,#17b877); color:#fff;
-            box-shadow:0 2px 6px -1px rgba(23,184,119,.5); }
-          .step.cur .n{ background:linear-gradient(180deg,#3f9aff,#2e8fff); color:#fff;
-            box-shadow:0 2px 6px -1px rgba(46,143,255,.55); }
-          .step.todo .n{ background:var(--surface-2); color:var(--faint); 
-            border:1px solid var(--line-strong); }
-          .step .t{ font-size:13.5px; font-weight:600; letter-spacing:-.1px; }
-          .step.done .t{ color:var(--ink); } .step.cur .t{ color:var(--blue-2); }
-          .step.todo .t{ color:var(--faint); }
-          .step-line{ flex:1; height:2px; background:var(--line-strong); margin:0 15px; min-width:24px;
-            border-radius:2px; }
-          .step-line.done{ background:linear-gradient(90deg,#17b877,#1fc286); }
+          .stepper{ display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:var(--s2); }
+          .step{ display:flex; align-items:center; gap:var(--s2); }
+          .step .n{ width:22px; height:22px; border-radius:var(--r-pill); display:grid;
+            place-items:center; flex:0 0 22px; font-size:var(--fs-caption); font-weight:600;
+            font-variant-numeric:tabular-nums; }
+          .step.done .n{ background:var(--st-ok); color:var(--n0); }
+          .step.cur .n{ background:var(--blue); color:var(--n0); }
+          .step.todo .n{ background:var(--surface-inset); color:var(--text-4);
+            border:1px solid var(--border); }
+          .step .t{ font-size:var(--fs-sm); font-weight:var(--fw-label); }
+          .step.done .t{ color:var(--text-2); } .step.cur .t{ color:var(--blue); }
+          .step.todo .t{ color:var(--text-4); }
+          .step-line{ flex:1; height:1px; background:var(--border); margin:0 var(--s3);
+            min-width:20px; }
+          .step-line.done{ background:var(--st-ok); }
 
-          .maptag{ display:inline-flex; align-items:center; gap:7px; background:var(--surface-2);
-            border:1px solid var(--line); border-radius:var(--r-sm); padding:5px 11px; font-size:12.5px;
-            margin:0 8px 0 0; }
-          .maptag b{ color:var(--blue-2); font-weight:660; } .maptag span{ color:var(--muted); }
+          .maptag{ display:inline-flex; align-items:center; gap:var(--s2);
+            background:var(--surface-inset); border:1px solid var(--border);
+            border-radius:var(--r-sm); padding:var(--s1) var(--s3); font-size:var(--fs-label);
+            margin:0 var(--s2) 0 0; }
+          .maptag b{ color:var(--blue); font-weight:var(--fw-label); }
+          .maptag span{ color:var(--text-3); }
 
-          .note{ display:flex; gap:11px; align-items:flex-start; border-radius:var(--r); padding:13px 16px;
-            font-size:13.5px; line-height:1.55; border:1px solid transparent; }
-          .note-info{ background:var(--blue-ghost); color:var(--blue-dark); 
-            border-color:rgba(46,143,255,.16); }
-          .note-ok{ background:var(--green-soft); color:var(--green-txt);
-            border-color:rgba(23,184,119,.18); }
-          .note svg{ flex:0 0 16px; margin-top:1px; }
+          .note{ display:flex; gap:var(--s3); align-items:flex-start; border-radius:var(--r-sm);
+            padding:var(--s3) var(--s4); font-size:var(--fs-sm); line-height:var(--lh-body);
+            border:1px solid transparent; }
+          .note-info{ background:var(--blue-soft); color:var(--blue); border-color:var(--blue-soft); }
+          .note-ok{ background:var(--st-ok-soft); color:var(--st-ok);
+            border-color:var(--st-ok-soft); }
+          .note svg{ flex:0 0 16px; margin-top:2px; }
 
           /* ---------- Single check verdict ---------- */
-          .verdict{ display:flex; align-items:center; gap:18px; padding:24px 22px;
-            background:linear-gradient(180deg,rgba(46,143,255,.03),rgba(46,143,255,0)); }
-          .verdict .ring{ width:66px; height:66px; flex:0 0 66px; 
-            filter:drop-shadow(0 2px 4px rgba(20,21,26,.08)); }
-          .verdict .em{ font-size:18.5px; font-weight:720; color:var(--ink); letter-spacing:-.4px; }
-          .verdict .su{ color:var(--muted); font-size:13.5px; margin-top:5px; line-height:1.5; }
-          .brk-row{ display:flex; align-items:center; gap:13px; padding:13px 22px;
-            border-top:1px solid var(--line-2); transition:background .14s var(--ease); }
-          .brk-row:hover{ background:var(--surface-2); }
-          .brk-row .ic{ flex:0 0 20px; display:inline-flex; }
-          .brk-row .ttl{ font-size:13.5px; font-weight:640; color:var(--ink); min-width:150px;
-            letter-spacing:-.1px; }
-          .brk-row .ds{ font-size:13px; color:var(--faint); }
+          .verdict{ display:flex; align-items:center; gap:var(--s5); padding:var(--s5); }
+          .verdict .ring{ width:56px; height:56px; flex:0 0 56px; }
+          .verdict .em{ font-size:var(--fs-heading); font-weight:var(--fw-heading);
+            color:var(--text-1); letter-spacing:var(--tr-heading); overflow-wrap:anywhere; }
+          .verdict .su{ color:var(--text-3); font-size:var(--fs-sm); margin-top:var(--s1);
+            line-height:var(--lh-body); }
+          .brk-row{ display:flex; align-items:center; gap:var(--s3); padding:var(--s3) var(--s5);
+            border-top:1px solid var(--divider); }
+          .brk-row .ic{ flex:0 0 18px; display:inline-flex; }
+          .brk-row .ttl{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-2);
+            min-width:142px; }
+          .brk-row .ds{ font-size:var(--fs-sm); color:var(--text-4); }
 
-          .fact{ border:1px solid var(--line); border-radius:var(--r); padding:14px 16px;
-            background:var(--surface); box-shadow:var(--sh-xs); }
-          .fact .l{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--faint);
-            font-weight:640; }
-          .fact .v{ font-size:16px; font-weight:700; margin-top:7px; color:var(--ink); letter-spacing:-.2px; }
-          .chip{ display:inline-block; border:1px solid var(--line-strong); border-radius:20px;
-            padding:4px 12px; font-size:12px; font-weight:550; color:var(--muted); margin:0 6px 6px 0;
-            background:var(--surface-2); }
+          .fact{ border:1px solid var(--border); border-radius:var(--r-sm);
+            padding:var(--s3) var(--s4); background:var(--surface); }
+          .fact .l{ font-size:var(--fs-caption); text-transform:uppercase;
+            letter-spacing:var(--tr-caption); color:var(--text-4); font-weight:var(--fw-caption); }
+          .fact .v{ font-size:var(--fs-heading); font-weight:var(--fw-heading);
+            margin-top:var(--s2); color:var(--text-1); }
+          .chip{ display:inline-block; border:1px solid var(--border); border-radius:var(--r-pill);
+            padding:2px var(--s3); font-size:var(--fs-label); font-weight:400; color:var(--text-3);
+            margin:0 var(--s1) var(--s1) 0; background:var(--surface-inset); }
 
-          .empty{ text-align:center; padding:56px 20px; }
-          .empty .eico{ width:60px; height:60px; border-radius:18px;
-            background:linear-gradient(160deg,var(--blue-soft),var(--blue-ghost)); color:var(--blue);
-            display:grid; place-items:center; margin:0 auto 18px;
-            box-shadow:inset 0 1px 0 rgba(255,255,255,.7), 0 6px 16px -6px rgba(46,143,255,.35); }
-          .empty h4{ font-size:16.5px; font-weight:720; color:var(--ink); margin:0 0 7px; 
-            letter-spacing:-.3px; }
-          .empty p{ color:var(--muted); font-size:14px; margin:0 auto; max-width:46ch; line-height:1.55; }
+          /* ---------- Empty state ---------- */
+          .empty{ text-align:center; padding:var(--s12) var(--s5); }
+          .empty .eico{ width:40px; height:40px; border-radius:var(--r-md);
+            background:var(--surface-inset); border:1px solid var(--border); color:var(--text-4);
+            display:grid; place-items:center; margin:0 auto var(--s4); }
+          .empty h4{ font-size:var(--fs-heading); font-weight:var(--fw-heading);
+            color:var(--text-1); margin:0 0 var(--s2); letter-spacing:var(--tr-heading); }
+          .empty p{ color:var(--text-3); font-size:var(--fs-sm); margin:0 auto; max-width:44ch;
+            line-height:var(--lh-body); }
 
-          .mbar{ display:flex; height:8px; border-radius:20px; overflow:hidden; background:var(--surface-3);
-            box-shadow:inset 0 0 0 1px rgba(20,21,26,.02); }
+          .mbar{ display:flex; height:6px; border-radius:var(--r-pill); overflow:hidden;
+            background:var(--surface-inset); }
           .mbar i{ display:block; height:100%; }
-          .lgd{ display:flex; flex-direction:column; gap:12px; margin-top:8px; }
-          .lgd .row{ display:flex; align-items:center; gap:10px; font-size:13px; color:var(--muted); }
-          .lgd .row .nm{ font-weight:560; color:var(--body); }
-          .lgd .row .v{ margin-left:auto; font-weight:660; color:var(--ink); 
+          .lgd{ display:flex; flex-direction:column; gap:var(--s3); margin-top:var(--s2); }
+          .lgd .row{ display:flex; align-items:center; gap:var(--s2); font-size:var(--fs-sm);
+            color:var(--text-3); }
+          .lgd .row .nm{ font-weight:400; color:var(--text-2); }
+          .lgd .row .v{ margin-left:auto; font-weight:var(--fw-label); color:var(--text-1);
             font-variant-numeric:tabular-nums; }
-          .lgd .row .pc{ color:var(--faint); font-weight:550; min-width:46px; text-align:right; }
+          .lgd .row .pc{ color:var(--text-4); font-weight:400; min-width:48px; text-align:right;
+            font-variant-numeric:tabular-nums; }
 
-          .dom{ display:flex; align-items:center; gap:13px; padding:12px 0;
-            border-bottom:1px solid var(--line-2); }
+          .dom{ display:flex; align-items:center; gap:var(--s3); padding:var(--s3) 0;
+            border-bottom:1px solid var(--divider); }
           .dom:last-child{ border-bottom:0; }
-          .dom .d{ flex:1; } .dom .nm{ font-size:13px; font-weight:620; color:var(--ink); 
-            letter-spacing:-.1px; }
-          .dom .track{ height:6px; border-radius:20px; background:var(--surface-3); margin-top:7px;
-            overflow:hidden; }
-          .dom .track i{ display:block; height:100%; border-radius:20px;
-            background:linear-gradient(90deg,#57a6ff,#2e8fff); }
-          .dom .rt{ text-align:right; } .dom .rt .v{ font-size:13px; font-weight:660; color:var(--ink);
-            font-variant-numeric:tabular-nums; } .dom .rt .pc{ font-size:11.5px; color:var(--faint); }
+          .dom .d{ flex:1; min-width:0; }
+          .dom .nm{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-1);
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+          .dom .track{ height:5px; border-radius:var(--r-pill); background:var(--surface-inset);
+            margin-top:var(--s2); overflow:hidden; }
+          .dom .track i{ display:block; height:100%; border-radius:var(--r-pill);
+            background:var(--blue); }
+          .dom .rt{ text-align:right; }
+          .dom .rt .v{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-1);
+            font-variant-numeric:tabular-nums; }
+          .dom .rt .pc{ font-size:var(--fs-caption); color:var(--text-4);
+            font-variant-numeric:tabular-nums; }
 
           /* ---------- Verification layers (process) ---------- */
-          .layer{ display:flex; gap:16px; padding:19px 0; border-bottom:1px solid var(--line-2); }
+          .layer{ display:flex; gap:var(--s4); padding:var(--s5) 0;
+            border-bottom:1px solid var(--divider); }
           .layer:last-child{ border-bottom:0; }
-          .layer .n{ width:34px; height:34px; flex:0 0 34px; border-radius:10px; display:grid;
-            place-items:center; font-weight:720; font-size:13.5px;
-            background:linear-gradient(160deg,var(--blue-soft),var(--blue-ghost)); color:var(--blue-2);
-            font-variant-numeric:tabular-nums; box-shadow:inset 0 1px 0 rgba(255,255,255,.6); }
-          .layer .ttl{ font-size:14.5px; font-weight:700; color:var(--ink); display:flex;
-            align-items:center; gap:9px; letter-spacing:-.2px; }
-          .layer .ttl .tg{ font-size:10.5px; font-weight:640; letter-spacing:.04em; padding:2px 9px;
-            border-radius:20px; background:var(--surface-2); color:var(--muted);
-            border:1px solid var(--line-strong); text-transform:uppercase; }
-          .layer .dsc{ color:var(--muted); font-size:13.5px; line-height:1.65; margin-top:7px;
-            max-width:74ch; }
+          .layer .n{ width:26px; height:26px; flex:0 0 26px; border-radius:var(--r-sm);
+            display:grid; place-items:center; font-weight:var(--fw-label);
+            font-size:var(--fs-label); background:var(--surface-inset); color:var(--text-3);
+            border:1px solid var(--border); font-variant-numeric:tabular-nums; }
+          .layer .ttl{ font-size:var(--fs-body); font-weight:var(--fw-heading); color:var(--text-1);
+            display:flex; align-items:center; gap:var(--s2); flex-wrap:wrap;
+            letter-spacing:var(--tr-heading); }
+          .layer .ttl .tg{ font-size:var(--fs-caption); font-weight:var(--fw-caption);
+            letter-spacing:var(--tr-caption); padding:2px var(--s2); border-radius:var(--r-pill);
+            background:var(--surface-inset); color:var(--text-4); border:1px solid var(--border);
+            text-transform:uppercase; }
+          .layer .dsc{ color:var(--text-3); font-size:var(--fs-sm); line-height:var(--lh-body);
+            margin-top:var(--s2); max-width:74ch; }
 
-          /* ---------- Streamlit widget polish ---------- */
+          /* ---------- Streamlit widget layer ----------
+             Only what config.toml can't express. Selectors are data-testid or
+             data-baseweb attributes and never generated class names, which are
+             hashed and change on upgrade. */
           .stButton>button, .stDownloadButton>button, .stFormSubmitButton>button{
-            border-radius:var(--r-sm); font-weight:620; border:1px solid var(--line-strong);
-            transition:all .16s var(--ease); box-shadow:var(--sh-xs); letter-spacing:-.1px; }
-          .stButton>button[kind="primary"], .stFormSubmitButton>button[kind="primary"],
-          .stDownloadButton>button[kind="primary"]{
-            background:linear-gradient(180deg,#3f9aff,#2e8fff) !important; border-color:#2482f2 !important;
-            box-shadow:0 1px 2px rgba(46,143,255,.45), 0 8px 18px -6px rgba(46,143,255,.55),
-              inset 0 1px 0 rgba(255,255,255,.25) !important; }
-          .stButton>button[kind="primary"]:hover, .stFormSubmitButton>button[kind="primary"]:hover,
-          .stDownloadButton>button[kind="primary"]:hover{
-            background:linear-gradient(180deg,#2e8fff,#1f7bf0) !important; }
-          .stButton>button:hover, .stDownloadButton>button:hover{ border-color:#cfd2d9;
-            box-shadow:var(--sh-sm); }
-          .stButton>button:active, .stDownloadButton>button:active,
-          .stFormSubmitButton>button:active{ transform:translateY(1px); }
-          [data-baseweb="input"], [data-baseweb="select"]>div, .stTextInput input, .stNumberInput input{
-            border-radius:var(--r-sm) !important; }
-          .stTextInput input:focus, [data-baseweb="input"]:focus-within,
-          [data-baseweb="select"]>div:focus-within{ box-shadow:var(--ring) !important;
+            min-height:34px; font-weight:var(--fw-label); font-size:var(--fs-sm);
+            transition:background var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease); }
+          .stButton>button:hover, .stDownloadButton>button:hover,
+          .stFormSubmitButton>button:hover{ border-color:var(--border-hover); }
+          .stButton>button:disabled, .stDownloadButton>button:disabled,
+          .stFormSubmitButton>button:disabled{ color:var(--text-disabled) !important;
+            background:var(--surface-inset) !important; border-color:var(--border) !important; }
+
+          [data-baseweb="input"]:focus-within, [data-baseweb="select"]>div:focus-within,
+          [data-baseweb="textarea"]:focus-within{ box-shadow:var(--ring) !important;
             border-color:var(--blue) !important; }
-          /* segmented control -> pill group */
-          [data-baseweb="segmented-control"]{ background:var(--surface-3) !important; padding:3px !important;
-            border-radius:var(--r-sm) !important; gap:2px; }
-          /* Native bordered container styled as a premium card */
-          div[data-testid="stVerticalBlockBorderWrapper"]{ border:1px solid var(--line) !important;
-            border-radius:var(--r-lg) !important; background:var(--surface); box-shadow:var(--sh-sm);
-            padding:3px; }
-          .ccard-h{ display:flex; align-items:center; gap:11px; margin:-3px 0 16px;
-            padding-bottom:14px; border-bottom:1px solid var(--line-2); }
-          .ccard-h h4{ font-size:14.5px; font-weight:700; margin:0; color:var(--ink); letter-spacing:-.25px; }
-          .ccard-h .cnt{ background:var(--blue-soft); color:var(--blue-dark); border-radius:20px;
-            font-size:11.5px; font-weight:660; padding:2px 9px; }
-          .ccard-h .sp{ margin-left:auto; display:flex; align-items:center; gap:10px; }
-          [data-testid="stDataFrame"]{ border:1px solid var(--line); border-radius:var(--r); }
-          .stTabs [data-baseweb="tab-list"]{ gap:4px; }
-          .stTabs [data-baseweb="tab"]{ font-weight:620; }
-          [data-testid="stMetricValue"]{ font-weight:720; letter-spacing:-.6px; }
-          div[data-testid="stExpander"]{ border:1px solid var(--line); border-radius:var(--r);
-            background:var(--surface); box-shadow:var(--sh-xs); }
-          .stProgress > div > div > div{ background:linear-gradient(90deg,#3f9aff,#2e8fff) !important; }
-          .stCaption, [data-testid="stCaptionContainer"]{ color:var(--faint) !important; }
+          /* Reserve the help/error line so an error can't push content down. */
+          [data-testid="stWidgetLabel"] p{ font-size:var(--fs-label) !important;
+            font-weight:var(--fw-label) !important; color:var(--text-2) !important; }
+
+          [data-baseweb="segmented-control"]{ background:var(--surface-inset) !important;
+            padding:2px !important; border-radius:var(--r-sm) !important; gap:2px; }
+
+          /* st.container(border=True) as the one card primitive. */
+          div[data-testid="stVerticalBlockBorderWrapper"]{
+            border:1px solid var(--border) !important; border-radius:var(--r-md) !important;
+            background:var(--surface); box-shadow:var(--e1); }
+          .ccard-h{ display:flex; align-items:center; gap:var(--s3); margin:0 0 var(--s4);
+            padding-bottom:var(--s3); border-bottom:1px solid var(--divider); }
+          .ccard-h h4{ font-size:var(--fs-heading); font-weight:var(--fw-heading); margin:0;
+            color:var(--text-1); letter-spacing:var(--tr-heading); }
+          .ccard-h .cnt{ background:var(--surface-inset); color:var(--text-3);
+            border-radius:var(--r-pill); font-size:var(--fs-label); font-weight:var(--fw-label);
+            padding:2px var(--s2); font-variant-numeric:tabular-nums; }
+          .ccard-h .sp{ margin-left:auto; display:flex; align-items:center; gap:var(--s2); }
+
+          [data-testid="stDataFrame"]{ border-radius:var(--r-sm); }
+          .stTabs [data-baseweb="tab-list"]{ gap:var(--s1); }
+          .stTabs [data-baseweb="tab"]{ font-weight:var(--fw-label); font-size:var(--fs-sm); }
+          [data-testid="stMetricValue"]{ font-weight:var(--fw-display);
+            letter-spacing:var(--tr-display); font-variant-numeric:tabular-nums; }
+          div[data-testid="stExpander"]{ border:1px solid var(--border);
+            border-radius:var(--r-sm); background:var(--surface); }
+          .stProgress > div > div > div{ background:var(--blue) !important; }
+          .stCaption, [data-testid="stCaptionContainer"]{ color:var(--text-4) !important;
+            font-size:var(--fs-label) !important; }
+
+          /* File dropzone: distinct idle / hover / drag-over states. */
+          [data-testid="stFileUploaderDropzone"]{ background:var(--surface) !important;
+            border:1px dashed var(--border-hover) !important; border-radius:var(--r-md) !important;
+            transition:border-color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease); }
+          [data-testid="stFileUploaderDropzone"]:hover{ border-color:var(--blue) !important;
+            background:var(--surface-hover) !important; }
+          [data-testid="stFileUploaderDropzone"]:focus-within{ border-color:var(--blue) !important;
+            box-shadow:var(--ring) !important; }
+
+          /* ---------- Responsive: usable from 320px ---------- */
+          @media (max-width:1024px){
+            .block-container{ padding:var(--s6) var(--s5) var(--s12); } }
+          @media (max-width:640px){
+            .block-container{ padding:var(--s5) var(--s4) var(--s10); }
+            .phead{ flex-direction:column; gap:var(--s3); }
+            .phead .sp{ margin-left:0; justify-content:flex-start; }
+            :root{ --fs-display:26px; --fs-title:21px; }
+            /* The table scrolls horizontally rather than being squeezed. */
+            .vt-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+            .vt-head, .vt-row, .vt-skel{ min-width:640px; } }
 
           @media (prefers-reduced-motion:reduce){ *{ animation-duration:.001ms !important;
-            transition-duration:.001ms !important; } }
+            animation-iteration-count:1 !important; transition-duration:.001ms !important; } }
 
         </style>
         """,
@@ -559,53 +748,85 @@ def fmt_int(n) -> str:
         return str(n)
 
 
+def fmt_pct(part, whole, decimals: int = 1) -> str:
+    """One decimal place, always. Never a raw float.
+
+    The app used to mix `round(x, 1)` and `round(x)` for the same metric, so the
+    deliverable rate rendered as "82.4%" on one screen and "82%" on another.
+    """
+    try:
+        whole = float(whole)
+        if whole <= 0:
+            return "—"
+        return f"{float(part) / whole * 100:.{decimals}f}%"
+    except (TypeError, ValueError, ZeroDivisionError):
+        return "—"
+
+
+def pct_parts(values: dict, decimals: int = 1) -> dict:
+    """Percentages that sum to exactly 100 after rounding.
+
+    Largest-remainder method: round every share down, then hand the leftover
+    units to the largest remainders. Without this the four verdict shares can
+    display as 99.9% or 100.1% of a total the user can see for themselves.
+    """
+    total = sum(max(0, float(v or 0)) for v in values.values())
+    if total <= 0:
+        return {k: 0.0 for k in values}
+    scale = 10 ** decimals
+    exact = {k: max(0, float(v or 0)) / total * 100 * scale for k, v in values.items()}
+    floors = {k: int(v) for k, v in exact.items()}
+    leftover = round(100 * scale) - sum(floors.values())
+    order = sorted(exact, key=lambda k: exact[k] - floors[k], reverse=True)
+    for k in order[:max(0, leftover)]:
+        floors[k] += 1
+    return {k: v / scale for k, v in floors.items()}
+
+
 # --------------------------------------------------------------------------- #
 # Reusable HTML components
 # --------------------------------------------------------------------------- #
-_grad_seq = [0]
+def sparkline(values: list[float], color: str = BLUE, w: int = 320, h: int = 48) -> str:
+    """A quiet line sparkline as inline SVG, scaled to the data.
 
-
-def sparkline(values: list[float], color: str = BLUE, w: int = 320, h: int = 60,
-              on_dark: bool = False) -> str:
-    """A bold area+line sparkline as inline SVG, scaled to the data."""
+    Returns "" for a series with fewer than two real points rather than
+    inventing a shape — a placeholder curve reads as data the user doesn't have.
+    """
     vals = [float(v) for v in values if v is not None]
     if len(vals) < 2:
-        vals = [1.0, 1.0, 1.2, 1.1, 1.4]
+        return ""
     lo, hi = min(vals), max(vals)
     rng = (hi - lo) or 1.0
-    n = len(vals)
-    step = w / (n - 1)
-    pad = 6
+    step = w / (len(vals) - 1)
+    pad = 5
     pts = [(i * step, h - pad - ((v - lo) / rng) * (h - 2 * pad)) for i, v in enumerate(vals)]
     line = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
     area = f"M0,{h} " + " ".join(f"L{x:.1f},{y:.1f}" for x, y in pts) + f" L{w},{h} Z"
-    _grad_seq[0] += 1
-    gid = f"sg{_grad_seq[0]}"
-    stroke = "#ffffff" if on_dark else color
-    top_op = "0.35" if on_dark else "0.22"
     ex, ey = pts[-1]
     return (
         f'<svg viewBox="0 0 {w} {h}" width="100%" height="{h}" preserveAspectRatio="none" '
-        f'style="display:block;overflow:visible">'
-        f'<defs><linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1">'
-        f'<stop offset="0" stop-color="{stroke}" stop-opacity="{top_op}"/>'
-        f'<stop offset="1" stop-color="{stroke}" stop-opacity="0"/></linearGradient></defs>'
-        f'<path d="{area}" fill="url(#{gid})"/>'
-        f'<polyline points="{line}" fill="none" stroke="{stroke}" stroke-width="2.75" '
-        f'stroke-linecap="round" stroke-linejoin="round"/>'
-        f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="3.4" fill="{stroke}"/></svg>'
+        f'style="display:block" aria-hidden="true">'
+        f'<path d="{area}" fill="{color}" fill-opacity="0.07"/>'
+        f'<polyline points="{line}" fill="none" stroke="{color}" stroke-width="1.75" '
+        f'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'
+        f'<circle cx="{ex:.1f}" cy="{ey:.1f}" r="2.5" fill="{color}"/></svg>'
     )
 
 
-def status_tag(status: str) -> str:
+def status_tag(status: str, sub: bool = True) -> str:
+    """The one status indicator. Dot + label; label carries the meaning.
+
+    `disposable` / `spam_trap` render as Undeliverable with their specificity as
+    grey secondary text, so the four verdict colours stay 1:1 with four labels.
+    """
     s = str(status)
-    d = STATUS.get(s, STATUS["unknown"])
-    return (f'<span class="stag" style="color:{d["txt"]}">'
-            f'<span class="d" style="background:{d["dot"]}"></span>{_e(d["label"])}</span>')
-
-
-def badge(status: str) -> str:  # kept for compatibility
-    return status_tag(status)
+    v = verdict(s)
+    d = PRIMARY[v]
+    reason = SUB_REASON.get(s) if sub else None
+    tail = f'<span class="sreason">{_e(reason)}</span>' if reason else ""
+    return (f'<span class="stag" style="color:{d["c"]}">'
+            f'<span class="d" style="background:{d["c"]}"></span>{_e(d["label"])}</span>'
+            f'{" " + tail if tail else ""}')
 
 
 def score_bar(score, status: str | None = None) -> str:
@@ -613,8 +834,9 @@ def score_bar(score, status: str | None = None) -> str:
         pct = max(0, min(100, int(score)))
     except (TypeError, ValueError):
         pct = 0
-    color = STATUS_DOT.get(str(status), BLUE) if status else BLUE
-    return (f'<span class="sbar"><span class="track"><i style="width:{pct}%;background:{color}"></i></span>'
+    color = status_color(status) if status else BLUE
+    return (f'<span class="sbar"><span class="track">'
+            f'<i style="width:{pct}%;background:{color}"></i></span>'
             f'<span class="n num">{pct}</span></span>')
 
 
@@ -642,131 +864,174 @@ def card(title: str | None = None, count: str = "", right_html: str = ""):
 
 
 def stat_card(label: str, value: str, foot: str = "", spark_vals=None, delta: str = "",
-              delta_up: bool = True, accent: str | None = None, icon_name: str = "",
-              hero: bool = False) -> str:
-    if hero:
-        cls, style = "stat hero", ""
-    elif accent:
-        cls, style = "stat brd", f' style="border-left-color:{accent}"'
+              delta_up: bool | None = True, accent: str | None = None,
+              icon_name: str = "") -> str:
+    """A KPI tile.
+
+    `delta` is only ever a *change*, never a share of total — pass share-of-total
+    through `foot`. `delta_up=None` renders the neutral style for a flat or
+    non-directional value, so nothing shows a green up-arrow it hasn't earned.
+    """
+    cls = "stat brd" if accent else "stat"
+    style = f' style="border-left-color:{accent}"' if accent else ""
+    gl = f'<span class="g">{icon(icon_name, 15)}</span>' if icon_name else ""
+    if delta:
+        tone = "flat" if delta_up is None else ("up" if delta_up else "dn")
+        arrow = "" if delta_up is None else icon("trendup" if delta_up else "trenddown", 12)
+        delta_html = f'<span class="d {tone}">{arrow}{_e(delta)}</span>'
     else:
-        cls, style = "stat", ""
-    gl = f'<span class="g">{icon(icon_name or "dots", 16)}</span>'
-    delta_html = (f'<span class="d {"up" if delta_up else "dn"}">'
-                  f'{icon("trendup", 13)}{_e(delta)}</span>') if delta else ""
-    spark_html = (f'<div class="spark">{sparkline(spark_vals, on_dark=hero)}</div>'
-                  if spark_vals else "")
-    foot_html = f'<div class="foot">{foot}</div>' if foot and not spark_vals else ""
+        delta_html = ""
+    spark_svg = sparkline(spark_vals) if spark_vals else ""
+    spark_html = f'<div class="spark">{spark_svg}</div>' if spark_svg else ""
+    foot_html = f'<div class="foot">{foot}</div>' if foot else ""
     return (f'<div class="{cls}"{style}><div class="l">{_e(label)}{gl}</div>'
             f'<div class="v">{value}{delta_html}</div>{foot_html}{spark_html}</div>')
 
 
 def mini_bar(counts: dict) -> str:
-    total = sum(counts.get(k, 0) for k in STATUS_ORDER) or 1
+    """Stacked share bar. Segment colours are exactly the four status colours."""
+    totals = verdict_totals(counts)
+    total = sum(totals.values())
+    if not total:
+        return '<div class="mbar"></div>'
     segs = "".join(
-        f'<i style="width:{counts.get(k, 0) / total * 100:.1f}%;background:{STATUS_DOT[k]}"></i>'
-        for k in STATUS_ORDER if counts.get(k, 0)
+        f'<i style="width:{totals[v] / total * 100:.1f}%;background:{PRIMARY[v]["c"]}" '
+        f'title="{PRIMARY[v]["label"]}: {fmt_int(totals[v])}"></i>'
+        for v in VERDICT_ORDER if totals[v]
     )
     return f'<div class="mbar">{segs}</div>'
 
 
 def _avatar_color(seed: str) -> str:
-    palette = ["#2e90fa", "#12b76a", "#f79009", "#7a5af8", "#ec4899", "#06aed4", "#f04438", "#0ba5ec"]
-    return palette[sum(ord(c) for c in seed) % len(palette)]
+    """Neutral ramp only.
+
+    This used to return one of eight hues (purple, pink, cyan…) that existed
+    nowhere in the theme, and rendered as dots directly beside status dots — a
+    second dot system that carried no meaning.
+    """
+    return (N100, N150, N200)[sum(ord(c) for c in seed) % 3]
 
 
 # --------------------------------------------------------------------------- #
 # Charts
 # --------------------------------------------------------------------------- #
-def _axis_font(a):
-    return a
+def verdict_totals(status_totals: dict) -> dict:
+    """Collapse the six engine statuses onto the four primary verdicts.
+
+    Every chart and legend consumes this, so a segment can never exist without a
+    matching legend row — the donut used to draw all six while the legend listed
+    four, leaving two same-coloured slices unexplained and the percentages
+    summing to 87.5%.
+    """
+    out = {v: 0 for v in VERDICT_ORDER}
+    for status, n in status_totals.items():
+        if status in VERDICT_OF:
+            out[verdict(status)] += int(n or 0)
+    return out
 
 
 def donut_chart(status_totals: dict, height: int = 200):
+    totals = verdict_totals(status_totals)
     df = pd.DataFrame({
-        "raw": STATUS_ORDER,
-        "status": [STATUS_LABEL[s] for s in STATUS_ORDER],
-        "count": [status_totals.get(s, 0) for s in STATUS_ORDER],
+        "verdict": VERDICT_ORDER,
+        "status": [PRIMARY[v]["label"] for v in VERDICT_ORDER],
+        "count": [totals[v] for v in VERDICT_ORDER],
     })
     df = df[df["count"] > 0]
     if df.empty:
         return None
     total = int(df["count"].sum())
-    total_txt = f"{total / 1000:.1f}K" if total >= 1000 else str(total)
     arc = (
         alt.Chart(df)
-        .mark_arc(innerRadius=62, cornerRadius=4, stroke="#fffdf9", strokeWidth=3)
+        # Separator matches the card surface exactly. A near-white stroke used to
+        # leave a visible seam between segments.
+        .mark_arc(innerRadius=58, cornerRadius=2, stroke=N0, strokeWidth=2)
         .encode(
             theta=alt.Theta("count:Q", stack=True),
             color=alt.Color(
                 "status:N",
                 scale=alt.Scale(
-                    domain=[STATUS_LABEL[s] for s in STATUS_ORDER],
-                    range=[STATUS_DOT[s] for s in STATUS_ORDER],
+                    domain=[PRIMARY[v]["label"] for v in VERDICT_ORDER],
+                    range=[PRIMARY[v]["c"] for v in VERDICT_ORDER],
                 ),
                 legend=None,
             ),
-            tooltip=[alt.Tooltip("status:N", title="Status"), alt.Tooltip("count:Q", title="Count")],
+            order=alt.Order("count:Q", sort="descending"),
+            tooltip=[alt.Tooltip("status:N", title="Status"),
+                     alt.Tooltip("count:Q", title="Addresses", format=",")],
         )
     )
-    big = alt.Chart(pd.DataFrame({"t": [total_txt]})).mark_text(
-        fontSize=26, fontWeight="bold", color="#101014", dy=-6).encode(text="t:N")
-    small = alt.Chart(pd.DataFrame({"t": ["validated"]})).mark_text(
-        fontSize=11, color="#79756c", dy=16).encode(text="t:N")
+    big = alt.Chart(pd.DataFrame({"t": [fmt_int(total)]})).mark_text(
+        fontSize=22, fontWeight=600, color=N900, dy=-7).encode(text="t:N")
+    small = alt.Chart(pd.DataFrame({"t": ["addresses"]})).mark_text(
+        fontSize=11, color=AX_LABEL, dy=13).encode(text="t:N")
     return (arc + big + small).properties(height=height)
 
 
-def volume_area(by_date: dict, height: int = 280):
+def _axis_x(**kw):
+    """Shared x-axis: one neutral ramp for every chart in the app."""
+    base = dict(grid=False, labelColor=AX_LABEL, domainColor=AX_LINE, tickColor=AX_LINE,
+                labelFontSize=11)
+    base.update(kw)
+    return alt.Axis(**base)
+
+
+def _axis_y(**kw):
+    base = dict(grid=True, gridColor=AX_GRID, labelColor=AX_LABEL, domainOpacity=0,
+                tickOpacity=0, labelFontSize=11)
+    base.update(kw)
+    return alt.Axis(**base)
+
+
+def volume_area(by_date: dict, height: int = 240):
     rows = [{"date": d, "verified": v["verified"]} for d, v in sorted(by_date.items())]
     if not rows:
         return None
     df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"])
-    grad = alt.Gradient(
-        gradient="linear",
-        stops=[alt.GradientStop(color="#2e8fff", offset=0), alt.GradientStop(color="#7ab8ff", offset=0.55),
-               alt.GradientStop(color="#eaf3ff", offset=1)],
-        x1=1, x2=1, y1=0, y2=1,
-    )
     base = alt.Chart(df).encode(
-        x=alt.X("date:T", title=None, axis=alt.Axis(format="%b %d", grid=False, labelColor="#878b95",
-                                                     domainColor="#ecedf1", tickColor="#ecedf1",
-                                                     labelFontWeight=600)),
-        y=alt.Y("verified:Q", title=None, axis=alt.Axis(grid=True, gridColor="#f2f3f6", tickMinStep=1,
-                                                        labelColor="#878b95", domainOpacity=0)),
-        tooltip=[alt.Tooltip("date:T", title="Date"), alt.Tooltip("verified:Q", title="Verified")],
+        x=alt.X("date:T", title=None, axis=_axis_x(format="%b %d")),
+        y=alt.Y("verified:Q", title=None, axis=_axis_y(tickMinStep=1)),
+        tooltip=[alt.Tooltip("date:T", title="Date"),
+                 alt.Tooltip("verified:Q", title="Addresses", format=",")],
     )
-    area = base.mark_area(interpolate="monotone", line={"color": "#2e8fff", "strokeWidth": 3.5},
-                          color=grad, opacity=0.9)
-    pts = base.mark_point(size=64, color="#2e8fff", filled=True, opacity=1, stroke="#fff", strokeWidth=2)
+    # Flat low-opacity fill instead of a three-stop gradient.
+    area = base.mark_area(interpolate="monotone", line={"color": BLUE, "strokeWidth": 2},
+                          color=BLUE, opacity=0.08)
+    pts = base.mark_point(size=36, color=BLUE, filled=True, opacity=1, stroke=N0, strokeWidth=1.5)
     return (area + pts).properties(height=height)
 
 
-def hbar_dist(counts: dict, height: int = 200):
+def hbar_dist(counts: dict, height: int = 190):
+    totals = verdict_totals(counts)
+    labels = [PRIMARY[v]["label"] for v in VERDICT_ORDER]
     df = pd.DataFrame({
-        "raw": STATUS_ORDER,
-        "status": [STATUS_LABEL[s] for s in STATUS_ORDER],
-        "count": [counts.get(s, 0) for s in STATUS_ORDER],
+        "verdict": VERDICT_ORDER,
+        "status": labels,
+        "count": [totals[v] for v in VERDICT_ORDER],
     })
     return (
         alt.Chart(df)
-        .mark_bar(cornerRadiusEnd=5, height=18)
+        .mark_bar(cornerRadiusEnd=2, height=14)
         .encode(
-            x=alt.X("count:Q", title=None, axis=alt.Axis(grid=True, gridColor="#f0eee9", tickMinStep=1,
-                                                         labelColor="#79756c", domainOpacity=0)),
-            y=alt.Y("status:N", sort=[STATUS_LABEL[s] for s in STATUS_ORDER], title=None,
-                    axis=alt.Axis(labelColor="#57534b", domainOpacity=0, tickOpacity=0)),
+            x=alt.X("count:Q", title=None, axis=_axis_y(tickMinStep=1, grid=True)),
+            y=alt.Y("status:N", sort=labels, title=None,
+                    axis=alt.Axis(labelColor=N800, domainOpacity=0, tickOpacity=0,
+                                  labelFontSize=12)),
             color=alt.Color(
-                "raw:N",
-                scale=alt.Scale(domain=STATUS_ORDER, range=[STATUS_DOT[s] for s in STATUS_ORDER]),
+                "verdict:N",
+                scale=alt.Scale(domain=VERDICT_ORDER,
+                                range=[PRIMARY[v]["c"] for v in VERDICT_ORDER]),
                 legend=None,
             ),
-            tooltip=[alt.Tooltip("status:N", title="Status"), alt.Tooltip("count:Q", title="Count")],
+            tooltip=[alt.Tooltip("status:N", title="Status"),
+                     alt.Tooltip("count:Q", title="Addresses", format=",")],
         )
         .properties(height=height)
     )
 
 
-def weekday_bar(by_date: dict, height: int = 230):
+def weekday_bar(by_date: dict, height: int = 210):
     rows = [{"date": d, "verified": v["verified"]} for d, v in by_date.items()]
     if not rows:
         return None
@@ -780,14 +1045,18 @@ def weekday_bar(by_date: dict, height: int = 230):
     agg["hl"] = agg.index == peak
     return (
         alt.Chart(agg)
-        .mark_bar(cornerRadius=6, width=42)
+        .mark_bar(cornerRadius=2, width=32)
         .encode(
             x=alt.X("day:N", sort=names, title=None,
-                    axis=alt.Axis(labelColor="#79756c", domainOpacity=0, tickOpacity=0, labelAngle=0)),
+                    axis=alt.Axis(labelColor=AX_LABEL, domainColor=AX_LINE, tickOpacity=0,
+                                  labelAngle=0, labelFontSize=11)),
             y=alt.Y("verified:Q", title=None, axis=None),
-            color=alt.Color("hl:N", scale=alt.Scale(domain=[True, False], range=["#2e90fa", "#d6ecff"]),
+            # Accent marks the peak; every other bar is neutral. Two tones, not
+            # a second hue.
+            color=alt.Color("hl:N", scale=alt.Scale(domain=[True, False], range=[BLUE, N300]),
                             legend=None),
-            tooltip=[alt.Tooltip("day:N", title="Weekday"), alt.Tooltip("verified:Q", title="Verified")],
+            tooltip=[alt.Tooltip("day:N", title="Weekday"),
+                     alt.Tooltip("verified:Q", title="Addresses", format=",")],
         )
         .properties(height=height)
     )
@@ -959,7 +1228,7 @@ def render_sidebar() -> None:
         )
 
         live = "dot-live" if api_ok else ""
-        color = "#12b76a" if api_ok else "#f04438"
+        color = PRIMARY["deliverable"]["c"] if api_ok else PRIMARY["undeliverable"]["c"]
         st.markdown(
             f'<div class="side-foot"><div class="avatar">PK</div>'
             f'<div style="flex:1;min-width:0"><div class="nm">Pranav Kumar</div>'
@@ -1040,7 +1309,7 @@ def page_dashboard() -> None:
     st.markdown(
         '<div class="cards c3">'
         + stat_card("Total validated", fmt_int(verified), spark_vals=series,
-                    delta=f'{fmt_int(total_valid)} valid', delta_up=True, hero=True)
+                    foot=f'{fmt_int(total_valid)} deliverable')
         + stat_card("Deliverable rate", f'{valid_rate}%', spark_vals=valid_series or series)
         + stat_card("Avg. quality score", str(avg_score), spark_vals=series)
         + "</div>",
@@ -1093,7 +1362,7 @@ def page_dashboard() -> None:
                 f'<a class="card" style="display:flex;align-items:center;gap:14px;padding:14px 18px;'
                 f'text-decoration:none;color:inherit;margin-bottom:8px" target="_self" '
                 f'href="?page=validate&resume={r["id"]}">'
-                f'<span style="color:var(--blue-2)">{icon("clock", 20)}</span>'
+                f'<span style="color:var(--blue)">{icon("clock", 20)}</span>'
                 f'<div><div class="em">{_e(r["filename"])}</div>'
                 f'<div class="muted">verifying… {done}/{total}</div></div>'
                 f'<span class="sp" style="margin-left:auto"></span>'
@@ -1157,7 +1426,7 @@ def page_validate() -> None:
         size_str = f"{size / 1_048_576:.1f} MB" if size > 1_048_576 else f"{size / 1024:.1f} KB"
         st.markdown(
             f'<div class="card"><div class="card-b" style="display:flex;align-items:center;gap:14px">'
-            f'<span style="color:var(--blue-2)">{icon("file", 26)}</span>'
+            f'<span style="color:var(--blue)">{icon("file", 26)}</span>'
             f'<div><div class="em">{_e(upload.name)} '
             f'<span class="pill p-ok" style="margin-left:6px">READY</span></div>'
             f'<div class="muted">{len(cols)} columns · delimiter '
@@ -1264,8 +1533,8 @@ def render_results(c: dict, outputs: dict) -> None:
         st.markdown(
             '<div class="card"><div class="card-b" style="display:flex;align-items:center;gap:12px">'
             f'{icon("checkcircle", 22, cls="")}'
-            '<div style="color:var(--green-txt)"></div>'
-            f'<div class="em" style="color:var(--ink)">Validation complete · saved to history</div>'
+            '<div style="color:var(--st-ok)"></div>'
+            f'<div class="em" style="color:var(--text-1)">Validation complete · saved to history</div>'
             f'<span class="sp" style="margin-left:auto"></span></div></div>',
             unsafe_allow_html=True,
         )
@@ -1277,7 +1546,7 @@ def render_results(c: dict, outputs: dict) -> None:
         return (f'<div class="stat brd" style="border-left-color:{d["dot"]}">'
                 f'<div class="l"><span class="dot" style="background:{d["dot"]}"></span>{label}</div>'
                 f'<div class="v">{fmt_int(val)}'
-                f'<span class="d" style="color:var(--faint);font-weight:600">{pct}%</span></div>'
+                f'<span class="d" style="color:var(--text-4);font-weight:600">{pct}%</span></div>'
                 f'<div class="foot">{sub}</div></div>')
 
     st.markdown(
@@ -1362,7 +1631,7 @@ def page_single() -> None:
         rc = st.session_state.get("recent_checks", [])
         if rc:
             body = "".join(
-                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--line-2)">'
+                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--divider)">'
                 f'<span class="em" style="flex:1">{_e(c["email"])}</span>{status_tag(c["status"])}</div>'
                 for c in rc
             )
@@ -1387,17 +1656,18 @@ def page_single() -> None:
 
 def _ring(score: int, color: str) -> str:
     pct = max(0, min(100, int(score)))
-    r = 27
+    r = 24
     circ = 2 * 3.14159 * r
     off = circ * (1 - pct / 100)
     return (
-        f'<svg width="64" height="64" viewBox="0 0 64 64">'
-        f'<circle cx="32" cy="32" r="{r}" fill="none" stroke="#f0eee9" stroke-width="6"/>'
-        f'<circle cx="32" cy="32" r="{r}" fill="none" stroke="{color}" stroke-width="6" '
+        f'<svg width="56" height="56" viewBox="0 0 56 56">'
+        f'<circle cx="28" cy="28" r="{r}" fill="none" stroke="{N100}" stroke-width="4"/>'
+        f'<circle cx="28" cy="28" r="{r}" fill="none" stroke="{color}" stroke-width="4" '
         f'stroke-linecap="round" stroke-dasharray="{circ:.1f}" stroke-dashoffset="{off:.1f}" '
-        f'transform="rotate(-90 32 32)"/>'
-        f'<text x="32" y="32" text-anchor="middle" dominant-baseline="central" '
-        f'font-size="18" font-weight="700" fill="#101014">{pct}</text></svg>'
+        f'transform="rotate(-90 28 28)"/>'
+        f'<text x="28" y="28" text-anchor="middle" dominant-baseline="central" '
+        f'font-size="15" font-weight="640" fill="{N900}" '
+        f'style="font-variant-numeric:tabular-nums">{pct}</text></svg>'
     )
 
 
@@ -1439,7 +1709,7 @@ def _render_single_verdict(v: dict) -> None:
         if status in ("invalid", "disposable", "spam_trap") and title in ("SMTP mailbox",):
             ic, col = icon("x", 20), STATUS["invalid"]["dot"]
         elif not ok and title in ("Catch-all domain", "Disposable", "Role account", "Free provider"):
-            ic, col = icon("minus", 20), "#a8a29e"
+            ic, col = icon("minus", 20), N500
         elif ok:
             ic, col = icon("checkcircle", 20), STATUS["valid"]["dot"]
         else:
@@ -1452,8 +1722,8 @@ def _render_single_verdict(v: dict) -> None:
         f'<div class="verdict"><div class="ring">{_ring(v.get("score", 0), d["dot"])}</div>'
         f'<div style="flex:1"><div class="em">{_e(v["email"])} &nbsp;{status_tag(status)}</div>'
         f'<div class="su">{_e(subtitle)}</div></div></div>'
-        f'<div class="card-h" style="border-top:1px solid var(--line-2);padding:12px 20px">'
-        f'<h4 style="font-size:12px;letter-spacing:.04em;color:var(--faint);text-transform:uppercase">'
+        f'<div class="card-h" style="border-top:1px solid var(--divider);padding:12px 20px">'
+        f'<h4 style="font-size:12px;letter-spacing:.04em;color:var(--text-4);text-transform:uppercase">'
         f'Verification breakdown</h4></div>{rows}</div>',
         unsafe_allow_html=True,
     )
@@ -1589,20 +1859,16 @@ def page_analytics() -> None:
                 st.caption("Not enough activity yet.")
             else:
                 act["rate"] = (act["valid"] / act["verified"].replace(0, 1) * 100).round(1)
-                grad = alt.Gradient(gradient="linear",
-                                    stops=[alt.GradientStop(color="#eaf6ff", offset=0),
-                                           alt.GradientStop(color="#2e90fa", offset=1)],
-                                    x1=1, x2=1, y1=1, y2=0)
                 ch = alt.Chart(act).mark_area(
-                    interpolate="monotone", line={"color": "#2e90fa", "strokeWidth": 2.5}, color=grad
+                    interpolate="monotone", line={"color": BLUE, "strokeWidth": 2},
+                    color=BLUE, opacity=0.08,
                 ).encode(
-                    x=alt.X("date:T", title=None, axis=alt.Axis(format="%b", grid=False, labelColor="#79756c",
-                                                                domainColor="#e7e4de", tickColor="#e7e4de")),
+                    x=alt.X("date:T", title=None, axis=_axis_x(format="%b %d")),
                     y=alt.Y("rate:Q", title=None, scale=alt.Scale(domain=[0, 100]),
-                            axis=alt.Axis(grid=True, gridColor="#f0eee9", labelColor="#79756c",
-                                          domainOpacity=0)),
-                    tooltip=[alt.Tooltip("date:T", title="Day"), alt.Tooltip("rate:Q", title="Valid %")],
-                ).properties(height=230)
+                            axis=_axis_y(format="d")),
+                    tooltip=[alt.Tooltip("date:T", title="Day"),
+                             alt.Tooltip("rate:Q", title="Deliverable %", format=".1f")],
+                ).properties(height=210)
                 st.altair_chart(ch, use_container_width=True)
 
     with right:
@@ -1726,8 +1992,8 @@ def page_export() -> None:
                     f'<span class="muted num">{fmt_int(c.get("unique_emails", 0))}</span>',
                     '<span class="tag">CSV</span>',
                     f'<span class="muted">{_e(when)}</span>',
-                    '<span class="stag" style="color:var(--green-txt)">'
-                    '<span class="d" style="background:var(--green)"></span>Ready</span>',
+                    '<span class="stag" style="color:var(--st-ok)">'
+                    '<span class="d" style="background:var(--st-ok)"></span>Ready</span>',
                 ]})
             render_results_table(rows, [
                 ("Export", "2.4fr"), ("Segment", "1fr"), ("Rows", "0.8fr"),
@@ -1765,7 +2031,7 @@ def page_history() -> None:
                 rows.append({"href": f'?page=history&id={r["id"]}', "cells": [
                     f'<span class="em">{icon("file", 15)} {_e(r["filename"])}</span>',
                     f'<span class="muted num">{fmt_int(c.get("total_rows", 0))}</span>',
-                    f'<span style="color:var(--green-txt);font-weight:650">{rate}%</span>',
+                    f'<span style="color:var(--st-ok);font-weight:650">{rate}%</span>',
                     mini_bar(c),
                     f'<span class="muted">{_e(when)}</span>',
                 ]})
@@ -1872,13 +2138,13 @@ def page_settings() -> None:
             st.markdown(
                 f'<div class="card"><div class="card-h bd"><h4>Engine status</h4>'
                 f'<span class="sp"><span class="pill p-ok"><span class="dot dot-live" '
-                f'style="background:var(--green)"></span>Online</span></span></div><div class="card-b">'
+                f'style="background:var(--st-ok)"></span>Online</span></span></div><div class="card-b">'
                 f'<div class="brk-row" style="padding:11px 0;border:0"><span class="ttl">Version</span>'
                 f'<span class="ds" style="margin-left:auto">v{_e(health.get("version"))}</span></div>'
-                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--line-2)">'
+                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--divider)">'
                 f'<span class="ttl">DNS / MX</span><span class="sp" style="margin-left:auto"></span>'
                 f'<span class="pill {"p-ok" if dns_on else "p-off"}">{"ON" if dns_on else "OFF"}</span></div>'
-                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--line-2)">'
+                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--divider)">'
                 f'<span class="ttl">SMTP probe</span><span class="sp" style="margin-left:auto"></span>'
                 f'<span class="pill {"p-ok" if smtp_on else "p-off"}">'
                 f'{"ON" if smtp_on else "OFF"}</span></div>'
@@ -1888,7 +2154,8 @@ def page_settings() -> None:
         else:
             st.markdown(
                 f'<div class="card"><div class="card-b"><div class="empty" style="padding:32px 20px">'
-                f'<div class="eico" style="background:#fdeceb;color:#b42318">{icon("x", 24)}</div>'
+                f'<div class="eico" style="background:var(--st-bad-soft);'
+                f'color:var(--st-bad);border-color:var(--st-bad-soft)">{icon("x", 20)}</div>'
                 f'<h4>API offline</h4><p>Start the service and refresh this page.</p></div></div></div>',
                 unsafe_allow_html=True,
             )
@@ -1971,7 +2238,7 @@ def page_process() -> None:
     for idx, (status, desc) in enumerate(meanings):
         block = (
             f'<div class="fact" style="margin-bottom:12px">{status_tag(status)}'
-            f'<div style="margin-top:8px;color:var(--muted);font-size:13.5px;line-height:1.55">'
+            f'<div style="margin-top:8px;color:var(--text-3);font-size:13.5px;line-height:1.55">'
             f'{_e(desc)}</div></div>'
         )
         (left_cards := left_cards + block) if idx < half else (right_cards := right_cards + block)
