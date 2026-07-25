@@ -1173,7 +1173,7 @@ page = st.query_params.get("page", "dashboard")
 def render_sidebar() -> None:
     with st.sidebar:
         st.markdown(
-            f'<div class="brand"><span class="mark">{icon("checkcircle", 17, 2.2)}</span>'
+            f'<div class="brand"><span class="mark">{icon("checkcircle", 16, 2.2)}</span>'
             f'<span class="brand-word">valid<b>row</b></span></div>'
             f'<div class="searchbox">{icon("search", 16)}<span class="ph">Search</span>'
             f'<span class="kbd">⌘K</span></div>',
@@ -1221,9 +1221,9 @@ def render_sidebar() -> None:
         # Footer nav — Support routes to "How it works", Settings to connection.
         st.markdown(
             f'<a class="nav {"active" if page == "process" else ""}" target="_self" href="?page=process">'
-            f'{icon("life", 20)}<span>Support</span></a>'
+            f'{icon("life", 18)}<span>Support</span></a>'
             f'<a class="nav {"active" if page == "settings" else ""}" target="_self" href="?page=settings">'
-            f'{icon("settings", 20)}<span>Settings</span></a>',
+            f'{icon("settings", 18)}<span>Settings</span></a>',
             unsafe_allow_html=True,
         )
 
@@ -1252,30 +1252,152 @@ def link_btn(label: str, href: str, ic: str = "", primary: bool = False) -> str:
             f'<span>{_e(label)}</span></a>')
 
 
-def empty_state(ic: str, title: str, body: str, cta_label: str = "", cta_href: str = "") -> None:
-    cta = (f'<div style="margin-top:18px">{link_btn(cta_label, cta_href, "arrow", primary=True)}</div>'
-           if cta_label else "")
-    st.markdown(
-        f'<div class="card"><div class="empty"><div class="eico">{icon(ic, 26)}</div>'
-        f'<h4>{_e(title)}</h4><p>{_e(body)}</p>{cta}</div></div>',
-        unsafe_allow_html=True,
-    )
+def empty_state(ic: str, title: str, body: str, cta_label: str = "", cta_href: str = "",
+                bare: bool = False) -> None:
+    """Short headline, one sentence of guidance, one primary action.
+
+    `bare=True` omits the card wrapper, for use inside an existing container —
+    cards inside cards is the most common "not premium" tell.
+    """
+    cta = (f'<div style="margin-top:var(--s4)">'
+           f'{link_btn(cta_label, cta_href, "arrow", primary=True)}</div>' if cta_label else "")
+    inner = (f'<div class="empty"><div class="eico">{icon(ic, 20)}</div>'
+             f'<h4>{_e(title)}</h4><p>{_e(body)}</p>{cta}</div>')
+    st.markdown(inner if bare else f'<div class="card">{inner}</div>', unsafe_allow_html=True)
 
 
 def render_results_table(rows: list[dict], cols_spec: list[tuple[str, str]]) -> None:
-    """v3 email/results table. cols_spec = [(header, grid_fraction), ...]."""
+    """Compact HTML list view, for short navigable lists whose rows are links.
+
+    Dense address data uses `results_dataframe()` instead — it virtualises and so
+    handles a 50,000-row result set, which this cannot. This stays for the run and
+    export lists, where the whole row is a link into a detail route and the row
+    count is in the dozens.
+
+    cols_spec = [(header, grid_fraction), ...]; a header ending in a numeric
+    marker gets right-aligned tabular figures.
+    """
     grid = " ".join(f for _, f in cols_spec)
-    head = "".join(f"<span>{_e(h)}</span>" for h, _ in cols_spec)
+    head = "".join(
+        f'<span class="{"num-cell" if num else ""}">{_e(h)}</span>' for h, num in
+        ((h, _is_num_col(h)) for h, _ in cols_spec)
+    )
     body = ""
     for r in rows:
-        cells = "".join(f"<div>{r['cells'][i]}</div>" for i in range(len(cols_spec)))
+        cells = "".join(
+            f'<div class="{"num-cell" if _is_num_col(cols_spec[i][0]) else ""}">'
+            f'{r["cells"][i]}</div>'
+            for i in range(len(cols_spec))
+        )
         href = r.get("href")
         tag = "a" if href else "div"
         hattr = f' href="{href}" target="_self"' if href else ""
         body += f'<{tag} class="vt-row" style="grid-template-columns:{grid}"{hattr}>{cells}</{tag}>'
     st.markdown(
-        f'<div class="vt"><div class="vt-head" style="grid-template-columns:{grid}">{head}</div>{body}</div>',
+        f'<div class="vt-scroll"><div class="vt">'
+        f'<div class="vt-head" style="grid-template-columns:{grid}">{head}</div>{body}</div></div>',
         unsafe_allow_html=True,
+    )
+
+
+# Column headers whose values are numeric, and so are right-aligned with tabular
+# figures. Email addresses and labels stay left-aligned; nothing is centred.
+_NUM_COLS = {"rows", "addresses", "deliverable %", "score", "count", "unique"}
+
+
+def _is_num_col(header: str) -> bool:
+    return header.strip().lower() in _NUM_COLS
+
+
+# A geometric shape (U+25CF), not an emoji — it renders monochrome in the cell's
+# own text colour, so the status reads as the same dot + label in st.dataframe as
+# it does in the custom HTML, with one definition of the colour behind both.
+DOT = "●"
+
+# Pandas refuses to style a frame beyond this many cells, and Streamlit surfaces
+# that as an exception. Raise the ceiling, then apply our own budget below.
+pd.set_option("styler.render.max_elements", 2_000_000)
+
+# Styling cost is linear in cells and paid on *every* rerun — and Streamlit
+# reruns the whole script on every keystroke in the filter box. Measured on this
+# machine: ~0.66s at 350k cells, ~2.7s at 1.4M. This budget keeps a 50,000-row
+# result set (the size we test against) inside ~0.8s while refusing to make the
+# filter box laggy on something pathological.
+STYLE_CELL_BUDGET = 500_000
+
+
+def styled_table(table: pd.DataFrame, status_colors: list, grey_cols: tuple = ()):
+    """Apply status colour to a table, or return it plain if that's too costly.
+
+    Above the cell budget the colour is dropped but the dot and label remain. That
+    degradation is safe precisely because the label — never the colour — carries
+    the meaning; it's the same property that makes the table readable with a
+    red/green colour vision deficiency.
+    """
+    if table.size > STYLE_CELL_BUDGET:
+        return table
+
+    def _paint(col: pd.Series):
+        if col.name == "Status":
+            return [f"color:{c}" for c in status_colors]
+        if col.name in grey_cols:
+            return [f"color:{N600}"] * len(col)
+        return [""] * len(col)
+
+    return table.style.apply(_paint, axis=0)
+
+
+def status_cell(status) -> str:
+    return f"{DOT}  {status_label(status)}"
+
+
+def reason_cell(row) -> str:
+    """Sub-reason as secondary text: the engine's sub_status, a typo suggestion,
+    or the specificity carried by disposable / spam_trap."""
+    corr = row.get("suggested_correction")
+    if isinstance(corr, str) and corr.strip():
+        return f"Did you mean {corr}"
+    sub = str(row.get("sub_status") or "").strip()
+    if sub and sub.lower() not in {"ok", "none", "nan"}:
+        return sub
+    return SUB_REASON.get(str(row.get("email_status", "")), "")
+
+
+def results_dataframe(df: pd.DataFrame, email_col: str | None = None,
+                      key: str | None = None, max_height: int = 460) -> None:
+    """The results table — the core data view.
+
+    Native `st.dataframe` rather than hand-built HTML: it virtualises, so the
+    whole result set is scrollable instead of capped at the first 60 rows, and it
+    gives a sticky header, resizable columns and per-column alignment for free.
+
+    Status colour comes from the one status definition, applied through a Styler
+    so the table, the summary cards and the chart legend cannot drift apart.
+    """
+    ecol = email_col if email_col in df.columns else (
+        "normalized_email" if "normalized_email" in df.columns else df.columns[0])
+    view = pd.DataFrame({
+        "Email": df[ecol].astype(str),
+        "Status": [status_cell(s) for s in df.get("email_status", "")],
+        "Reason": [reason_cell(r) for _, r in df.iterrows()],
+        "Score": pd.to_numeric(df.get("score", 0), errors="coerce").fillna(0).astype(int),
+    })
+    colors = [status_color(s) for s in df.get("email_status", "")]
+    # Row height is fixed by Streamlit, so a 60-character address truncates
+    # rather than wrapping — the row height cannot change.
+    st.dataframe(
+        styled_table(view, colors, grey_cols=("Reason",)),
+        hide_index=True,
+        width="stretch",
+        height=min(max_height, 44 + 35 * max(len(view), 1)),
+        key=key,
+        column_config={
+            "Email": st.column_config.TextColumn("Email", width="large"),
+            "Status": st.column_config.TextColumn("Status", width="small"),
+            "Reason": st.column_config.TextColumn("Reason", width="medium"),
+            "Score": st.column_config.ProgressColumn(
+                "Score", min_value=0, max_value=100, format="%d", width="small"),
+        },
     )
 
 
@@ -1362,7 +1484,7 @@ def page_dashboard() -> None:
                 f'<a class="card" style="display:flex;align-items:center;gap:14px;padding:14px 18px;'
                 f'text-decoration:none;color:inherit;margin-bottom:8px" target="_self" '
                 f'href="?page=validate&resume={r["id"]}">'
-                f'<span style="color:var(--blue)">{icon("clock", 20)}</span>'
+                f'<span style="color:var(--blue)">{icon("clock", 18)}</span>'
                 f'<div><div class="em">{_e(r["filename"])}</div>'
                 f'<div class="muted">verifying… {done}/{total}</div></div>'
                 f'<span class="sp" style="margin-left:auto"></span>'
@@ -1379,7 +1501,7 @@ def stepper(active: int) -> str:
     parts = []
     for i, lab in enumerate(labels, start=1):
         cls = "done" if i < active else ("cur" if i == active else "todo")
-        glyph = icon("check", 15) if i < active else str(i)
+        glyph = icon("check", 14) if i < active else str(i)
         parts.append(f'<div class="step {cls}"><span class="n">{glyph}</span>'
                      f'<span class="t">{lab}</span></div>')
         if i < len(labels):
@@ -1426,7 +1548,7 @@ def page_validate() -> None:
         size_str = f"{size / 1_048_576:.1f} MB" if size > 1_048_576 else f"{size / 1024:.1f} KB"
         st.markdown(
             f'<div class="card"><div class="card-b" style="display:flex;align-items:center;gap:14px">'
-            f'<span style="color:var(--blue)">{icon("file", 26)}</span>'
+            f'<span style="color:var(--blue)">{icon("file", 20)}</span>'
             f'<div><div class="em">{_e(upload.name)} '
             f'<span class="pill p-ok" style="margin-left:6px">READY</span></div>'
             f'<div class="muted">{len(cols)} columns · delimiter '
@@ -1519,45 +1641,43 @@ def poll_and_render_job() -> None:
         render_results(c, outputs)
 
 
-REASON_TEXT = {
-    "valid": "Mailbox exists", "risky": "Catch-all / role", "invalid": "Undeliverable",
-    "unknown": "No answer", "disposable": "Disposable domain", "spam_trap": "Known spam trap",
-}
+def verdict_cards(counts: dict) -> str:
+    """The four verdict summary cards.
+
+    Counts and shares come from the same `verdict_totals` / `pct_parts` pair the
+    donut and legend use, so the four cards, the chart and the table can never
+    disagree — and the four shares sum to exactly 100%.
+    """
+    totals = verdict_totals(counts)
+    shares = pct_parts(totals)
+    subs = {
+        "deliverable": "mailbox confirmed",
+        "risky": "catch-all or role address",
+        "undeliverable": "will bounce — remove",
+        "unknown": "provider gave no answer",
+    }
+    out = ""
+    for v in VERDICT_ORDER:
+        d = PRIMARY[v]
+        out += (f'<div class="stat brd" style="border-left-color:{d["c"]}">'
+                f'<div class="l"><span class="dot" style="background:{d["c"]}"></span>'
+                f'{d["label"]}</div>'
+                f'<div class="v">{fmt_int(totals[v])}'
+                f'<span class="d flat">{shares[v]:.1f}%</span></div>'
+                f'<div class="foot">{subs[v]}</div></div>')
+    return f'<div class="cards c4">{out}</div>'
 
 
 def render_results(c: dict, outputs: dict) -> None:
-    invalid_total = store.invalid_total(c)
-    unique = c["unique_emails"] or 1
-
     if outputs.get("cleaned"):
         st.markdown(
-            '<div class="card"><div class="card-b" style="display:flex;align-items:center;gap:12px">'
-            f'{icon("checkcircle", 22, cls="")}'
-            '<div style="color:var(--st-ok)"></div>'
-            f'<div class="em" style="color:var(--text-1)">Validation complete · saved to history</div>'
-            f'<span class="sp" style="margin-left:auto"></span></div></div>',
+            f'<div class="note note-ok">{icon("checkcircle", 16)}'
+            f'<div>Validation complete — saved to history.</div></div>',
             unsafe_allow_html=True,
         )
         st.write("")
 
-    def vcard(label, val, sub, status):
-        d = STATUS[status]
-        pct = round(val / unique * 100)
-        return (f'<div class="stat brd" style="border-left-color:{d["dot"]}">'
-                f'<div class="l"><span class="dot" style="background:{d["dot"]}"></span>{label}</div>'
-                f'<div class="v">{fmt_int(val)}'
-                f'<span class="d" style="color:var(--text-4);font-weight:600">{pct}%</span></div>'
-                f'<div class="foot">{sub}</div></div>')
-
-    st.markdown(
-        '<div class="cards c4">'
-        + vcard("Valid", c["valid"], "deliverable", "valid")
-        + vcard("Risky", c["risky"], "catch-all / role", "risky")
-        + vcard("Invalid", invalid_total, "undeliverable", "invalid")
-        + vcard("Unknown", c["unknown"], "no answer", "unknown")
-        + "</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(verdict_cards(c), unsafe_allow_html=True)
 
     # Downloads
     dcols = st.columns([1, 1, 1, 2.4])
@@ -1572,36 +1692,57 @@ def render_results(c: dict, outputs: dict) -> None:
                                  width="stretch", icon=":material/download:")
 
     st.write("")
-    with card("Results", count=f'{fmt_int(c["total_rows"])} rows'):
-        if outputs.get("cleaned"):
-            df = pd.read_csv(io.BytesIO(outputs["cleaned"]))
-            email_col = st.session_state.get("detection", {}).get("guessed_email")
-            rows = _results_rows_from_df(df, email_col)
-            if rows:
-                render_results_table(rows, [
-                    ("Email", "2.4fr"), ("Status", "1fr"), ("Reason", "1.6fr"), ("Score", "1.4fr"),
-                ])
-            st.caption(f"Showing {min(len(df), len(rows))} of {len(df)} rows.")
+    if outputs.get("cleaned"):
+        df = pd.read_csv(io.BytesIO(outputs["cleaned"]))
+        email_col = st.session_state.get("detection", {}).get("guessed_email")
+        results_panel(df, email_col, key_prefix="job")
 
 
-def _results_rows_from_df(df: pd.DataFrame, email_col: str | None, limit: int = 60) -> list[dict]:
-    ecol = email_col if email_col in df.columns else (
-        "normalized_email" if "normalized_email" in df.columns else df.columns[0])
-    rows = []
-    for _, r in df.head(limit).iterrows():
-        status = str(r.get("email_status", "unknown"))
-        sub = str(r.get("sub_status") or "") or REASON_TEXT.get(status, "—")
-        corr = r.get("suggested_correction")
-        if isinstance(corr, str) and corr:
-            sub = f'Typo → {corr}'
-        score = r.get("score", 0)
-        rows.append({"cells": [
-            f'<span class="em">{_e(r.get(ecol, ""))}</span>',
-            status_tag(status),
-            f'<span class="muted">{_e(sub)}</span>',
-            score_bar(score, status),
-        ]})
-    return rows
+def results_panel(df: pd.DataFrame, email_col: str | None, key_prefix: str) -> None:
+    """Results table plus its filter bar and export.
+
+    The filter bar is a persistent, quiet row of controls — not a modal — and
+    filters only the already-loaded frame. Export is a primary action, offered
+    beside the filters so it always reflects what is on screen.
+    """
+    with card("Results", count=f"{fmt_int(len(df))} addresses"):
+        fc = st.columns([0.48, 0.34, 0.18], gap="small", vertical_alignment="bottom")
+        with fc[0]:
+            picked = st.segmented_control(
+                "Verdict", ["All"] + [PRIMARY[v]["label"] for v in VERDICT_ORDER],
+                default="All", label_visibility="collapsed", key=f"{key_prefix}_verdict")
+        q = fc[1].text_input("Search", placeholder="Search address or domain…",
+                             label_visibility="collapsed", key=f"{key_prefix}_q")
+
+        statuses = df.get("email_status", pd.Series([""] * len(df)))
+        view = df
+        if picked and picked != "All":
+            want = next(v for v in VERDICT_ORDER if PRIMARY[v]["label"] == picked)
+            view = view[[verdict(s) == want for s in statuses]]
+        if q:
+            ecol = email_col if email_col in view.columns else (
+                "normalized_email" if "normalized_email" in view.columns else view.columns[0])
+            view = view[view[ecol].astype(str).str.contains(q, case=False, na=False)]
+
+        # Secondary: the screen's primary action is the full-set download above,
+        # so only one primary competes per screen.
+        fc[2].download_button(
+            "Export view", view.to_csv(index=False).encode("utf-8"),
+            f"validrow_{key_prefix}.csv", "text/csv", width="stretch",
+            icon=":material/download:", disabled=view.empty, key=f"{key_prefix}_dl")
+
+        if view.empty:
+            # Empty-after-filter reads differently from empty-no-data: the fix is
+            # to widen the filter, not to go and validate something.
+            empty_state("filter", "No addresses match these filters",
+                        "Clear the search or pick a different verdict to see results again.",
+                        bare=True)
+        else:
+            st.markdown(
+                f'<div class="tag" style="margin:var(--s2) 0 var(--s1)">'
+                f'{fmt_int(len(view))} of {fmt_int(len(df))} addresses</div>',
+                unsafe_allow_html=True)
+            results_dataframe(view, email_col, key=f"{key_prefix}_tbl")
 
 
 # --------------------------------------------------------------------------- #
@@ -1644,7 +1785,7 @@ def page_single() -> None:
     with right:
         if not v:
             st.markdown(
-                f'<div class="card"><div class="empty"><div class="eico">{icon("mail", 26)}</div>'
+                f'<div class="card"><div class="empty"><div class="eico">{icon("mail", 20)}</div>'
                 f'<h4>No address checked yet</h4>'
                 '<p>Enter an email and hit Verify. Try a typo like '
                 '<code>john@gmial.com</code> to see the correction in action.</p></div></div>',
@@ -1707,13 +1848,13 @@ def _render_single_verdict(v: dict) -> None:
     rows = ""
     for title, ok, desc in breakdown:
         if status in ("invalid", "disposable", "spam_trap") and title in ("SMTP mailbox",):
-            ic, col = icon("x", 20), STATUS["invalid"]["dot"]
+            ic, col = icon("x", 18), STATUS["invalid"]["dot"]
         elif not ok and title in ("Catch-all domain", "Disposable", "Role account", "Free provider"):
-            ic, col = icon("minus", 20), N500
+            ic, col = icon("minus", 18), N500
         elif ok:
-            ic, col = icon("checkcircle", 20), STATUS["valid"]["dot"]
+            ic, col = icon("checkcircle", 18), STATUS["valid"]["dot"]
         else:
-            ic, col = icon("x", 20), STATUS["invalid"]["dot"]
+            ic, col = icon("x", 18), STATUS["invalid"]["dot"]
         rows += (f'<div class="brk-row"><span class="ic" style="color:{col}">{ic}</span>'
                  f'<span class="ttl">{_e(title)}</span><span class="ds">{_e(desc)}</span></div>')
 
@@ -1748,9 +1889,9 @@ def _status_options(df: pd.DataFrame) -> list[str]:
 
 
 def page_contacts() -> None:
-    page_header("Contacts", "Every verified address across all your uploads, in one place.",
-                right=link_btn("Export", "?page=export", "download")
-                + link_btn("Add contact", "?page=single", "plus", primary=True))
+    page_header("Contacts", "Every address you have validated, across every job.",
+                right=link_btn("Check one address", "?page=single", "target")
+                + link_btn("Validate a list", "?page=validate", "plus", primary=True))
     df = contacts_df
     if df.empty:
         empty_state("users", "No contacts yet",
@@ -1759,70 +1900,89 @@ def page_contacts() -> None:
         return
 
     total = len(df)
-    valid = int((df["status"] == "valid").sum())
-    risky = int((df["status"] == "risky").sum())
-    bounced = int(df["status"].isin(["invalid", "disposable", "spam_trap"]).sum())
+    counts = df["status"].value_counts().to_dict()
+    totals = verdict_totals(counts)
+    shares = pct_parts(totals)
     st.markdown(
         '<div class="cards c4">'
-        + stat_card("Total contacts", fmt_int(total))
-        + stat_card("Deliverable", fmt_int(valid), delta=f'{round(valid / total * 100, 1)}%')
-        + stat_card("Risky", fmt_int(risky), delta=f'{round(risky / total * 100, 1)}%')
-        + stat_card("Bounced / invalid", fmt_int(bounced), delta=f'{round(bounced / total * 100, 1)}%',
-                    delta_up=False)
+        + stat_card("Total addresses", fmt_int(total))
+        + stat_card("Deliverable", fmt_int(totals["deliverable"]),
+                    foot=f'{shares["deliverable"]:.1f}% of all addresses',
+                    accent=PRIMARY["deliverable"]["c"])
+        + stat_card("Risky", fmt_int(totals["risky"]),
+                    foot=f'{shares["risky"]:.1f}% of all addresses',
+                    accent=PRIMARY["risky"]["c"])
+        + stat_card("Undeliverable", fmt_int(totals["undeliverable"]),
+                    foot=f'{shares["undeliverable"]:.1f}% of all addresses',
+                    accent=PRIMARY["undeliverable"]["c"])
         + "</div>",
         unsafe_allow_html=True,
     )
 
     with card():
-        fc1, fc2, fc3 = st.columns([0.34, 0.42, 0.24])
-        with fc1:
+        fc = st.columns([0.46, 0.24, 0.16, 0.14], gap="small", vertical_alignment="bottom")
+        with fc[0]:
             status_filter = st.segmented_control(
-                "Status", ["All", "Valid", "Risky", "Invalid"], default="All",
-                label_visibility="collapsed")
-        q = fc2.text_input("Search", placeholder="Search contacts…", label_visibility="collapsed")
-        sort_by = fc3.selectbox("Sort", ["Recent", "Score ↓", "Score ↑", "Email A–Z"],
-                                label_visibility="collapsed")
+                "Verdict", ["All"] + [PRIMARY[v]["label"] for v in VERDICT_ORDER],
+                default="All", label_visibility="collapsed")
+        q = fc[1].text_input("Search", placeholder="Search address…",
+                             label_visibility="collapsed")
+        sort_by = fc[2].selectbox("Sort", ["Recent", "Score ↓", "Score ↑", "A–Z"],
+                                  label_visibility="collapsed")
 
         view = df
         if q:
-            view = view[view["email"].str.lower().str.contains(q.lower(), na=False)]
+            view = view[view["email"].str.contains(q, case=False, na=False)]
         if status_filter and status_filter != "All":
-            key = {"Valid": ["valid"], "Risky": ["risky"], "Invalid": ["invalid", "disposable", "spam_trap"]}
-            view = view[view["status"].isin(key[status_filter])]
+            want = next(v for v in VERDICT_ORDER if PRIMARY[v]["label"] == status_filter)
+            view = view[[verdict(s) == want for s in view["status"]]]
         view = {
             "Recent": view.sort_values("verified_at", ascending=False),
             "Score ↓": view.sort_values("score", ascending=False),
             "Score ↑": view.sort_values("score", ascending=True),
-            "Email A–Z": view.sort_values("email"),
+            "A–Z": view.sort_values("email"),
         }[sort_by]
 
-        st.markdown(f'<div class="tag" style="margin:6px 0 4px">{fmt_int(len(view))} of '
-                    f'{fmt_int(total)} contacts</div>',
-                    unsafe_allow_html=True)
+        fc[3].download_button(
+            "Export view", view.to_csv(index=False).encode("utf-8"), "validrow_contacts.csv",
+            "text/csv", width="stretch", icon=":material/download:", disabled=view.empty)
 
-        rows = []
-        for _, r in view.head(200).iterrows():
-            email = str(r["email"])
-            name = email.split("@")[0].replace(".", " ").replace("_", " ").title()
-            domain = email.split("@")[-1]
-            seg = r["source"].rsplit(".", 1)[0].replace("_", " ").title()
-            init = "".join(w[0] for w in name.split()[:2]).upper() or "?"
-            rows.append({"cells": [
-                f'<div class="name-cell"><span class="avatar-sm" style="background:{_avatar_color(email)}">'
-                f'{_e(init)}</span><div><div class="nm">{_e(name)}</div>'
-                f'<div class="sub">{_e(email)}</div></div></div>',
-                f'<span class="tag">{_e(domain)}</span>',
-                f'<span class="tag">{_e(seg)}</span>',
-                status_tag(r["status"]),
-                score_bar(r["score"], r["status"]),
-                f'<span class="muted">{_e(r["verified_at"][5:10] or "—")}</span>',
-            ]})
-        render_results_table(rows, [
-            ("Name", "2.4fr"), ("Domain", "1.2fr"), ("Segment", "1.2fr"),
-            ("Status", "1fr"), ("Score", "1.4fr"), ("Last validated", "1fr"),
-        ])
-        if len(view) > 200:
-            st.caption(f"Showing the first 200 — narrow to see the rest ({fmt_int(len(view))} match).")
+        if view.empty:
+            empty_state("filter", "No addresses match these filters",
+                        "Clear the search or pick a different verdict to see addresses again.",
+                        bare=True)
+            return
+
+        st.markdown(
+            f'<div class="tag" style="margin:var(--s2) 0 var(--s1)">'
+            f'{fmt_int(len(view))} of {fmt_int(total)} addresses</div>', unsafe_allow_html=True)
+
+        # Native table: the whole set is scrollable rather than capped at 200.
+        # No Domain column — the address beside it already shows the domain, and
+        # dropping it keeps the frame inside the styling budget at 50k rows.
+        table = pd.DataFrame({
+            "Email": view["email"].astype(str),
+            "Status": [status_cell(s) for s in view["status"]],
+            "Reason": [SUB_REASON.get(str(s), "") for s in view["status"]],
+            "Score": view["score"].astype(int),
+            "Source": view["source"].astype(str),
+            "Validated": view["verified_at"].astype(str).str[:10],
+        })
+        colors = [status_color(s) for s in view["status"]]
+        st.dataframe(
+            styled_table(table, colors, grey_cols=("Reason", "Source", "Validated")),
+            hide_index=True, width="stretch",
+            height=min(560, 44 + 35 * max(len(table), 1)),
+            column_config={
+                "Email": st.column_config.TextColumn("Email", width="large"),
+                "Status": st.column_config.TextColumn("Status", width="small"),
+                "Reason": st.column_config.TextColumn("Reason", width="small"),
+                "Score": st.column_config.ProgressColumn(
+                    "Score", min_value=0, max_value=100, format="%d", width="small"),
+                "Source": st.column_config.TextColumn("Source list", width="medium"),
+                "Validated": st.column_config.TextColumn("Validated", width="small"),
+            },
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -1830,7 +1990,7 @@ def page_contacts() -> None:
 # --------------------------------------------------------------------------- #
 def page_analytics() -> None:
     right = ('<div class="chip-btn">' + icon("calendar", 16)
-             + '<span>All time</span>' + icon("chevdown", 15) + '</div>')
+             + '<span>All time</span>' + icon("chevdown", 14) + '</div>')
     page_header("Analytics",
                 "Deliverability, risk distribution and validation activity over time.", right=right)
     df = contacts_df
@@ -1850,7 +2010,7 @@ def page_analytics() -> None:
             st.markdown(
                 f'<div class="stat" style="border:0;box-shadow:none;padding:0 0 18px;background:none">'
                 f'<div class="l">Deliverable rate over time</div>'
-                f'<div class="v">{valid_rate}%<span class="d up">{icon("trendup", 13)}'
+                f'<div class="v">{valid_rate}%<span class="d up">{icon("trendup", 14)}'
                 f'{valid_rate} pts</span></div></div>',
                 unsafe_allow_html=True,
             )
@@ -1987,7 +2147,7 @@ def page_export() -> None:
                 c = r.get("counts", {})
                 when = (r.get("completed_at") or r.get("created_at") or "").replace("T", " ")[:10]
                 rows.append({"href": f'?page=history&id={r["id"]}', "cells": [
-                    f'<span class="em">{icon("file", 15)} {_e(r["filename"])}</span>',
+                    f'<span class="em">{icon("file", 14)} {_e(r["filename"])}</span>',
                     '<span class="tag">Cleaned</span>',
                     f'<span class="muted num">{fmt_int(c.get("unique_emails", 0))}</span>',
                     '<span class="tag">CSV</span>',
@@ -2012,7 +2172,7 @@ def page_history() -> None:
 
     runs = store.list_runs()
     right = ('<div class="chip-btn">' + icon("calendar", 16) + '<span>All time</span>'
-             + icon("chevdown", 15) + '</div>')
+             + icon("chevdown", 14) + '</div>')
     page_header("History", "Every past validation run, with per-run analytics and downloads.", right=right)
 
     if not runs:
@@ -2029,7 +2189,7 @@ def page_history() -> None:
             if r.get("status") == "completed":
                 rate = round(store.valid_rate(c) * 100)
                 rows.append({"href": f'?page=history&id={r["id"]}', "cells": [
-                    f'<span class="em">{icon("file", 15)} {_e(r["filename"])}</span>',
+                    f'<span class="em">{icon("file", 14)} {_e(r["filename"])}</span>',
                     f'<span class="muted num">{fmt_int(c.get("total_rows", 0))}</span>',
                     f'<span style="color:var(--st-ok);font-weight:650">{rate}%</span>',
                     mini_bar(c),
@@ -2037,7 +2197,7 @@ def page_history() -> None:
                 ]})
             else:
                 rows.append({"href": f'?page=validate&resume={r["id"]}', "cells": [
-                    f'<span class="em">{icon("file", 15)} {_e(r["filename"])}</span>',
+                    f'<span class="em">{icon("file", 14)} {_e(r["filename"])}</span>',
                     f'<span class="muted num">{fmt_int(c.get("total_rows", 0))}</span>',
                     '<span class="pill p-warn">Processing</span>',
                     '',
@@ -2057,61 +2217,54 @@ def page_history_detail(run_id: str) -> None:
         return
 
     c = r.get("counts", {})
-    back = link_btn("Back", "?page=history", "arrow")
-    page_header(r["filename"],
-                f'Validated {(r.get("completed_at") or r.get("created_at") or "").replace("T", " ")[:16]} · '
-                f'status {r.get("status")}', right=back)
-
-    if r.get("status") != "completed":
-        st.info("This run is still processing or did not finish. Open it from the dashboard to resume.")
-        return
-
-    invalid_total = store.invalid_total(c)
-    unique = c.get("unique_emails") or 1
-    st.markdown(
-        '<div class="cards c4">'
-        + stat_card("Unique mailboxes", fmt_int(c.get("unique_emails", 0)),
-                    foot=f'from {fmt_int(c.get("total_rows", 0))} rows')
-        + stat_card("Valid", fmt_int(c.get("valid", 0)), accent=STATUS["valid"]["dot"],
-                    foot=f'{round(c.get("valid", 0) / unique * 100)}% valid rate')
-        + stat_card("Risky", fmt_int(c.get("risky", 0)), foot="catch-all / role",
-                    accent=STATUS["risky"]["dot"])
-        + stat_card("Removed", fmt_int(invalid_total), foot="undeliverable + disposable",
-                    accent=STATUS["invalid"]["dot"])
-        + "</div>",
-        unsafe_allow_html=True,
+    when = (r.get("completed_at") or r.get("created_at") or "").replace("T", " ")[:16]
+    page_header(
+        r["filename"],
+        f'{fmt_int(c.get("unique_emails", 0))} unique addresses from '
+        f'{fmt_int(c.get("total_rows", 0))} rows · validated {when}',
+        right=link_btn("All jobs", "?page=history", "arrow"),
     )
 
-    dcols = st.columns([1, 1, 1, 1.5])
-    for i, (seg, label) in enumerate([("cleaned", "Cleaned CSV"), ("valid", "Valid only"),
+    if r.get("status") != "completed":
+        st.info("This job is still processing or did not finish. Open it from the dashboard to resume.")
+        return
+
+    st.markdown(verdict_cards(c), unsafe_allow_html=True)
+
+    dcols = st.columns([1, 1, 1, 1.4])
+    for i, (seg, label) in enumerate([("cleaned", "Cleaned CSV"), ("valid", "Deliverable only"),
                                       ("removed", "Removed rows")]):
         data = store.output_bytes(run_id, seg)
         if data:
             dcols[i].download_button(label, data, f"{seg}.csv", "text/csv", width="stretch",
                                      type="primary" if seg == "cleaned" else "secondary",
                                      icon=":material/download:", key=f"dl_{seg}")
-    if dcols[3].button("Delete this run", icon=":material/delete:", key="del_run", width="stretch"):
-        store.delete(run_id)
-        st.query_params.pop("id", None)
-        st.rerun()
+    # Destructive action: names the specific object, and the consequence is in
+    # the button label rather than a bare "Confirm".
+    with dcols[3].popover("Delete job", icon=":material/delete:", width="stretch"):
+        st.markdown(
+            f'<div style="font-size:var(--fs-sm);line-height:var(--lh-body);'
+            f'color:var(--text-2)">Delete <b>{_e(r["filename"])}</b> and its cached '
+            f'outputs? The validated addresses in it will no longer appear in '
+            f'Contacts, Analytics or Exports.</div>',
+            unsafe_allow_html=True)
+        st.write("")
+        if st.button(f"Delete {r['filename']} permanently", type="primary",
+                     key="del_run_confirm", width="stretch"):
+            store.delete(run_id)
+            st.query_params.pop("id", None)
+            st.rerun()
 
     st.write("")
-    left, right = st.columns([0.6, 0.4], gap="large")
-    with right:
-        with card("Status distribution"):
-            st.altair_chart(hbar_dist(c), use_container_width=True)
-    with left:
-        data = store.output_bytes(run_id, "cleaned")
-        with card("Cleaned sheet", count=f'{fmt_int(c.get("total_rows", 0))} rows'):
-            if data:
-                df = pd.read_csv(io.BytesIO(data))
-                rows = _results_rows_from_df(df, (r.get("mapping") or {}).get("email"))
-                if rows:
-                    render_results_table(rows, [
-                        ("Email", "2.4fr"), ("Status", "1fr"), ("Reason", "1.6fr"), ("Score", "1.4fr")])
-                st.caption(f"Showing {min(len(df), len(rows))} of {len(df)} rows.")
-            else:
-                st.caption("Cached output not available for this run.")
+    data = store.output_bytes(run_id, "cleaned")
+    if data:
+        results_panel(pd.read_csv(io.BytesIO(data)), (r.get("mapping") or {}).get("email"),
+                      key_prefix=f"run{run_id[:8]}")
+    else:
+        with card("Results"):
+            empty_state("file", "Cached output not available",
+                        "This job's CSVs were removed from local storage. Re-run the "
+                        "list to regenerate them.", bare=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -2155,7 +2308,7 @@ def page_settings() -> None:
             st.markdown(
                 f'<div class="card"><div class="card-b"><div class="empty" style="padding:32px 20px">'
                 f'<div class="eico" style="background:var(--st-bad-soft);'
-                f'color:var(--st-bad);border-color:var(--st-bad-soft)">{icon("x", 20)}</div>'
+                f'color:var(--st-bad);border-color:var(--st-bad-soft)">{icon("x", 18)}</div>'
                 f'<h4>API offline</h4><p>Start the service and refresh this page.</p></div></div></div>',
                 unsafe_allow_html=True,
             )
