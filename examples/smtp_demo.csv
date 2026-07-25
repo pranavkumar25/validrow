@@ -1,0 +1,9 @@
+email,first_name,last_name
+alice@acme-demo.com,alice,anderson
+bob@acme-demo.com,bob,brown
+ghost@acme-demo.com,ghost,gone
+info@acme-demo.com,info,team
+sarah@catchall-demo.com,sarah,smith
+mike@catchall-demo.com,mike,miller
+temp@mailinator.com,temp,user
+not-an-email,bad,row

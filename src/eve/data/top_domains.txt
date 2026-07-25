@@ -1,0 +1,33 @@
+# High-frequency domains used as typo-correction targets (Layer 3).
+# Keep this list to genuinely common domains — every entry is a magnet that
+# nearby misspellings snap to, so junk here creates false suggestions.
+gmail.com
+googlemail.com
+yahoo.com
+yahoo.co.uk
+yahoo.co.in
+ymail.com
+hotmail.com
+hotmail.co.uk
+outlook.com
+live.com
+msn.com
+aol.com
+icloud.com
+me.com
+mac.com
+proton.me
+protonmail.com
+gmx.com
+mail.com
+zoho.com
+yandex.com
+fastmail.com
+qq.com
+163.com
+comcast.net
+verizon.net
+att.net
+sbcglobal.net
+cox.net
+charter.net

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Env / secrets
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# Data / scratch
+*.log
+/tmp/
+scratch/
+
+# Local run data / IDE
+.eve_storage/
+frontend/.eve_store/
+.idea/

@@ -1,0 +1,42 @@
+# Disposable / temporary email domains (starter set).
+# In production, sync this from the open-source `disposable-email-domains`
+# project (thousands of entries) on a schedule. One domain per line.
+0-mail.com
+10minutemail.com
+20minutemail.com
+33mail.com
+guerrillamail.com
+guerrillamail.info
+guerrillamail.net
+grr.la
+sharklasers.com
+mailinator.com
+mailinator.net
+maildrop.cc
+mailnesia.com
+mytemp.email
+temp-mail.org
+tempmail.com
+tempmailo.com
+tempr.email
+throwawaymail.com
+trashmail.com
+trashmail.de
+getnada.com
+nada.email
+dispostable.com
+fakeinbox.com
+yopmail.com
+yopmail.fr
+mohmal.com
+emailondeck.com
+mintemail.com
+spamgourmet.com
+spam4.me
+tempinbox.com
+burnermail.io
+moakt.com
+inboxbear.com
+tempmailaddress.com
+easytrashmail.com
+luxusmail.org

@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "email-validation-engine"
+version = "0.1.0"
+description = "In-house email verification engine (syntax → normalize → typo → MX → classify → SMTP)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Proprietary" }
+authors = [{ name = "Pranav Kumar" }]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "email-validator>=2.1",
+    "dnspython>=2.6",
+    "aiosmtplib>=3.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.19",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+# Production backends — imported lazily so they are not required for local dev.
+s3 = ["aioboto3>=12.0"]
+redis = ["redis>=5.0"]
+postgres = ["asyncpg>=0.29"]
+worker = ["arq>=0.26"]
+# Streamlit front-end (separate process; talks to the API).
+frontend = ["streamlit>=1.30", "requests>=2.31", "pandas>=2.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+    "aiosmtpd>=1.4",
+    "ruff>=0.4",
+    "mypy>=1.9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+eve = ["data/*.txt"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.pyupgrade]
+# Keep typing-module annotations (Optional/List/Dict) intact — Pydantic models
+# evaluate annotations at runtime and must stay Python 3.9-compatible.
+keep-runtime-typing = true
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true

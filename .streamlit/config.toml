@@ -1,0 +1,35 @@
+# Native Streamlit theme — "Validrow v3" look (Figma redesign).
+# Warm cream canvas, bright sky-blue primary, Inter throughout.
+
+[server]
+# Serve the self-hosted Inter font from frontend/static/ at /app/static/.
+enableStaticServing = true
+
+[theme]
+base = "light"
+primaryColor = "#2e8fff"
+backgroundColor = "#f6f7f9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#1c1d22"
+linkColor = "#1f7bf0"
+# Self-hosted Inter (one variable file covers weights 100–900) — applied
+# natively across every Streamlit component, so no CDN and no CSS fights.
+font = "Inter"
+codeFont = "monospace"
+baseRadius = "0.62rem"
+borderColor = "#ecedf1"
+showWidgetBorder = true
+baseFontSize = 15
+
+# Inter variable font (one file covers weights 100–900).
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/InterVariable.woff2"
+weight = "100 900"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/InterVariable-Italic.woff2"
+weight = "100 900"
+style = "italic"

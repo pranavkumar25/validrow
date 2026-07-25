@@ -1,0 +1,35 @@
+# Free consumer email providers (deliverable but not corporate).
+# One domain per line. Used by Layer 5 classification.
+gmail.com
+googlemail.com
+yahoo.com
+yahoo.co.uk
+yahoo.co.in
+ymail.com
+rocketmail.com
+hotmail.com
+hotmail.co.uk
+outlook.com
+live.com
+msn.com
+aol.com
+icloud.com
+me.com
+mac.com
+proton.me
+protonmail.com
+gmx.com
+gmx.net
+gmx.de
+mail.com
+zoho.com
+yandex.com
+yandex.ru
+fastmail.com
+tutanota.com
+hey.com
+qq.com
+163.com
+126.com
+sina.com
+rediffmail.com

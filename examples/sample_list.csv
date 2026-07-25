@@ -1,0 +1,10 @@
+email,first_name,last_name,company
+john.doe@gmail.com,john,doe,Acme Corp
+johndoe+newsletter@gmail.com,john,doe,Acme Corp
+sales@shopify.com,,,Shopify
+support@microsoft.com,,,Microsoft
+throwaway@mailinator.com,temp,user,Spammy
+jane.smith@stripe.com,jane,smith,Stripe
+bogus-not-an-email,bad,row,Broken
+info@gmial.com,info,team,Typo Co
+carlos@thisdomaindoesnotexist-xyz987.com,carlos,ruiz,Ghost

@@ -1,0 +1,23 @@
+email,expected_status,expected_suggestion,note
+john.doe@gmail.com,unknown,,valid syntax free provider (mailbox unprobed offline)
+jane@some-company.io,unknown,,valid syntax corporate
+plainaddress,invalid,,no @ sign
+@missinglocal.com,invalid,,missing local part
+missingatsign.com,invalid,,no @ sign
+john doe@gmail.com,invalid,,space in local part
+john@localhost,invalid,,domain has no dot
+double@@at.com,invalid,,two @ signs
+test@mailinator.com,disposable,,known disposable
+user@guerrillamail.com,disposable,,known disposable
+foo@10minutemail.com,disposable,,known disposable
+throwaway@yopmail.com,disposable,,known disposable
+info@some-company.io,risky,,role account
+sales@acme.io,risky,,role account
+support@gmail.com,risky,,role account on free provider
+admin@corp.co,risky,,role account
+john@gmial.com,unknown,gmail.com,transposition typo
+jane@gmail.con,unknown,gmail.com,tld typo con->com
+bob@yahooo.com,unknown,yahoo.com,extra letter typo
+alice@hotmial.com,unknown,hotmail.com,transposition typo
+dave@outlok.com,unknown,outlook.com,missing letter typo
+erin@company.com,unknown,,corporate address

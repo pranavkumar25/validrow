@@ -1,0 +1,269 @@
+"""The bulk verification pipeline.
+
+Two streaming passes over the file with O(unique-emails) memory:
+
+  * **split**    — stream rows, run cheap layers 1-3 inline, dedupe emails &
+                   domains, collect the unique work-list.
+  * **resolve**  — resolve each unique domain's MX exactly once (warms the cache).
+  * **verify**   — verify each unique email (layers 4-7) with bounded concurrency.
+  * **assemble** — stream rows again, join verdicts back by dedupe key, and emit
+                   cleaned / valid_only / removed CSVs.
+
+Duplicates and undeliverable rows are re-derived on the assembly pass, so we
+never hold the whole sheet in memory.
+"""
+from __future__ import annotations
+
+import asyncio
+import concurrent.futures
+import functools
+from dataclasses import dataclass
+from typing import Optional, Protocol
+
+from eve.config import Settings, get_settings
+from eve.engine import apply_probe_outcome, validate
+from eve.jobs import csv_io
+from eve.jobs.models import Job, JobStatus
+from eve.jobs.store import JobStore
+from eve.layers import dns_mx
+from eve.layers.normalize import normalize
+from eve.layers.smtp import ProbeResult
+from eve.layers.syntax import check_syntax
+from eve.storage import ObjectStore
+from eve.verdict import Status, Verdict
+
+# Statuses that go to the "removed" pile (do-not-send).
+_REMOVED_STATUSES = {Status.INVALID, Status.DISPOSABLE, Status.SPAM_TRAP}
+
+# DNS/validation is I/O-bound (network). asyncio.to_thread caps at ~CPU+4
+# threads, which serializes thousands of MX lookups; give this work its own
+# wide pool so resolution actually runs concurrently.
+_IO_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=64, thread_name_prefix="eve-io")
+
+_VERDICT_COLUMNS = [
+    "email_status",
+    "sub_status",
+    "score",
+    "normalized_email",
+    "suggested_correction",
+    "is_disposable",
+    "is_role",
+    "is_free",
+    "is_catch_all",
+    "mx_found",
+    "duplicate_of",
+]
+
+
+class AsyncProber(Protocol):
+    async def probe(self, email: str, mx_hosts: list[str], domain: str) -> ProbeResult:  # noqa: E704
+        ...
+
+
+class NullAsyncProber:
+    """Used when SMTP is disabled — never confirms a mailbox."""
+
+    async def probe(self, email: str, mx_hosts: list[str], domain: str) -> ProbeResult:
+        return ProbeResult(outcome="unknown", detail="smtp_disabled")
+
+
+@dataclass
+class _Work:
+    email: str  # canonical (normalized) address to verify
+    domain: str
+    valid_syntax: bool
+
+
+def _dedupe_key(raw: str) -> tuple[str, _Work]:
+    """Map a raw cell value to a canonical dedupe key + work item."""
+    syn = check_syntax(raw)
+    if not syn.valid:
+        key = (raw or "").strip().lower()
+        return key, _Work(email=raw, domain="", valid_syntax=False)
+    norm = normalize(syn.local_part or "", syn.domain or "")
+    return norm.dedupe_key, _Work(email=norm.normalized_email, domain=syn.domain or "", valid_syntax=True)
+
+
+async def run_job(
+    job: Job,
+    *,
+    store: ObjectStore,
+    job_store: JobStore,
+    prober: Optional[AsyncProber] = None,
+    settings: Optional[Settings] = None,
+) -> Job:
+    settings = settings or get_settings()
+    prober = prober or NullAsyncProber()
+    assert job.mapping is not None, "job requires a column mapping"
+    email_col = job.mapping.email
+
+    job.status = JobStatus.PROCESSING
+    await job_store.save(job)
+
+    try:
+        detection = await csv_io.detect_columns(store, job.file_key)
+        delimiter = detection.delimiter
+        line_terminator = detection.line_terminator
+        original_columns = detection.columns
+
+        # --- split -------------------------------------------------------
+        unique: dict[str, _Work] = {}
+        domains: set[str] = set()
+        total_rows = 0
+        async for row in csv_io.iter_rows(store, job.file_key, delimiter):
+            total_rows += 1
+            raw = (row.get(email_col) or "").strip()
+            key, work = _dedupe_key(raw)
+            if key not in unique:
+                unique[key] = work
+                if work.domain:
+                    domains.add(work.domain)
+        job.counts.total_rows = total_rows
+        job.counts.unique_emails = len(unique)
+        job.counts.duplicates = total_rows - len(unique)
+        await job_store.save(job)
+
+        # --- resolve (once per domain, in parallel) ----------------------
+        if settings.enable_dns and domains:
+            loop = asyncio.get_running_loop()
+            rsem = asyncio.Semaphore(max(1, settings.verify_concurrency))
+
+            async def _resolve(d: str) -> None:
+                async with rsem:
+                    await loop.run_in_executor(
+                        _IO_EXECUTOR, functools.partial(dns_mx.resolve_mx, d, settings.dns_timeout)
+                    )
+
+            await asyncio.gather(*(_resolve(d) for d in domains))
+
+        # --- verify (bounded concurrency, streamed progress) -------------
+        verdicts: dict[str, Verdict] = {}
+        sem = asyncio.Semaphore(max(1, settings.verify_concurrency))
+
+        async def _verify_one(key: str, work: _Work) -> None:
+            async with sem:
+                v = await _verify_email(
+                    work.email,
+                    enable_dns=settings.enable_dns,
+                    enable_smtp=settings.enable_smtp,
+                    prober=prober,
+                    dns_timeout=settings.dns_timeout,
+                )
+            verdicts[key] = v
+            job.counts.bump(v.status.value)
+
+        items = list(unique.items())
+        batch = max(1, settings.chunk_size)
+        for i in range(0, len(items), batch):
+            await asyncio.gather(*(_verify_one(k, w) for k, w in items[i : i + batch]))
+            await job_store.save(job)  # stream progress after each chunk
+
+        # --- assemble ----------------------------------------------------
+        await _assemble(
+            job, store, delimiter, line_terminator, original_columns, unique, verdicts
+        )
+
+        job.status = JobStatus.COMPLETED
+        await job_store.save(job)
+    except Exception as exc:  # noqa: BLE001 - surface any failure on the job
+        job.status = JobStatus.FAILED
+        job.error = f"{type(exc).__name__}: {exc}"
+        await job_store.save(job)
+        raise
+
+    return job
+
+
+async def _verify_email(
+    email: str, *, enable_dns: bool, enable_smtp: bool, prober: AsyncProber, dns_timeout: float
+) -> Verdict:
+    # Layers 1-5 + DNS (cache hit after the resolve pass). Run off the loop.
+    loop = asyncio.get_running_loop()
+    v = await loop.run_in_executor(
+        _IO_EXECUTOR,
+        functools.partial(validate, email, enable_dns=enable_dns, enable_smtp=False, dns_timeout=dns_timeout),
+    )
+    if not enable_smtp or v.status in (Status.INVALID, Status.DISPOSABLE):
+        return v
+    if enable_dns:
+        if not v.mx_found:
+            return v  # domain can't receive mail — nothing to probe
+        mx_hosts = dns_mx.resolve_mx(v.domain or "", timeout=dns_timeout).mx_hosts  # cached
+    else:
+        # DNS off (e.g. SMTP demo mode): the prober's target host decides where
+        # to connect, so a synthetic MX is fine.
+        mx_hosts = [v.domain or ""]
+    probe = await prober.probe(email, mx_hosts, v.domain or "")
+    v.record("smtp", {"outcome": probe.outcome, "code": probe.smtp_code, "detail": probe.detail})
+    if probe.is_catch_all or probe.outcome in ("valid", "invalid", "catch_all"):
+        apply_probe_outcome(v, probe)
+    return v
+
+
+async def _assemble(
+    job: Job,
+    store: ObjectStore,
+    delimiter: str,
+    line_terminator: str,
+    original_columns: list[str],
+    unique: dict[str, _Work],
+    verdicts: dict[str, Verdict],
+) -> None:
+    header = list(original_columns) + _VERDICT_COLUMNS
+    fmt = {"delimiter": delimiter, "line_terminator": line_terminator}
+    cleaned = csv_io.CsvWriter(store, store.new_key("_cleaned.csv"), header, **fmt)
+    valid_only = csv_io.CsvWriter(store, store.new_key("_valid.csv"), header, **fmt)
+    removed = csv_io.CsvWriter(store, store.new_key("_removed.csv"), header, **fmt)
+
+    seen: set[str] = set()
+    m = job.mapping
+    async for row in csv_io.iter_rows(store, job.file_key, delimiter):
+        raw = (row.get(m.email) or "").strip()
+        key, _ = _dedupe_key(raw)
+        v = verdicts.get(key)
+
+        # Bonus hygiene: tidy the mapped name columns.
+        out = dict(row)
+        for col in (m.first_name, m.last_name):
+            if col and out.get(col):
+                out[col] = out[col].strip().title()
+
+        is_dup = key in seen
+        seen.add(key)
+        duplicate_of = unique[key].email if (is_dup and key in unique) else ""
+
+        if v is not None:
+            out.update(
+                {
+                    "email_status": v.status.value,
+                    "sub_status": v.sub_status.value,
+                    "score": v.score,
+                    "normalized_email": v.normalized_email or "",
+                    "suggested_correction": v.suggested_correction or "",
+                    "is_disposable": v.is_disposable,
+                    "is_role": v.is_role,
+                    "is_free": v.is_free,
+                    "is_catch_all": v.is_catch_all,
+                    "mx_found": v.mx_found,
+                    "duplicate_of": duplicate_of,
+                }
+            )
+            status = v.status
+        else:
+            out.update({"email_status": "invalid", "sub_status": "empty", "duplicate_of": duplicate_of})
+            status = Status.INVALID
+
+        cleaned.write(out)
+        if is_dup or status in _REMOVED_STATUSES:
+            removed.write(out)
+        else:
+            valid_only.write(out)
+
+    await cleaned.close()
+    await valid_only.close()
+    await removed.close()
+    job.output_keys = {
+        "cleaned": cleaned.key,
+        "valid": valid_only.key,
+        "removed": removed.key,
+    }
