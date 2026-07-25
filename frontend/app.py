@@ -129,14 +129,12 @@ AX_GRID = N150
 
 # Inline SVG icons (Lucide-style) — no emoji as structural icons.
 IC = {
-    "home": '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
     "grid": '<rect x="3" y="3" width="7" height="7" rx="1.5"/>'
             '<rect x="14" y="3" width="7" height="7" rx="1.5"/>'
             '<rect x="14" y="14" width="7" height="7" rx="1.5"/>'
             '<rect x="3" y="14" width="7" height="7" rx="1.5"/>',
     "bolt": '<path d="M13 2 3 14h7l-1 8 10-12h-7z"/>',
     "target": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
-    "search": '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     "check": '<path d="M20 6 9 17l-5-5"/>',
     "checkcircle": '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
@@ -171,8 +169,6 @@ IC = {
                 '1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     "life": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/>'
             '<path d="m4.9 4.9 4.2 4.2M14.9 14.9l4.2 4.2M14.9 9.1l4.2-4.2M4.9 19.1l4.2-4.2"/>',
-    "logout": '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/>'
-              '<path d="M21 12H9"/>',
     "chevdown": '<path d="m6 9 6 6 6-6"/>',
     "dots": '<circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/>'
             '<circle cx="12" cy="19" r="1.4"/>',
@@ -331,16 +327,6 @@ def inject_css() -> None:
           .brand-word{ font-size:var(--fs-heading); font-weight:640; letter-spacing:var(--tr-title);
             line-height:1; color:var(--text-1); }
           .brand-word b{ color:var(--blue); font-weight:640; }
-          .searchbox{ display:flex; align-items:center; gap:var(--s2);
-            border:1px solid var(--border); background:var(--surface); border-radius:var(--r-sm);
-            padding:var(--s2) var(--s3); margin:var(--s5) var(--s2) var(--s1);
-            transition:border-color var(--t-fast) var(--ease); }
-          .searchbox:hover{ border-color:var(--border-hover); }
-          .searchbox svg{ color:var(--mark); flex:0 0 16px; }
-          .searchbox .ph{ color:var(--text-4); font-size:var(--fs-sm); }
-          .searchbox .kbd{ margin-left:auto; color:var(--text-4); font-size:var(--fs-caption);
-            font-weight:var(--fw-label); border:1px solid var(--border); border-radius:var(--r-sm);
-            padding:1px var(--s1); background:var(--surface-inset); }
 
           /* One definition of "small uppercase label" — was four. */
           .eyebrow, .side-label{ font-size:var(--fs-caption); font-weight:var(--fw-caption);
@@ -366,17 +352,20 @@ def inject_css() -> None:
             border-radius:var(--r-pill); font-size:var(--fs-caption); font-weight:var(--fw-label);
             padding:1px var(--s2); min-width:19px; text-align:center; }
           .nav.active .badge-n{ background:var(--n0); color:var(--blue); }
+          /* Pushes the footer nav to the bottom without a viewport magic number. */
+          section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"]{
+            display:flex; flex-direction:column; min-height:calc(100vh - 5rem); }
+          .side-spacer{ flex:1 1 auto; min-height:var(--s5); }
+
           .side-foot{ border-top:1px solid var(--divider); margin:var(--s2) var(--s3) 0;
-            padding:var(--s3) var(--s1) var(--s1); display:flex; align-items:center; gap:var(--s3); }
-          .avatar{ width:32px; height:32px; flex:0 0 32px; border-radius:var(--r-pill); display:grid;
-            place-items:center; color:var(--text-3); font-weight:600; font-size:var(--fs-label);
-            background:var(--surface-inset); border:1px solid var(--border); }
-          .side-foot .nm{ font-size:var(--fs-sm); font-weight:600; color:var(--text-1);
+            padding:var(--s3) var(--s1); display:flex; align-items:center; gap:var(--s2);
+            text-decoration:none !important; color:inherit !important; }
+          .side-foot .nm{ font-size:var(--fs-label); font-weight:500; color:var(--text-3);
             line-height:var(--lh-tight); }
-          .side-foot .em{ font-size:var(--fs-label); color:var(--text-4); }
+          .side-foot:hover .nm{ color:var(--text-1); }
           .side-foot .lo{ margin-left:auto; color:var(--mark); display:inline-flex;
             transition:color var(--t-fast) var(--ease); }
-          .side-foot .lo:hover{ color:var(--text-3); }
+          .side-foot:hover .lo{ color:var(--text-3); }
 
           /* ---------- Pills (non-status meta only) ---------- */
           .pill{ display:inline-flex; align-items:center; gap:var(--s1);
@@ -472,12 +461,6 @@ def inject_css() -> None:
           /* Sub-reason: secondary grey text, never its own hue. */
           .sreason{ font-size:var(--fs-label); color:var(--text-4); font-weight:400; }
 
-          .sbar{ display:inline-flex; align-items:center; gap:var(--s3); }
-          .sbar .track{ width:96px; height:5px; border-radius:var(--r-pill);
-            background:var(--surface-inset); overflow:hidden; }
-          .sbar .track i{ display:block; height:100%; border-radius:var(--r-pill); }
-          .sbar .n{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-2);
-            font-variant-numeric:tabular-nums; min-width:22px; text-align:right; }
           .tag{ display:inline-flex; align-items:center; gap:var(--s1); font-size:var(--fs-label);
             color:var(--text-3); font-weight:400; }
 
@@ -507,17 +490,34 @@ def inject_css() -> None:
             font-variant-numeric:tabular-nums; }
           .vt .em{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-1); }
           .vt .muted{ font-size:var(--fs-sm); color:var(--text-4); }
-          .avatar-sm{ width:28px; height:28px; flex:0 0 28px; border-radius:var(--r-pill);
-            display:grid; place-items:center; color:var(--text-3); font-weight:600;
-            font-size:var(--fs-caption); background:var(--surface-inset);
-            border:1px solid var(--border); }
-          .name-cell{ display:flex; align-items:center; gap:var(--s3); min-width:0; }
-          .name-cell > div{ min-width:0; }
-          .name-cell .nm, .name-cell .sub{ overflow:hidden; text-overflow:ellipsis;
-            white-space:nowrap; }
-          .name-cell .nm{ font-size:var(--fs-sm); font-weight:var(--fw-label);
-            color:var(--text-1); }
-          .name-cell .sub{ font-size:var(--fs-label); color:var(--text-4); }
+
+          /* ---------- Running job row ---------- */
+          .jobrow{ display:flex; align-items:center; gap:var(--s3);
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:var(--r-md); padding:var(--s3) var(--s4);
+            margin-bottom:var(--s2); text-decoration:none !important;
+            color:inherit !important; box-shadow:var(--e1);
+            transition:border-color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease); }
+          .jobrow:hover{ border-color:var(--border-hover); background:var(--surface-hover); }
+          .jobrow .ic{ color:var(--blue); display:inline-flex; flex:0 0 16px; }
+          .jobrow .nm{ font-size:var(--fs-sm); font-weight:var(--fw-label);
+            color:var(--text-1); min-width:0; overflow:hidden; text-overflow:ellipsis;
+            white-space:nowrap; max-width:34%; }
+          .jobrow .ph{ font-size:var(--fs-label); color:var(--text-4); min-width:0;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+          /* Fixed-width track: reserving the space means reaching 100% and
+             completing can't collapse or reflow the row. */
+          .jobrow .bar{ margin-left:auto; flex:0 0 128px; height:5px;
+            border-radius:var(--r-pill); background:var(--surface-inset);
+            overflow:hidden; }
+          .jobrow .bar i{ display:block; height:100%; background:var(--blue);
+            border-radius:var(--r-pill); transition:width var(--t) var(--ease); }
+          .jobrow .pc{ font-size:var(--fs-label); font-weight:var(--fw-label);
+            color:var(--text-2); flex:0 0 34px; text-align:right; }
+          .jobrow svg:last-child{ color:var(--mark); flex:0 0 14px; }
+          @media (max-width:640px){
+            .jobrow .ph{ display:none; } .jobrow .nm{ max-width:none; } }
 
           /* Skeleton rows at the real row height, so nothing shifts on load. */
           .vt-skel{ height:52px; display:flex; align-items:center; padding:0 var(--s3);
@@ -829,17 +829,6 @@ def status_tag(status: str, sub: bool = True) -> str:
             f'{" " + tail if tail else ""}')
 
 
-def score_bar(score, status: str | None = None) -> str:
-    try:
-        pct = max(0, min(100, int(score)))
-    except (TypeError, ValueError):
-        pct = 0
-    color = status_color(status) if status else BLUE
-    return (f'<span class="sbar"><span class="track">'
-            f'<i style="width:{pct}%;background:{color}"></i></span>'
-            f'<span class="n num">{pct}</span></span>')
-
-
 def page_header(title: str, sub: str, right: str = "") -> None:
     st.markdown(
         f'<div class="phead"><div><h1>{_e(title)}</h1>'
@@ -865,7 +854,7 @@ def card(title: str | None = None, count: str = "", right_html: str = ""):
 
 def stat_card(label: str, value: str, foot: str = "", spark_vals=None, delta: str = "",
               delta_up: bool | None = True, accent: str | None = None,
-              icon_name: str = "") -> str:
+              icon_name: str = "", extra: str = "") -> str:
     """A KPI tile.
 
     `delta` is only ever a *change*, never a share of total — pass share-of-total
@@ -885,7 +874,7 @@ def stat_card(label: str, value: str, foot: str = "", spark_vals=None, delta: st
     spark_html = f'<div class="spark">{spark_svg}</div>' if spark_svg else ""
     foot_html = f'<div class="foot">{foot}</div>' if foot else ""
     return (f'<div class="{cls}"{style}><div class="l">{_e(label)}{gl}</div>'
-            f'<div class="v">{value}{delta_html}</div>{foot_html}{spark_html}</div>')
+            f'<div class="v">{value}{delta_html}</div>{foot_html}{spark_html}{extra}</div>')
 
 
 def mini_bar(counts: dict) -> str:
@@ -900,16 +889,6 @@ def mini_bar(counts: dict) -> str:
         for v in VERDICT_ORDER if totals[v]
     )
     return f'<div class="mbar">{segs}</div>'
-
-
-def _avatar_color(seed: str) -> str:
-    """Neutral ramp only.
-
-    This used to return one of eight hues (purple, pink, cyan…) that existed
-    nowhere in the theme, and rendered as dots directly beside status dots — a
-    second dot system that carried no meaning.
-    """
-    return (N100, N150, N200)[sum(ord(c) for c in seed) % 3]
 
 
 # --------------------------------------------------------------------------- #
@@ -990,7 +969,10 @@ def volume_area(by_date: dict, height: int = 240):
     df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"])
     base = alt.Chart(df).encode(
-        x=alt.X("date:T", title=None, axis=_axis_x(format="%b %d")),
+        # One tick per day at most. Without this, a short series gets sub-day
+        # ticks that all format identically — "Jul 18  Jul 18  Jul 19  Jul 19".
+        x=alt.X("date:T", title=None,
+                axis=_axis_x(format="%b %d", tickCount={"interval": "day", "step": 1})),
         y=alt.Y("verified:Q", title=None, axis=_axis_y(tickMinStep=1)),
         tooltip=[alt.Tooltip("date:T", title="Date"),
                  alt.Tooltip("verified:Q", title="Addresses", format=",")],
@@ -1172,70 +1154,65 @@ page = st.query_params.get("page", "dashboard")
 # --------------------------------------------------------------------------- #
 def render_sidebar() -> None:
     with st.sidebar:
+        # No fake search box: it was a div with a ⌘K hint bound to nothing.
         st.markdown(
             f'<div class="brand"><span class="mark">{icon("checkcircle", 16, 2.2)}</span>'
-            f'<span class="brand-word">valid<b>row</b></span></div>'
-            f'<div class="searchbox">{icon("search", 16)}<span class="ph">Search</span>'
-            f'<span class="kbd">⌘K</span></div>',
+            f'<span class="brand-word">valid<b>row</b></span></div>',
             unsafe_allow_html=True,
         )
 
         runs_badge = str(agg["runs_total"]) if agg["runs_total"] else ""
-        contacts_badge = fmt_int(agg["contacts_total"]) if agg["contacts_total"] else ""
+        addr_badge = fmt_int(agg["contacts_total"]) if agg["contacts_total"] else ""
         val_badge = str(ongoing_n) if ongoing_n else ""
+        # "Home" and "Dashboard" both pointed at ?page=dashboard — two entries,
+        # one route. Dashboard is the one that stays.
         nav_sections = [
             (None, [
-                ("dashboard", "Home", "home", "", "home"),
-                ("dashboard", "Dashboard", "grid", "", "dashboard"),
-                ("validate", "Validate list", "bolt", val_badge, "validate"),
-                ("single", "Single check", "target", "", "single"),
+                ("dashboard", "Dashboard", "grid", ""),
+                ("validate", "Validate a list", "bolt", val_badge),
+                ("single", "Single check", "target", ""),
             ]),
             ("Workspace", [
-                ("contacts", "Contacts", "users", contacts_badge, "contacts"),
-                ("analytics", "Analytics", "bar", "", "analytics"),
-                ("export", "Exports", "download", "", "export"),
-                ("history", "History", "clock", runs_badge, "history"),
+                ("contacts", "Addresses", "users", addr_badge),
+                ("analytics", "Analytics", "bar", ""),
+                ("export", "Exports", "download", ""),
+                ("history", "History", "clock", runs_badge),
             ]),
         ]
         nav_html = ""
         for section, items in nav_sections:
             if section:
                 nav_html += f'<div class="side-label">{section}</div>'
-            for key, label, ic, badge_n, act_key in items:
-                # "Home" is a design alias for Dashboard; Dashboard owns the active state.
-                active = "active" if (page == key and (act_key != "home")) else ""
-                if act_key == "home" and page not in {
-                    "dashboard", "validate", "single", "contacts", "analytics", "export", "history",
-                    "process", "settings",
-                }:
-                    active = "active"
+            for key, label, ic, badge_n in items:
+                active = "active" if page == key else ""
+                aria = ' aria-current="page"' if active else ""
                 b = f'<span class="badge-n">{badge_n}</span>' if badge_n else ""
                 nav_html += (
-                    f'<a class="nav {active}" target="_self" href="?page={key}">'
-                    f'{icon(ic, 20)}<span>{label}</span>{b}</a>'
+                    f'<a class="nav {active}" target="_self" href="?page={key}"{aria}>'
+                    f'{icon(ic, 18)}<span>{label}</span>{b}</a>'
                 )
         st.markdown(nav_html, unsafe_allow_html=True)
 
-        st.markdown('<div style="height:calc(100vh - 640px);min-height:8px"></div>', unsafe_allow_html=True)
+        # Flex spacer, replacing a `calc(100vh - 640px)` magic number that
+        # collapsed on short viewports.
+        st.markdown('<div class="side-spacer"></div>', unsafe_allow_html=True)
 
-        # Footer nav — Support routes to "How it works", Settings to connection.
         st.markdown(
-            f'<a class="nav {"active" if page == "process" else ""}" target="_self" href="?page=process">'
-            f'{icon("life", 18)}<span>Support</span></a>'
-            f'<a class="nav {"active" if page == "settings" else ""}" target="_self" href="?page=settings">'
-            f'{icon("settings", 18)}<span>Settings</span></a>',
+            f'<a class="nav {"active" if page == "process" else ""}" target="_self" '
+            f'href="?page=process">{icon("life", 18)}<span>How it works</span></a>'
+            f'<a class="nav {"active" if page == "settings" else ""}" target="_self" '
+            f'href="?page=settings">{icon("settings", 18)}<span>Settings</span></a>',
             unsafe_allow_html=True,
         )
 
         live = "dot-live" if api_ok else ""
         color = PRIMARY["deliverable"]["c"] if api_ok else PRIMARY["undeliverable"]["c"]
+        state = "Engine online" if api_ok else "Engine offline"
         st.markdown(
-            f'<div class="side-foot"><div class="avatar">PK</div>'
-            f'<div style="flex:1;min-width:0"><div class="nm">Pranav Kumar</div>'
-            f'<div class="em">pranav@validrow.io</div></div>'
-            f'<span class="dot {live}" title="API {"online" if api_ok else "offline"}" '
-            f'style="background:{color}"></span>'
-            f'<span class="lo">{icon("logout", 18)}</span></div>',
+            f'<a class="side-foot" target="_self" href="?page=settings">'
+            f'<span class="dot {live}" style="background:{color}"></span>'
+            f'<span class="nm">{state}</span>'
+            f'<span class="lo">{icon("arrow", 14)}</span></a>',
             unsafe_allow_html=True,
         )
 
@@ -1407,90 +1384,126 @@ def results_dataframe(df: pd.DataFrame, email_col: str | None = None,
 def page_dashboard() -> None:
     page_header(
         "Dashboard",
-        "Track deliverability and validation activity across all your lists.",
-        right=link_btn("New validation", "?page=validate", "plus", primary=True),
+        "Deliverability and validation activity across every job.",
+        right=link_btn("Validate a list", "?page=validate", "plus", primary=True),
     )
 
-    st_ = agg["status_totals"]
-    total_valid = st_["valid"]
-    verified = agg["addresses_verified"]
-    valid_rate = round(agg["avg_valid_rate"] * 100, 1)
-    avg_score = round(contacts_df["score"].mean()) if len(contacts_df) else 0
-
     if agg["runs_total"] == 0:
-        empty_state("mail", "No validations yet",
-                    "Upload your first CSV to start cleaning lists. Your stats, volume trend and "
-                    "recent results will show up here.",
-                    "Go to Validate", "?page=validate")
+        empty_state("upload", "Validate your first list",
+                    "Upload a CSV and Validrow tells you which addresses are deliverable "
+                    "before you send. Your stats and job history will build up here.",
+                    "Upload a CSV", "?page=validate")
         return
 
-    # sparkline series from the daily volume timeline
-    series = [v["verified"] for _, v in sorted(agg["by_date"].items())] or [0]
-    valid_series = [v["valid"] for _, v in sorted(agg["by_date"].items())] or [0]
+    # Running jobs come first: most people land here to check on one. Showing
+    # them below three KPI tiles buried the reason for the visit.
+    if agg["ongoing"]:
+        render_running_jobs(agg["ongoing"])
+
+    totals = verdict_totals(agg["status_totals"])
+    verified = agg["addresses_verified"]
+    shares = pct_parts(totals)
+    days = sorted(agg["by_date"].items())
+    volume_series = [v["verified"] for _, v in days]
+    # Rate per day, so the sparkline under "Deliverable rate" is that rate over
+    # time — not the volume series reused, which is what all three cards showed.
+    rate_series = [
+        (v["valid"] / v["verified"] * 100) if v["verified"] else 0.0 for _, v in days
+    ]
+    avg_score = round(contacts_df["score"].mean()) if len(contacts_df) else 0
 
     st.markdown(
         '<div class="cards c3">'
-        + stat_card("Total validated", fmt_int(verified), spark_vals=series,
-                    foot=f'{fmt_int(total_valid)} deliverable')
-        + stat_card("Deliverable rate", f'{valid_rate}%', spark_vals=valid_series or series)
-        + stat_card("Avg. quality score", str(avg_score), spark_vals=series)
+        + stat_card("Addresses validated", fmt_int(verified), spark_vals=volume_series,
+                    foot=f'across {agg["runs_completed"]} completed '
+                         f'{"job" if agg["runs_completed"] == 1 else "jobs"}')
+        + stat_card("Deliverable rate", fmt_pct(totals["deliverable"], verified),
+                    spark_vals=rate_series,
+                    foot=f'{fmt_int(totals["deliverable"])} of {fmt_int(verified)} addresses')
+        + stat_card("Average quality score", str(avg_score),
+                    foot=f'{shares["risky"]:.1f}% risky · {shares["unknown"]:.1f}% unknown',
+                    extra=f'<div style="margin-top:var(--s4)">'
+                          f'{mini_bar(agg["status_totals"])}</div>')
         + "</div>",
         unsafe_allow_html=True,
     )
 
-    # Validation volume
     vc = volume_area(agg["by_date"])
-    with card("Validation volume", right_html='<span class="tag">addresses verified / day</span>'):
+    with card("Validation volume", right_html='<span class="tag">addresses per day</span>'):
         if vc is not None:
             st.altair_chart(vc, use_container_width=True)
         else:
-            st.caption("Not enough data yet — validate a few lists to see the trend.")
+            empty_state("bar", "Not enough history yet",
+                        "Validate a few more lists and the daily trend will appear here.",
+                        bare=True)
 
     st.write("")
 
-    # Recent results (recent verified contacts)
-    with card("Recent results", count=f'{fmt_int(len(contacts_df))} verified',
+    with card("Recently validated", count=f"{fmt_int(len(contacts_df))} addresses",
               right_html=link_btn("View all", "?page=contacts", "arrow")):
-        recent = contacts_df.head(7)
+        recent = contacts_df.head(8)
         if recent.empty:
-            st.caption("No verified addresses yet.")
+            empty_state("mail", "No addresses yet",
+                        "Completed jobs will list their most recent addresses here.",
+                        bare=True)
         else:
-            rows = []
-            for _, r in recent.iterrows():
-                seg = r["source"].rsplit(".", 1)[0].replace("_", " ").title()
-                rows.append({"cells": [
-                    f'<span class="em">{_e(r["email"])}</span>',
-                    status_tag(r["status"]),
-                    score_bar(r["score"], r["status"]),
-                    f'<span class="tag"><span class="dot" style="background:{_avatar_color(seg)}"></span>'
-                    f'{_e(seg)}</span>',
-                    f'<span class="muted">{_e(r["verified_at"][5:10] or "—")}</span>',
-                ]})
-            render_results_table(rows, [
-                ("Email", "2.6fr"), ("Status", "1fr"), ("Quality score", "1.6fr"),
-                ("Segment", "1.3fr"), ("Checked", "0.8fr"),
-            ])
-
-    if agg["ongoing"]:
-        st.write("")
-        st.markdown('<div class="side-label" style="margin-left:2px">Ongoing validations</div>',
-                    unsafe_allow_html=True)
-        for r in agg["ongoing"][:4]:
-            c = r.get("counts", {})
-            done = sum(c.get(k, 0) for k in STATUS_ORDER)
-            total = c.get("unique_emails") or c.get("total_rows") or 0
-            pctv = round(done / total * 100) if total else 0
-            st.markdown(
-                f'<a class="card" style="display:flex;align-items:center;gap:14px;padding:14px 18px;'
-                f'text-decoration:none;color:inherit;margin-bottom:8px" target="_self" '
-                f'href="?page=validate&resume={r["id"]}">'
-                f'<span style="color:var(--blue)">{icon("clock", 18)}</span>'
-                f'<div><div class="em">{_e(r["filename"])}</div>'
-                f'<div class="muted">verifying… {done}/{total}</div></div>'
-                f'<span class="sp" style="margin-left:auto"></span>'
-                f'<span class="pill p-warn">{pctv}%</span></a>',
-                unsafe_allow_html=True,
+            table = pd.DataFrame({
+                "Email": recent["email"].astype(str),
+                "Status": [status_cell(s) for s in recent["status"]],
+                "Score": recent["score"].astype(int),
+                "Source": recent["source"].astype(str),
+                "Validated": recent["verified_at"].astype(str).str[:10],
+            })
+            st.dataframe(
+                styled_table(table, [status_color(s) for s in recent["status"]],
+                             grey_cols=("Source", "Validated")),
+                hide_index=True, width="stretch", height=44 + 35 * len(table),
+                column_config={
+                    "Email": st.column_config.TextColumn("Email", width="large"),
+                    "Status": st.column_config.TextColumn("Status", width="small"),
+                    "Score": st.column_config.ProgressColumn(
+                        "Score", min_value=0, max_value=100, format="%d", width="small"),
+                    "Source": st.column_config.TextColumn("Source list", width="medium"),
+                    "Validated": st.column_config.TextColumn("Validated", width="small"),
+                },
             )
+
+
+def render_running_jobs(ongoing: list) -> None:
+    """Jobs still in flight, with real progress rather than a spinner."""
+    st.markdown('<div class="eyebrow" style="margin:0 0 var(--s2) 2px">'
+                'Running now</div>', unsafe_allow_html=True)
+    for r in ongoing[:4]:
+        c = r.get("counts", {})
+        done = sum(c.get(k, 0) for k in STATUS_ORDER)
+        total = c.get("unique_emails") or c.get("total_rows") or 0
+        phase, frac = job_phase(c, done, total)
+        st.markdown(
+            f'<a class="jobrow" target="_self" href="?page=validate&resume={r["id"]}">'
+            f'<span class="ic">{icon("clock", 16)}</span>'
+            f'<span class="nm">{_e(r["filename"])}</span>'
+            f'<span class="ph">{_e(phase)}</span>'
+            f'<span class="bar"><i style="width:{frac * 100:.0f}%"></i></span>'
+            f'<span class="pc num">{frac * 100:.0f}%</span>'
+            f'{icon("arrow", 14)}</a>',
+            unsafe_allow_html=True,
+        )
+    st.write("")
+
+
+def job_phase(counts: dict, done: int, total: int):
+    """One definition of a job's phase and progress, shared by the dashboard row
+    and the job screen, so the two can't report different numbers."""
+    if not counts:
+        return "Queued", 0.02
+    if not counts.get("unique_emails"):
+        return "Reading and de-duplicating", 0.06
+    if done == 0:
+        return "Resolving domains", 0.12
+    if total and done >= total:
+        return "Finalizing", 0.99
+    return (f"Verifying mailboxes · {fmt_int(done)} of {fmt_int(total)}",
+            min(0.98, done / total) if total else 0.5)
 
 
 # --------------------------------------------------------------------------- #
@@ -1510,9 +1523,9 @@ def stepper(active: int) -> str:
 
 
 def page_validate() -> None:
-    right = link_btn("New validation", "?page=validate", "plus", primary=True)
     page_header("Validate a list",
-                "Upload a CSV, map the email column, and get a cleaned list back.", right=right)
+                "Upload a CSV, tell us which column holds the addresses, and get a "
+                "cleaned list back.")
 
     resume_id = st.query_params.get("resume")
     if resume_id:
@@ -1528,11 +1541,14 @@ def page_validate() -> None:
     st.markdown(stepper(active_step), unsafe_allow_html=True)
     st.write("")
 
-    upload = st.file_uploader("Upload a CSV (emails + any other columns)", type=["csv"])
+    upload = st.file_uploader(
+        "CSV file", type=["csv"], label_visibility="collapsed",
+        help="Any CSV. One column must hold email addresses; every other column is "
+             "carried through to the output untouched.")
 
     if upload is not None:
         if st.session_state.get("uploaded_name") != upload.name:
-            with st.spinner("Uploading & detecting columns…"):
+            with st.spinner("Reading the file and detecting columns…"):
                 r = api_post(api, "/v1/files",
                              files={"file": (upload.name, upload.getvalue(), "text/csv")})
                 r.raise_for_status()
@@ -1545,48 +1561,72 @@ def page_validate() -> None:
         det = st.session_state.detection
         cols = det["columns"]
         size = upload.size or 0
-        size_str = f"{size / 1_048_576:.1f} MB" if size > 1_048_576 else f"{size / 1024:.1f} KB"
-        st.markdown(
-            f'<div class="card"><div class="card-b" style="display:flex;align-items:center;gap:14px">'
-            f'<span style="color:var(--blue)">{icon("file", 20)}</span>'
-            f'<div><div class="em">{_e(upload.name)} '
-            f'<span class="pill p-ok" style="margin-left:6px">READY</span></div>'
-            f'<div class="muted">{len(cols)} columns · delimiter '
-            f'“{_e(det.get("delimiter", ","))}” · {size_str}</div></div></div></div>',
-            unsafe_allow_html=True,
-        )
+        size_str = (f"{size / 1_048_576:.1f} MB" if size > 1_048_576
+                    else f"{size / 1024:.0f} KB")
+        delim = {",": "comma", ";": "semicolon", "\t": "tab", "|": "pipe"}.get(
+            det.get("delimiter", ","), det.get("delimiter", ","))
 
-        st.markdown("##### Column preview")
-        if det["sample_rows"]:
-            st.dataframe(pd.DataFrame(det["sample_rows"]), width="stretch", hide_index=True)
+        with card("Mapping", right_html=f'<span class="tag">{_e(upload.name)} · '
+                                       f'{len(cols)} columns · {delim}-separated · {size_str}</span>'):
+            # Preview first: confirm the file parsed correctly *before* choosing
+            # columns or spending anything.
+            st.markdown('<div class="eyebrow" style="margin-bottom:var(--s2)">'
+                        'First rows, as we parsed them</div>', unsafe_allow_html=True)
+            if det["sample_rows"]:
+                sample = pd.DataFrame(det["sample_rows"])
+                st.dataframe(sample, width="stretch", hide_index=True,
+                             height=min(220, 40 + 35 * len(sample)))
+            else:
+                st.markdown(
+                    f'<div class="note" style="background:var(--st-risk-soft);'
+                    f'color:var(--st-risk);border-color:var(--st-risk-soft)">{icon("x", 16)}'
+                    f'<div>We read the header but found no data rows. Check the file '
+                    f'isn\'t empty below its first line.</div></div>',
+                    unsafe_allow_html=True)
 
-        st.markdown("##### Map your columns")
-        c1, c2, c3 = st.columns(3)
-        email_idx = cols.index(det["guessed_email"]) if det.get("guessed_email") in cols else 0
-        email_col = c1.selectbox("Email column *", cols, index=email_idx,
-                                 help="Required — the address to verify.")
-        name_opts = ["(none)"] + cols
-        fi = name_opts.index(det["guessed_first_name"]) if det.get("guessed_first_name") in cols else 0
-        li = name_opts.index(det["guessed_last_name"]) if det.get("guessed_last_name") in cols else 0
-        first_col = c2.selectbox("First name", name_opts, index=fi,
-                                 help="Optional — carried through to output.")
-        last_col = c3.selectbox("Last name", name_opts, index=li,
-                                help="Optional — carried through to output.")
+            st.write("")
+            st.markdown('<div class="eyebrow" style="margin-bottom:var(--s2)">'
+                        'Which column is which</div>', unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3, gap="medium")
+            email_idx = cols.index(det["guessed_email"]) if det.get("guessed_email") in cols else 0
+            email_col = c1.selectbox(
+                "Email address", cols, index=email_idx,
+                help="Required. This is the column Validrow verifies.")
+            name_opts = ["Not in this file"] + cols
+            fi = name_opts.index(det["guessed_first_name"]) if det.get("guessed_first_name") in cols else 0
+            li = name_opts.index(det["guessed_last_name"]) if det.get("guessed_last_name") in cols else 0
+            first_col = c2.selectbox("First name", name_opts, index=fi,
+                                     help="Optional. Carried through to the output.")
+            last_col = c3.selectbox("Last name", name_opts, index=li,
+                                    help="Optional. Carried through to the output.")
 
-        st.write("")
-        if st.button("Validate list", type="primary", icon=":material/bolt:"):
-            mapping = {"email": email_col}
-            if first_col != "(none)":
-                mapping["first_name"] = first_col
-            if last_col != "(none)":
-                mapping["last_name"] = last_col
-            r = api_post(api, "/v1/jobs",
-                         json={"file_id": st.session_state.file_id, "mapping": mapping})
-            r.raise_for_status()
-            jid = r.json()["id"]
-            st.session_state.job_id = jid
-            st.session_state.active_run = store.record_started(jid, upload.name, mapping)
-            st.rerun()
+            guessed = det.get("guessed_email") == email_col
+            rows_n = det.get("row_count") or det.get("total_rows")
+            st.markdown(
+                f'<div class="note note-info" style="margin-top:var(--s4)">'
+                f'{icon("shield", 16)}<div>Verifying <b>{_e(email_col)}</b>'
+                + (" (detected automatically)" if guessed else "")
+                + (f" — about {fmt_int(rows_n)} rows" if rows_n else "")
+                + ". Duplicates are collapsed before any network call, so you are only "
+                  "charged for unique addresses.</div></div>",
+                unsafe_allow_html=True,
+            )
+
+            st.write("")
+            if st.button("Start validating", type="primary", icon=":material/bolt:",
+                         width="content"):
+                mapping = {"email": email_col}
+                if first_col != "Not in this file":
+                    mapping["first_name"] = first_col
+                if last_col != "Not in this file":
+                    mapping["last_name"] = last_col
+                r = api_post(api, "/v1/jobs",
+                             json={"file_id": st.session_state.file_id, "mapping": mapping})
+                r.raise_for_status()
+                jid = r.json()["id"]
+                st.session_state.job_id = jid
+                st.session_state.active_run = store.record_started(jid, upload.name, mapping)
+                st.rerun()
 
     if st.session_state.get("job_id"):
         poll_and_render_job()
@@ -1610,24 +1650,43 @@ def poll_and_render_job() -> None:
     if job["status"] in ("pending", "processing"):
         if run:
             store.update(run, counts=c, status="processing")
-        total = c["unique_emails"] or c["total_rows"] or 1
-        if verified == 0:
-            phase = "Resolving domains (DNS)…" if c["unique_emails"] else "Reading & de-duplicating…"
-            frac = 0.05
-        else:
-            phase = f"Verifying mailboxes… {verified} / {c['unique_emails']}"
-            frac = min(0.99, verified / total)
-        st.progress(frac, text=phase)
-        st.caption(
-            f"{c['total_rows']} rows · {c['unique_emails']} unique · {c['duplicates']} duplicates. "
-            "This page refreshes automatically."
-        )
+        total = c["unique_emails"] or c["total_rows"] or 0
+        phase, frac = job_phase(c, verified, total)
+        with card("Validating"):
+            st.progress(frac, text=phase)
+            st.markdown(
+                f'<div class="tag">{fmt_int(c["total_rows"])} rows · '
+                f'{fmt_int(c["unique_emails"])} unique · '
+                f'{fmt_int(c["duplicates"])} duplicates removed</div>',
+                unsafe_allow_html=True)
+            # Partial results as they land, so the wait isn't a blank screen and
+            # the layout is already the shape it will be at completion.
+            if verified:
+                st.write("")
+                st.markdown(verdict_cards(c), unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="note note-info">{icon("clock", 16)}<div>This updates on its '
+                f'own. You can leave this page — the job keeps running, and it will be '
+                f'waiting for you under History.</div></div>',
+                unsafe_allow_html=True)
         time.sleep(1.0)
         st.rerun()
     elif job["status"] == "failed":
         if run:
             store.update(run, status="failed")
-        st.error(f"Job failed: {job.get('error')}")
+        err = job.get("error") or "The engine stopped partway through this job."
+        with card("Validation failed"):
+            st.markdown(
+                f'<div class="note" style="background:var(--st-bad-soft);'
+                f'color:var(--st-bad);border-color:var(--st-bad-soft)">{icon("x", 16)}'
+                f'<div>{_e(err)}</div></div>',
+                unsafe_allow_html=True)
+            st.write("")
+            if verified:
+                st.markdown(
+                    '<div class="tag">Addresses verified before the failure:</div>',
+                    unsafe_allow_html=True)
+                st.markdown(verdict_cards(c), unsafe_allow_html=True)
     else:
         outputs = {}
         for seg in ("cleaned", "valid", "removed"):
@@ -1989,41 +2048,52 @@ def page_contacts() -> None:
 # Page: Analytics
 # --------------------------------------------------------------------------- #
 def page_analytics() -> None:
-    right = ('<div class="chip-btn">' + icon("calendar", 16)
-             + '<span>All time</span>' + icon("chevdown", 14) + '</div>')
     page_header("Analytics",
-                "Deliverability, risk distribution and validation activity over time.", right=right)
+                "Deliverability, risk distribution and validation activity over time.",
+                right='<span class="tag">All time</span>')
     df = contacts_df
     st_ = agg["status_totals"]
     total = len(df)
     if total == 0:
         empty_state("bar", "No analytics yet",
-                    "Once you validate a list, deliverability trends and risk breakdowns show up here.")
+                    "Validate a list and deliverability trends, the risk mix and your top "
+                    "domains will appear here.",
+                    "Validate a list", "?page=validate")
         return
 
-    valid = int((df["status"] == "valid").sum())
-    valid_rate = round(valid / total * 100, 1)
+    totals = verdict_totals(st_)
+    verified = sum(totals.values())
+    shares = pct_parts(totals)
 
-    left, right = st.columns([0.62, 0.38], gap="large")
+    left, right = st.columns([0.6, 0.4], gap="large")
     with left:
         with card():
+            # The headline shows the rate and the counts behind it. It previously
+            # carried a green "↗ {rate} pts" delta, which was the rate itself
+            # relabelled as a change — there is no period to compare against.
             st.markdown(
-                f'<div class="stat" style="border:0;box-shadow:none;padding:0 0 18px;background:none">'
-                f'<div class="l">Deliverable rate over time</div>'
-                f'<div class="v">{valid_rate}%<span class="d up">{icon("trendup", 14)}'
-                f'{valid_rate} pts</span></div></div>',
+                f'<div class="stat" style="border:0;box-shadow:none;padding:0 0 var(--s4);'
+                f'background:none">'
+                f'<div class="l">Deliverable rate</div>'
+                f'<div class="v">{fmt_pct(totals["deliverable"], verified)}</div>'
+                f'<div class="foot">{fmt_int(totals["deliverable"])} of '
+                f'{fmt_int(verified)} addresses validated, all time</div></div>',
                 unsafe_allow_html=True,
             )
             act = resample_activity(agg["by_date"], "Daily")
             if act.empty or "valid" not in act:
-                st.caption("Not enough activity yet.")
+                empty_state("bar", "Not enough history yet",
+                            "The daily trend needs validations on more than one day.",
+                            bare=True)
             else:
                 act["rate"] = (act["valid"] / act["verified"].replace(0, 1) * 100).round(1)
                 ch = alt.Chart(act).mark_area(
                     interpolate="monotone", line={"color": BLUE, "strokeWidth": 2},
                     color=BLUE, opacity=0.08,
                 ).encode(
-                    x=alt.X("date:T", title=None, axis=_axis_x(format="%b %d")),
+                    x=alt.X("date:T", title=None,
+                            axis=_axis_x(format="%b %d",
+                                         tickCount={"interval": "day", "step": 1})),
                     y=alt.Y("rate:Q", title=None, scale=alt.Scale(domain=[0, 100]),
                             axis=_axis_y(format="d")),
                     tooltip=[alt.Tooltip("date:T", title="Day"),
@@ -2032,36 +2102,40 @@ def page_analytics() -> None:
                 st.altair_chart(ch, use_container_width=True)
 
     with right:
-        with card("Status mix"):
+        with card("Verdict mix"):
             dc = donut_chart(st_)
             if dc is not None:
                 st.altair_chart(dc, use_container_width=True)
-            legend = ""
-            for s in ["valid", "risky", "invalid", "unknown"]:
-                n = st_.get(s, 0)
-                pct = round(n / total * 100, 1) if total else 0
-                legend += (f'<div class="row"><span class="d dot" style="background:{STATUS_DOT[s]}"></span>'
-                           f'<span class="nm">{STATUS_LABEL[s]}</span><span class="v">{fmt_int(n)}</span>'
-                           f'<span class="pc">{pct}%</span></div>')
+            # The legend iterates the same four verdicts the donut draws, with
+            # shares from pct_parts, so it lists every segment and sums to 100%.
+            legend = "".join(
+                f'<div class="row">'
+                f'<span class="d dot" style="background:{PRIMARY[v]["c"]}"></span>'
+                f'<span class="nm">{PRIMARY[v]["label"]}</span>'
+                f'<span class="v">{fmt_int(totals[v])}</span>'
+                f'<span class="pc">{shares[v]:.1f}%</span></div>'
+                for v in VERDICT_ORDER
+            )
             st.markdown(f'<div class="lgd">{legend}</div>', unsafe_allow_html=True)
 
     st.write("")
-    left2, right2 = st.columns([0.62, 0.38], gap="large")
+    left2, right2 = st.columns([0.6, 0.4], gap="large")
     with left2:
         with card("Volume by weekday"):
             wb = weekday_bar(agg["by_date"])
             if wb is not None:
                 st.altair_chart(wb, use_container_width=True)
             else:
-                st.caption("Not enough activity yet.")
+                empty_state("bar", "Not enough history yet",
+                            "Validate lists across a few days to see which are busiest.",
+                            bare=True)
     with right2:
         with card("Top domains"):
             dom = df.copy()
             dom["domain"] = dom["email"].str.split("@").str[-1]
             g = dom.groupby("domain").agg(
                 total=("email", "size"), valid=("status", lambda s: (s == "valid").sum())).reset_index()
-            g["pct"] = (g["valid"] / g["total"] * 100).round(0).astype(int)
-            g = g.sort_values("total", ascending=False).head(5)
+            g = g.sort_values("total", ascending=False).head(6)
             mx = g["total"].max() if len(g) else 1
             doms = ""
             for _, r in g.iterrows():
@@ -2069,42 +2143,47 @@ def page_analytics() -> None:
                 doms += (f'<div class="dom"><div class="d"><div class="nm">{_e(r["domain"])}</div>'
                          f'<div class="track"><i style="width:{w}%"></i></div></div>'
                          f'<div class="rt"><div class="v num">{fmt_int(r["total"])}</div>'
-                         f'<div class="pc">{r["pct"]}% valid</div></div></div>')
-            st.markdown(doms or '<div class="muted">No domains yet.</div>', unsafe_allow_html=True)
+                         f'<div class="pc">{fmt_pct(r["valid"], r["total"])} '
+                         f'deliverable</div></div></div>')
+            st.markdown(doms or '<div class="tag">No domains yet.</div>', unsafe_allow_html=True)
 
 
 # --------------------------------------------------------------------------- #
 # Page: Exports
 # --------------------------------------------------------------------------- #
 EXPORT_PRESETS = {
-    "All contacts": lambda d: d,
-    "Valid only": lambda d: d[d["status"] == "valid"],
-    "Invalid / undeliverable": lambda d: d[d["status"].isin(["invalid", "disposable", "spam_trap"])],
-    "Risky (catch-all / role)": lambda d: d[d["status"] == "risky"],
-    "Catch-all": lambda d: d[d["is_catch_all"]],
-    "Disposable": lambda d: d[d["is_disposable"]],
-    "Custom filter…": None,
+    "All addresses": lambda d: d,
+    "Deliverable only": lambda d: d[[verdict(s) == "deliverable" for s in d["status"]]],
+    "Risky only": lambda d: d[[verdict(s) == "risky" for s in d["status"]]],
+    "Undeliverable only": lambda d: d[[verdict(s) == "undeliverable" for s in d["status"]]],
+    "Catch-all domains": lambda d: d[d["is_catch_all"]],
+    "Disposable domains": lambda d: d[d["is_disposable"]],
+    "Custom filter": None,
 }
 
 
 def page_export() -> None:
-    page_header("Exports", "Download filtered slices of your validated data — valid, risky, or custom.")
+    page_header("Exports",
+                "Download a slice of your validated addresses, or grab a finished job's "
+                "output again.")
     df = contacts_df
     if df.empty:
         empty_state("download", "Nothing to export yet",
-                    "Validate a list first — then export valid-only, risky, or custom slices from here.",
+                    "Validate a list first, then export deliverable-only, risky or custom "
+                    "slices of it from here.",
                     "Validate a list", "?page=validate")
         return
 
     with card("New export"):
         left, right = st.columns([0.42, 0.58], gap="large")
         with left:
-            preset = st.radio("What to export", list(EXPORT_PRESETS), label_visibility="collapsed")
-            if preset == "Custom filter…":
+            preset = st.radio("What to export", list(EXPORT_PRESETS),
+                              label_visibility="collapsed")
+            if preset == "Custom filter":
                 picked = st.multiselect(
-                    "Statuses", _status_options(df),
+                    "Verdicts to include", _status_options(df),
                     default=[s for s in ["valid"] if (df["status"] == s).any()],
-                    format_func=lambda s: STATUS_LABEL.get(s, s))
+                    format_func=status_label)
                 sel = df[df["status"].isin(picked)] if picked else df.iloc[0:0]
                 only_mx = st.checkbox("Require MX record", value=False)
                 excl_disp = st.checkbox("Exclude disposable", value=False)
@@ -2118,11 +2197,22 @@ def page_export() -> None:
                                help="Full detail includes status, score, flags and source list.")
 
         with right:
+            counts = sel["status"].value_counts().to_dict()
+            totals = verdict_totals(counts)
+            shares = pct_parts(totals)
+            legend = "".join(
+                f'<div class="row">'
+                f'<span class="d dot" style="background:{PRIMARY[v]["c"]}"></span>'
+                f'<span class="nm">{PRIMARY[v]["label"]}</span>'
+                f'<span class="v">{fmt_int(totals[v])}</span>'
+                f'<span class="pc">{shares[v]:.1f}%</span></div>'
+                for v in VERDICT_ORDER if totals[v]
+            )
             st.markdown(
-                f'<div class="stat"><div class="l">Contacts in this export</div>'
+                f'<div class="stat"><div class="l">Addresses in this export</div>'
                 f'<div class="v">{fmt_int(len(sel))}</div>'
-                f'<div style="margin-top:12px">'
-                f'{mini_bar(sel["status"].value_counts().to_dict())}</div></div>',
+                f'<div style="margin-top:var(--s4)">{mini_bar(counts)}</div>'
+                f'<div class="lgd" style="margin-top:var(--s4)">{legend}</div></div>',
                 unsafe_allow_html=True,
             )
             st.write("")
@@ -2132,32 +2222,37 @@ def page_export() -> None:
                 out = sel[["email", "status", "score", "sub_status", "is_disposable", "is_role",
                            "is_catch_all", "is_free", "mx_found", "source", "verified_at"]]
             csv_bytes = out.to_csv(index=False).encode("utf-8")
-            fname = "validrow_" + preset.split()[0].lower().strip("…") + ".csv"
-            st.download_button(f"Export {fmt_int(len(sel))} contacts", csv_bytes, fname, "text/csv",
-                               type="primary", width="stretch", icon=":material/download:",
-                               disabled=len(sel) == 0)
+            slug = preset.lower().replace(" ", "_")
+            n = fmt_int(len(sel))
+            st.download_button(
+                f'Export {n} {"address" if len(sel) == 1 else "addresses"}',
+                csv_bytes, f"validrow_{slug}.csv", "text/csv",
+                type="primary", width="stretch", icon=":material/download:",
+                disabled=len(sel) == 0)
+            if len(sel) == 0:
+                st.caption("Nothing matches this filter yet — widen it to export.")
 
-    # Ready-to-download outputs from every completed run
+    # Finished jobs, whose outputs are cached and can be downloaded again.
     completed = [r for r in store.list_runs() if r.get("status") == "completed"]
     if completed:
         st.write("")
-        with card("Run outputs", count=f'{len(completed)} ready'):
+        with card("Finished jobs", count=f"{len(completed)} available"):
             rows = []
             for r in completed:
                 c = r.get("counts", {})
-                when = (r.get("completed_at") or r.get("created_at") or "").replace("T", " ")[:10]
+                when = (r.get("completed_at") or r.get("created_at") or "")[:10]
+                totals = verdict_totals(c)
                 rows.append({"href": f'?page=history&id={r["id"]}', "cells": [
                     f'<span class="em">{icon("file", 14)} {_e(r["filename"])}</span>',
-                    '<span class="tag">Cleaned</span>',
-                    f'<span class="muted num">{fmt_int(c.get("unique_emails", 0))}</span>',
-                    '<span class="tag">CSV</span>',
+                    f'<span class="num">{fmt_int(c.get("unique_emails", 0))}</span>',
+                    f'<span class="stag" style="color:{PRIMARY["deliverable"]["c"]}">'
+                    f'{fmt_pct(totals["deliverable"], sum(totals.values()))}</span>',
+                    mini_bar(c),
                     f'<span class="muted">{_e(when)}</span>',
-                    '<span class="stag" style="color:var(--st-ok)">'
-                    '<span class="d" style="background:var(--st-ok)"></span>Ready</span>',
                 ]})
             render_results_table(rows, [
-                ("Export", "2.4fr"), ("Segment", "1fr"), ("Rows", "0.8fr"),
-                ("Format", "0.7fr"), ("Created", "1fr"), ("Status", "1fr"),
+                ("Job", "2.4fr"), ("Addresses", "0.9fr"), ("Deliverable %", "1fr"),
+                ("Mix", "1.5fr"), ("Finished", "1fr"),
             ])
 
 
@@ -2171,49 +2266,64 @@ def page_history() -> None:
         return
 
     runs = store.list_runs()
-    right = ('<div class="chip-btn">' + icon("calendar", 16) + '<span>All time</span>'
-             + icon("chevdown", 14) + '</div>')
-    page_header("History", "Every past validation run, with per-run analytics and downloads.", right=right)
+    page_header("History", "Every validation job, with its breakdown and outputs.",
+                right=link_btn("Validate a list", "?page=validate", "plus", primary=True))
 
     if not runs:
-        empty_state("clock", "No history yet",
-                    "Validated lists will appear here with per-upload deliverability analytics and "
-                    "downloadable outputs.")
+        empty_state("clock", "No jobs yet",
+                    "Every list you validate lands here with its deliverability breakdown "
+                    "and downloadable output.",
+                    "Validate a list", "?page=validate")
         return
 
-    with card("Validation runs", count=f'{len(runs)} runs'):
+    with card("Jobs", count=f'{len(runs)} total'):
         rows = []
         for r in runs:
             c = r.get("counts", {})
             when = (r.get("completed_at") or r.get("created_at") or "").replace("T", " ")[:16]
+            name = f'<span class="em">{icon("file", 14)} {_e(r["filename"])}</span>'
+            addresses = (f'<span class="num">'
+                         f'{fmt_int(c.get("unique_emails") or c.get("total_rows", 0))}</span>')
             if r.get("status") == "completed":
-                rate = round(store.valid_rate(c) * 100)
+                totals = verdict_totals(c)
                 rows.append({"href": f'?page=history&id={r["id"]}', "cells": [
-                    f'<span class="em">{icon("file", 14)} {_e(r["filename"])}</span>',
-                    f'<span class="muted num">{fmt_int(c.get("total_rows", 0))}</span>',
-                    f'<span style="color:var(--st-ok);font-weight:650">{rate}%</span>',
+                    name, addresses,
+                    f'<span class="stag" style="color:{PRIMARY["deliverable"]["c"]}">'
+                    f'{fmt_pct(totals["deliverable"], sum(totals.values()))}</span>',
+                    mini_bar(c),
+                    f'<span class="muted">{_e(when)}</span>',
+                ]})
+            elif r.get("status") == "failed":
+                rows.append({"href": f'?page=validate&resume={r["id"]}', "cells": [
+                    name, addresses,
+                    '<span class="stag" style="color:var(--st-bad)">'
+                    '<span class="d" style="background:var(--st-bad)"></span>Failed</span>',
                     mini_bar(c),
                     f'<span class="muted">{_e(when)}</span>',
                 ]})
             else:
+                done = sum(c.get(k, 0) for k in STATUS_ORDER)
+                total = c.get("unique_emails") or c.get("total_rows") or 0
+                _, frac = job_phase(c, done, total)
                 rows.append({"href": f'?page=validate&resume={r["id"]}', "cells": [
-                    f'<span class="em">{icon("file", 14)} {_e(r["filename"])}</span>',
-                    f'<span class="muted num">{fmt_int(c.get("total_rows", 0))}</span>',
-                    '<span class="pill p-warn">Processing</span>',
-                    '',
+                    name, addresses,
+                    f'<span class="stag" style="color:var(--blue)">'
+                    f'<span class="d dot-live" style="background:var(--blue)"></span>'
+                    f'{frac * 100:.0f}%</span>',
+                    mini_bar(c),
                     f'<span class="muted">{_e(when)}</span>',
                 ]})
         render_results_table(rows, [
-            ("Run", "2.6fr"), ("Rows", "0.9fr"), ("Valid %", "0.9fr"),
-            ("Breakdown", "1.6fr"), ("Completed", "1.4fr"),
+            ("Job", "2.6fr"), ("Addresses", "0.9fr"), ("Deliverable %", "1fr"),
+            ("Mix", "1.5fr"), ("Finished", "1.3fr"),
         ])
 
 
 def page_history_detail(run_id: str) -> None:
     r = store.get(run_id)
     if not r:
-        page_header("Run not found", "That run no longer exists.",
-                    right=link_btn("Back to history", "?page=history", "arrow"))
+        page_header("Job not found", "That job is no longer in your history.",
+                    right=link_btn("All jobs", "?page=history", "arrow"))
         return
 
     c = r.get("counts", {})
@@ -2271,47 +2381,60 @@ def page_history_detail(run_id: str) -> None:
 # Page: Settings (connection + engine status)
 # --------------------------------------------------------------------------- #
 def page_settings() -> None:
-    page_header("Settings", "Connect to the validation engine and review its status.")
+    page_header("Settings", "Point the app at a validation engine and check what it has enabled.")
     left, right = st.columns([0.55, 0.45], gap="large")
     with left:
-        with card("Connection"):
-            new_api = st.text_input("API base URL", api).rstrip("/")
+        with card("Engine connection"):
+            new_api = st.text_input(
+                "Engine URL", api,
+                help="Where the Validrow API is running. Changing this reconnects "
+                     "immediately.").rstrip("/")
             if new_api != api:
                 st.session_state.api_base = new_api
                 st.rerun()
             if not api_ok:
                 st.markdown(
-                    f'<div class="note note-info" style="margin-top:4px">{icon("shield", 16)}'
-                    '<div>Start the service to validate addresses:</div></div>', unsafe_allow_html=True)
+                    f'<div class="note" style="background:var(--st-bad-soft);'
+                    f'color:var(--st-bad);border-color:var(--st-bad-soft)">{icon("x", 16)}'
+                    f'<div>Nothing is answering at that address. Start the engine, then '
+                    f'reload.</div></div>',
+                    unsafe_allow_html=True)
+                st.write("")
                 st.code("uvicorn eve.api.main:app --port 8000", language="bash")
     with right:
         if api_ok:
-            dns_on = health.get("dns_enabled")
-            smtp_on = health.get("smtp_enabled")
+            rows = [
+                ("Version", f'v{health.get("version")}', None),
+                ("DNS and MX lookups", None, bool(health.get("dns_enabled"))),
+                ("SMTP mailbox probe", None, bool(health.get("smtp_enabled"))),
+            ]
+            body = ""
+            for i, (label, text, on) in enumerate(rows):
+                border = "" if i == 0 else "border-top:1px solid var(--divider)"
+                if text is not None:
+                    val = f'<span class="ds" style="margin-left:auto">{_e(text)}</span>'
+                else:
+                    val = (f'<span style="margin-left:auto" class="stag" '
+                           f'style="color:var(--text-3)">'
+                           f'<span class="d" style="background:'
+                           f'{"var(--st-ok)" if on else "var(--n400)"}"></span>'
+                           f'{"Enabled" if on else "Disabled"}</span>')
+                body += (f'<div class="brk-row" style="padding:var(--s3) 0;{border}">'
+                         f'<span class="ttl">{_e(label)}</span>{val}</div>')
             st.markdown(
                 f'<div class="card"><div class="card-h bd"><h4>Engine status</h4>'
-                f'<span class="sp"><span class="pill p-ok"><span class="dot dot-live" '
-                f'style="background:var(--st-ok)"></span>Online</span></span></div><div class="card-b">'
-                f'<div class="brk-row" style="padding:11px 0;border:0"><span class="ttl">Version</span>'
-                f'<span class="ds" style="margin-left:auto">v{_e(health.get("version"))}</span></div>'
-                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--divider)">'
-                f'<span class="ttl">DNS / MX</span><span class="sp" style="margin-left:auto"></span>'
-                f'<span class="pill {"p-ok" if dns_on else "p-off"}">{"ON" if dns_on else "OFF"}</span></div>'
-                f'<div class="brk-row" style="padding:11px 0;border-top:1px solid var(--divider)">'
-                f'<span class="ttl">SMTP probe</span><span class="sp" style="margin-left:auto"></span>'
-                f'<span class="pill {"p-ok" if smtp_on else "p-off"}">'
-                f'{"ON" if smtp_on else "OFF"}</span></div>'
-                f'</div></div>',
+                f'<span class="sp"><span class="stag" style="color:var(--st-ok)">'
+                f'<span class="d dot-live" style="background:var(--st-ok)"></span>'
+                f'Online</span></span></div>'
+                f'<div class="card-b" style="padding-top:0">{body}</div></div>',
                 unsafe_allow_html=True,
             )
         else:
-            st.markdown(
-                f'<div class="card"><div class="card-b"><div class="empty" style="padding:32px 20px">'
-                f'<div class="eico" style="background:var(--st-bad-soft);'
-                f'color:var(--st-bad);border-color:var(--st-bad-soft)">{icon("x", 18)}</div>'
-                f'<h4>API offline</h4><p>Start the service and refresh this page.</p></div></div></div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            empty_state("x", "Engine offline",
+                        "The app can still show your saved history, but validating needs "
+                        "the engine running.", bare=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -2352,17 +2475,10 @@ VERIFICATION_LAYERS = [
 
 
 def page_process() -> None:
-    page_header("How Validrow verifies email",
-                "Eight layers, cheapest first — each one can stop the pipeline early, so we spend an "
-                "SMTP probe only on addresses that earned it.")
-
-    st.markdown(
-        f'<div class="note note-info">{icon("shield", 16)}<div>Validrow runs every address through '
-        'the same pipeline, in order. Cheap checks (syntax, DNS) run first and reject the obvious '
-        'failures; the expensive mailbox probe runs only on what survives.</div></div>',
-        unsafe_allow_html=True,
-    )
-    st.write("")
+    page_header("How Validrow verifies an address",
+                f"{len(VERIFICATION_LAYERS)} layers, cheapest first. Each one can end the "
+                "job early, so an SMTP probe is only spent on an address that earned it.",
+                right=link_btn("Try a single check", "?page=single", "target"))
 
     rows = ""
     for i, (title, tag, desc) in enumerate(VERIFICATION_LAYERS, start=1):
@@ -2374,38 +2490,58 @@ def page_process() -> None:
     st.markdown(f'<div class="card"><div class="card-b">{rows}</div></div>', unsafe_allow_html=True)
 
     st.write("")
-    st.markdown('<h4 style="margin:6px 2px 10px;font-size:15px;font-weight:700">'
-                'What each final status means</h4>', unsafe_allow_html=True)
+    st.markdown('<h3 style="margin:0 0 var(--s3) 2px">What each verdict means</h3>',
+                unsafe_allow_html=True)
+    # The four verdicts, in the same order and with the same colours as
+    # everywhere else. Sub-reasons are listed underneath their verdict rather
+    # than promoted to peers with their own hues.
     meanings = [
-        ("valid", "Mailbox confirmed to exist and accept mail. Safe to send."),
-        ("risky", "Deliverable but lower confidence — catch-all domain or role address. Send with care."),
-        ("unknown", "Domain accepts mail but the mailbox couldn't be confirmed "
-                    "(e.g. the provider blocks probes)."),
-        ("invalid", "No such mailbox or no MX record. Sending will bounce — remove it."),
-        ("disposable", "Burner / temporary domain. Real today, gone tomorrow."),
-        ("spam_trap", "Known spam-trap address. Never send — it damages sender reputation."),
+        ("valid", "The mailbox exists and accepts mail. Safe to send.", []),
+        ("risky", "Deliverable, but with lower confidence — a catch-all domain or a "
+                  "role address like info@. Send with care.", []),
+        ("unknown", "The domain accepts mail but we could not confirm this specific "
+                    "mailbox, usually because the provider refuses probes. Not a "
+                    "failure — an honest absence of proof.", []),
+        ("invalid", "No such mailbox, or the domain publishes no MX record. Sending "
+                    "will bounce, so remove it.",
+         ["Disposable domain — a burner address: real today, gone tomorrow.",
+          "Spam trap — never send; it damages your sender reputation."]),
     ]
     cga, cgb = st.columns(2, gap="medium")
-    half = (len(meanings) + 1) // 2
-    left_cards, right_cards = "", ""
-    for idx, (status, desc) in enumerate(meanings):
-        block = (
-            f'<div class="fact" style="margin-bottom:12px">{status_tag(status)}'
-            f'<div style="margin-top:8px;color:var(--text-3);font-size:13.5px;line-height:1.55">'
-            f'{_e(desc)}</div></div>'
+    blocks = []
+    for status, desc, subs in meanings:
+        sub_html = "".join(
+            f'<div class="sreason" style="margin-top:var(--s2);padding-left:var(--s3);'
+            f'border-left:1px solid var(--border)">{_e(x)}</div>' for x in subs)
+        blocks.append(
+            f'<div class="fact" style="margin-bottom:var(--s3)">{status_tag(status, sub=False)}'
+            f'<div style="margin-top:var(--s2);color:var(--text-3);'
+            f'font-size:var(--fs-sm);line-height:var(--lh-body)">{_e(desc)}</div>'
+            f'{sub_html}</div>'
         )
-        (left_cards := left_cards + block) if idx < half else (right_cards := right_cards + block)
-    cga.markdown(left_cards, unsafe_allow_html=True)
-    cgb.markdown(right_cards, unsafe_allow_html=True)
+    cga.markdown("".join(blocks[:2]), unsafe_allow_html=True)
+    cgb.markdown("".join(blocks[2:]), unsafe_allow_html=True)
 
 
 # --------------------------------------------------------------------------- #
 # Router
 # --------------------------------------------------------------------------- #
 if not api_ok and page in ("validate", "single"):
-    page_header("API offline", "Start the service to validate addresses.",
-                right=link_btn("Settings", "?page=settings", "settings"))
-    st.warning("The API is not reachable. Start it and refresh:  `uvicorn eve.api.main:app --port 8000`")
+    page_header("Engine offline",
+                "Validating needs the Validrow engine running. Your saved history is "
+                "still available.",
+                right=link_btn("Open settings", "?page=settings", "settings"))
+    with card("Start the engine"):
+        st.markdown(
+            f'<div class="note" style="background:var(--st-bad-soft);color:var(--st-bad);'
+            f'border-color:var(--st-bad-soft)">{icon("x", 16)}'
+            f'<div>Nothing is answering at <b>{_e(api)}</b>.</div></div>',
+            unsafe_allow_html=True)
+        st.write("")
+        st.code("uvicorn eve.api.main:app --port 8000", language="bash")
+        st.markdown(
+            '<div class="tag">Already running somewhere else? Change the engine URL in '
+            'Settings.</div>', unsafe_allow_html=True)
 else:
     {
         "dashboard": page_dashboard,
