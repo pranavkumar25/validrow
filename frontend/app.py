@@ -252,6 +252,10 @@ def inject_css() -> None:
             --st-ok:#16744a;   --st-ok-soft:#eef7f2;
             --st-risk:#9a6410; --st-risk-soft:#f9f3e9;
             --st-bad:#c43c2f;  --st-bad-soft:#fbeeec;
+            /* Unknown is the neutral ramp step: "no answer" should read as
+               absence, not as a fifth category. Declared even though only the
+               other three currently have CSS consumers — an incomplete set is
+               what makes the next person hardcode the missing one. */
             --st-unk:var(--n600); --st-unk-soft:var(--n100);
 
             /* --- spacing: 4px scale --------------------------------- */
@@ -262,27 +266,35 @@ def inject_css() -> None:
             --fs-display:30px; --fw-display:640; --tr-display:-.022em;
             --fs-title:24px;   --fw-title:640;   --tr-title:-.018em;
             --fs-heading:15px; --fw-heading:620; --tr-heading:-.008em;
-            --fs-body:14px;    --fw-body:400;
+            --fs-body:14px;
             --fs-sm:13px;
             --fs-label:12px;   --fw-label:550;
             --fs-caption:11px; --fw-caption:560; --tr-caption:.04em;
-            --lh-tight:1.2; --lh-snug:1.35; --lh-body:1.55;
+            --lh-tight:1.2; --lh-body:1.55;
 
             /* --- radii: 3 values ------------------------------------ */
             --r-sm:6px;    /* inputs, buttons, small marks              */
             --r-md:10px;   /* cards, panels                             */
             --r-pill:999px;
 
-            /* --- elevation: 3 levels, border-led -------------------- */
-            --e0:none;                                    /* border only */
+            /* --- elevation: border-led ------------------------------ */
+            /* Level 0 is a hairline border and no shadow — the default for
+               every surface, so it needs no token. */
             --e1:0 1px 2px rgba(20,21,26,.04);            /* resting card */
             --e2:0 4px 12px -2px rgba(20,21,26,.07),
                  0 1px 2px rgba(20,21,26,.04);            /* overlay     */
             --ring:0 0 0 3px rgba(21,96,208,.28);         /* focus       */
 
             /* --- motion: one duration set, one curve ---------------- */
-            --t-fast:120ms; --t:200ms; --t-slow:300ms;
+            --t-fast:120ms; --t:200ms; --t-slow:300ms;  /* overlays */
+            --t-pulse:2s;   /* ambient loops (live dot, skeleton) only */
             --ease:cubic-bezier(.2,0,.13,1);
+
+            /* Intrinsic component dimensions — sizes, not spacing, so they
+               live here rather than on the 4px scale. */
+            --w-label-col:140px;  /* breakdown row label column */
+            --w-track:128px;      /* inline progress track      */
+            --h-spark:48px;
 
             /* Tabular figures ON globally. This app sells numeric
                precision; proportional digits made columns of numbers
@@ -380,7 +392,7 @@ def inject_css() -> None:
           .dot{ width:7px; height:7px; border-radius:var(--r-pill); flex:0 0 7px;
             display:inline-block; }
           @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:.45; } }
-          .dot-live{ position:relative; animation:pulse 2s var(--ease) infinite; }
+          .dot-live{ position:relative; animation:pulse var(--t-pulse) var(--ease) infinite; }
 
           /* ---------- Page header ---------- */
           .phead{ display:flex; align-items:flex-start; gap:var(--s4); margin:0 0 var(--s6); }
@@ -433,7 +445,7 @@ def inject_css() -> None:
           .stat .v .d.dn{ color:var(--st-bad); background:var(--st-bad-soft); }
           .stat .v .d.flat{ color:var(--text-3); background:var(--surface-inset); }
           .stat .foot{ font-size:var(--fs-label); color:var(--text-4); margin-top:var(--s2); }
-          .stat .spark{ margin-top:var(--s4); height:48px; }
+          .stat .spark{ margin-top:var(--s4); height:var(--h-spark); }
 
           /* ---------- Cards (raw HTML) ---------- */
           .card{ background:var(--surface); border:1px solid var(--border);
@@ -508,7 +520,7 @@ def inject_css() -> None:
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
           /* Fixed-width track: reserving the space means reaching 100% and
              completing can't collapse or reflow the row. */
-          .jobrow .bar{ margin-left:auto; flex:0 0 128px; height:5px;
+          .jobrow .bar{ margin-left:auto; flex:0 0 var(--w-track); height:5px;
             border-radius:var(--r-pill); background:var(--surface-inset);
             overflow:hidden; }
           .jobrow .bar i{ display:block; height:100%; background:var(--blue);
@@ -525,7 +537,7 @@ def inject_css() -> None:
           .vt-skel i{ display:block; height:9px; border-radius:var(--r-pill);
             background:var(--surface-inset); }
           @keyframes shimmer{ 0%,100%{ opacity:1 } 50%{ opacity:.45 } }
-          .vt-skel i{ animation:shimmer 1.4s var(--ease) infinite; }
+          .vt-skel i{ animation:shimmer var(--t-pulse) var(--ease) infinite; }
 
           /* ---------- Stepper ---------- */
           .stepper{ display:flex; align-items:center; gap:0; flex-wrap:wrap; row-gap:var(--s2); }
@@ -570,7 +582,7 @@ def inject_css() -> None:
             border-top:1px solid var(--divider); }
           .brk-row .ic{ flex:0 0 18px; display:inline-flex; }
           .brk-row .ttl{ font-size:var(--fs-sm); font-weight:var(--fw-label); color:var(--text-2);
-            min-width:142px; }
+            min-width:var(--w-label-col); }
           .brk-row .ds{ font-size:var(--fs-sm); color:var(--text-4); }
 
           .fact{ border:1px solid var(--border); border-radius:var(--r-sm);
@@ -602,7 +614,8 @@ def inject_css() -> None:
           .lgd .row .nm{ font-weight:400; color:var(--text-2); }
           .lgd .row .v{ margin-left:auto; font-weight:var(--fw-label); color:var(--text-1);
             font-variant-numeric:tabular-nums; }
-          .lgd .row .pc{ color:var(--text-4); font-weight:400; min-width:48px; text-align:right;
+          .lgd .row .pc{ color:var(--text-4); font-weight:400; min-width:var(--s12);
+            text-align:right;
             font-variant-numeric:tabular-nums; }
 
           .dom{ display:flex; align-items:center; gap:var(--s3); padding:var(--s3) 0;
@@ -676,6 +689,15 @@ def inject_css() -> None:
             padding:2px var(--s2); font-variant-numeric:tabular-nums; }
           .ccard-h .sp{ margin-left:auto; display:flex; align-items:center; gap:var(--s2); }
 
+          /* Popover (destructive confirm): overlay elevation, low-opacity
+             neutral backdrop rather than a heavy blur. */
+          [data-baseweb="popover"] [data-baseweb="block"],
+          div[data-testid="stPopoverBody"]{
+            box-shadow:var(--e2) !important; border:1px solid var(--border) !important;
+            border-radius:var(--r-md) !important; }
+          div[data-testid="stPopoverBody"]{ padding:var(--s4) !important; }
+          [data-baseweb="popover"]{ animation-duration:var(--t-slow) !important; }
+
           [data-testid="stDataFrame"]{ border-radius:var(--r-sm); }
           .stTabs [data-baseweb="tab-list"]{ gap:var(--s1); }
           .stTabs [data-baseweb="tab"]{ font-weight:var(--fw-label); font-size:var(--fs-sm); }
@@ -705,9 +727,30 @@ def inject_css() -> None:
             .phead{ flex-direction:column; gap:var(--s3); }
             .phead .sp{ margin-left:0; justify-content:flex-start; }
             :root{ --fs-display:26px; --fs-title:21px; }
-            /* The table scrolls horizontally rather than being squeezed. */
+            .card-h, .card-b, .stat{ padding:var(--s4); }
+
+            /* The HTML list views scroll horizontally rather than being
+               squeezed, with the first column frozen so the row stays
+               identifiable. (st.dataframe does this natively via pinned=True.) */
             .vt-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-            .vt-head, .vt-row, .vt-skel{ min-width:640px; } }
+            .vt-head, .vt-row, .vt-skel{ min-width:620px; }
+            .vt-head > span:first-child, .vt-row > div:first-child{
+              position:sticky; left:0; z-index:1; background:var(--surface);
+              padding-right:var(--s3); }
+            .vt-row:hover > div:first-child{ background:var(--surface-hover); }
+
+            /* Single-check verdict: ring above the address rather than beside it. */
+            .verdict{ flex-wrap:wrap; gap:var(--s3); padding:var(--s4); }
+            /* Breakdown rows stack so a long description can't overflow. */
+            .brk-row{ flex-wrap:wrap; padding:var(--s3) var(--s4); }
+            .brk-row .ttl{ min-width:0; flex:1 1 auto; }
+            .brk-row .ds{ flex:1 1 100%; padding-left:calc(var(--s5) + var(--s2)); }
+            .layer{ gap:var(--s3); } }
+
+          @media (max-width:380px){
+            .block-container{ padding:var(--s4) var(--s3) var(--s8); }
+            :root{ --fs-display:24px; --fs-title:19px; }
+            .stat .v{ gap:var(--s1); } }
 
           @media (prefers-reduced-motion:reduce){ *{ animation-duration:.001ms !important;
             animation-iteration-count:1 !important; transition-duration:.001ms !important; } }
@@ -753,14 +796,26 @@ def fmt_pct(part, whole, decimals: int = 1) -> str:
 
     The app used to mix `round(x, 1)` and `round(x)` for the same metric, so the
     deliverable rate rendered as "82.4%" on one screen and "82%" on another.
+
+    Rounding never claims an absolute it hasn't reached: a non-zero part that
+    rounds to 0.0% shows "<0.1%", and a part short of the whole that rounds to
+    100.0% shows ">99.9%". In a product selling accuracy, "100.0% deliverable"
+    beside a non-zero undeliverable count is the kind of small lie that costs
+    trust.
     """
     try:
-        whole = float(whole)
-        if whole <= 0:
-            return "—"
-        return f"{float(part) / whole * 100:.{decimals}f}%"
-    except (TypeError, ValueError, ZeroDivisionError):
+        part, whole = float(part), float(whole)
+    except (TypeError, ValueError):
         return "—"
+    if whole <= 0:
+        return "—"
+    pct = part / whole * 100
+    smallest = 10 ** -decimals
+    if 0 < pct < smallest:
+        return f"<{smallest:.{decimals}f}%"
+    if part < whole and pct > 100 - smallest:
+        return f">{100 - smallest:.{decimals}f}%"
+    return f"{pct:.{decimals}f}%"
 
 
 def pct_parts(values: dict, decimals: int = 1) -> dict:
@@ -779,6 +834,18 @@ def pct_parts(values: dict, decimals: int = 1) -> dict:
     leftover = round(100 * scale) - sum(floors.values())
     order = sorted(exact, key=lambda k: exact[k] - floors[k], reverse=True)
     for k in order[:max(0, leftover)]:
+        floors[k] += 1
+
+    # A non-zero count must never display as 0.0%, and no single share may show
+    # as 100.0% while another category has a non-zero count. Give each starved
+    # category its smallest visible unit, taken from the largest share — the
+    # total still comes to exactly 100%.
+    starved = [k for k, v in values.items() if float(v or 0) > 0 and floors[k] == 0]
+    for k in starved:
+        donor = max(floors, key=lambda x: floors[x])
+        if floors[donor] <= 1:
+            break
+        floors[donor] -= 1
         floors[k] += 1
     return {k: v / scale for k, v in floors.items()}
 
@@ -1303,6 +1370,18 @@ pd.set_option("styler.render.max_elements", 2_000_000)
 STYLE_CELL_BUDGET = 500_000
 
 
+# Streamlit's default row height varies with the base font size, so computing a
+# container height from a guessed row height left blank rows under short tables.
+# Pin the row height and the arithmetic becomes exact.
+ROW_H = 34
+HEAD_H = 40
+
+
+def df_height(n_rows: int, cap: int = 560) -> int:
+    """Exact height for n rows, so the table ends where its data ends."""
+    return min(cap, HEAD_H + ROW_H * max(int(n_rows), 1) + 2)
+
+
 def styled_table(table: pd.DataFrame, status_colors: list, grey_cols: tuple = ()):
     """Apply status colour to a table, or return it plain if that's too costly.
 
@@ -1366,10 +1445,10 @@ def results_dataframe(df: pd.DataFrame, email_col: str | None = None,
         styled_table(view, colors, grey_cols=("Reason",)),
         hide_index=True,
         width="stretch",
-        height=min(max_height, 44 + 35 * max(len(view), 1)),
+        height=df_height(len(view), max_height), row_height=ROW_H,
         key=key,
         column_config={
-            "Email": st.column_config.TextColumn("Email", width="large"),
+            "Email": st.column_config.TextColumn("Email", width="large", pinned=True),
             "Status": st.column_config.TextColumn("Status", width="small"),
             "Reason": st.column_config.TextColumn("Reason", width="medium"),
             "Score": st.column_config.ProgressColumn(
@@ -1457,9 +1536,10 @@ def page_dashboard() -> None:
             st.dataframe(
                 styled_table(table, [status_color(s) for s in recent["status"]],
                              grey_cols=("Source", "Validated")),
-                hide_index=True, width="stretch", height=44 + 35 * len(table),
+                hide_index=True, width="stretch", height=df_height(len(table)),
+                row_height=ROW_H,
                 column_config={
-                    "Email": st.column_config.TextColumn("Email", width="large"),
+                    "Email": st.column_config.TextColumn("Email", width="large", pinned=True),
                     "Status": st.column_config.TextColumn("Status", width="small"),
                     "Score": st.column_config.ProgressColumn(
                         "Score", min_value=0, max_value=100, format="%d", width="small"),
@@ -1575,7 +1655,7 @@ def page_validate() -> None:
             if det["sample_rows"]:
                 sample = pd.DataFrame(det["sample_rows"])
                 st.dataframe(sample, width="stretch", hide_index=True,
-                             height=min(220, 40 + 35 * len(sample)))
+                             height=df_height(len(sample), 240), row_height=ROW_H)
             else:
                 st.markdown(
                     f'<div class="note" style="background:var(--st-risk-soft);'
@@ -2031,9 +2111,9 @@ def page_contacts() -> None:
         st.dataframe(
             styled_table(table, colors, grey_cols=("Reason", "Source", "Validated")),
             hide_index=True, width="stretch",
-            height=min(560, 44 + 35 * max(len(table), 1)),
+            height=df_height(len(table)), row_height=ROW_H,
             column_config={
-                "Email": st.column_config.TextColumn("Email", width="large"),
+                "Email": st.column_config.TextColumn("Email", width="large", pinned=True),
                 "Status": st.column_config.TextColumn("Status", width="small"),
                 "Reason": st.column_config.TextColumn("Reason", width="small"),
                 "Score": st.column_config.ProgressColumn(
