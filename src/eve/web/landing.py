@@ -171,6 +171,20 @@ SAMPLE_MIX = [
     ("undeliverable", 531),
 ]
 
+#: The hero artifact: the uploaded file as it comes back. The left columns are
+#: the visitor's own, carried through untouched; the three on the right are what
+#: a run appends. Keyed on :data:`SAMPLE` so the page has one set of example
+#: addresses rather than two that could come to disagree with each other.
+YOUR_COLUMNS = ("company", "signed_up")
+APPENDED_COLUMNS = ("status", "sub_status", "settled_at")
+PREVIEW_ROWS = {
+    "jane.doe@acme.io": (("Acme", "2026-01-14"), "mailbox_confirmed"),
+    "sales@acme.io": (("Acme", "2026-02-02"), "role_account"),
+    "john@gmial.com": (("Northwind", "2026-02-19"), "no_mx"),
+    "hello@bigco.com": (("Bigco", "2026-03-05"), "greylisted"),
+}
+
+
 
 def _layers() -> list[dict[str, Any]]:
     counts = list_sizes()
@@ -196,6 +210,7 @@ def _sample() -> list[dict[str, Any]]:
                 "email": email,
                 **style,
                 "note": note,
+                "settled": settled,
                 "settledLabel": f"Settled at layer {settled}, {LAYERS[settled - 1][0]}",
                 "rail": [
                     style["dot"] if i == settled else (F.LINE_2 if i < settled else F.SURFACE)
@@ -204,6 +219,75 @@ def _sample() -> list[dict[str, Any]]:
             }
         )
     return rows
+
+
+def _preview() -> dict[str, Any]:
+    """The hero table: an uploaded file with the run's three columns appended.
+
+    Split into the columns that arrived and the columns that were added, because
+    that split is the promise the page is making. The engine only ever reads the
+    address column, so everything on the left of the rule is passed through
+    byte for byte, and everything on the right is what a run produces.
+    """
+    rows = []
+    for email, verdict, settled, _note in SAMPLE:
+        yours, sub = PREVIEW_ROWS[email]
+        style = F.VERDICT_STYLE[verdict]
+        rows.append(
+            {
+                "email": email,
+                "yours": list(yours),
+                "sub": sub,
+                "settled": settled,
+                "label": style["label"],
+                "dot": style["dot"],
+                "wash": style["wash"],
+                "ink": style["ink"],
+            }
+        )
+    return {
+        "yours": ["email", *YOUR_COLUMNS],
+        "added": list(APPENDED_COLUMNS),
+        "rows": rows,
+    }
+
+
+def _proof(open_signup: bool) -> list[dict[str, str]]:
+    """The three figures under the hero, each read from the engine itself.
+
+    The third is the offer, and it is only made where the offer stands. A
+    self-hosted engine with registration closed states what ships in the box
+    instead, so the strip never advertises a place the signup route would then
+    have to refuse.
+    """
+    counts = list_sizes()
+    s = get_settings()
+    strip = [
+        {
+            "figure": f"{len(LAYERS):,}",
+            "unit": "verification layers",
+            "detail": "Syntax through to an SMTP mailbox probe, run in that order.",
+        },
+        {
+            "figure": f"{counts['disposable']:,}",
+            "unit": "disposable domains",
+            "detail": "Vendored into the engine, and readable line by line.",
+        },
+    ]
+    strip.append(
+        {
+            "figure": f"{s.free_monthly_addresses:,}",
+            "unit": "addresses a month",
+            "detail": f"Free for the first {s.founding_accounts:,} accounts. No card.",
+        }
+        if open_signup
+        else {
+            "figure": f"{counts['roles'] + counts['free']:,}",
+            "unit": "role and free-provider rules",
+            "detail": "Classification runs offline, against lists you can audit.",
+        }
+    )
+    return strip
 
 
 def _mix() -> dict[str, Any]:
@@ -256,6 +340,7 @@ async def _offer() -> dict[str, Any]:
             "body": "Ask whoever runs it for an account, then sign in.",
             "ctaLabel": "Sign in",
             "ctaHref": "/login",
+            "open": False,
             "note": "",
             "counter": "",
         }
@@ -267,6 +352,7 @@ async def _offer() -> dict[str, Any]:
                     "and run a list today.",
             "ctaLabel": "Create an account",
             "ctaHref": "/signup",
+            "open": True,
             "note": "No card.",
             "counter": "",
         }
@@ -282,6 +368,7 @@ async def _offer() -> dict[str, Any]:
                 f"file back.",
         "ctaLabel": "Claim a free account",
         "ctaHref": "/signup",
+        "open": True,
         "note": "No card, and no clock counting down a trial.",
         # Nothing to count down until a place is taken, and "100 of 100" reads
         # as a counter that is broken rather than as one that has not moved.
@@ -292,9 +379,10 @@ async def _offer() -> dict[str, Any]:
 async def context(engine_url: str) -> dict[str, Any]:
     """Everything ``landing.html`` renders."""
     s = get_settings()
+    offer = await _offer()
     return {
         "palette": PALETTE,
-        "offer": await _offer(),
+        "offer": offer,
         "monthlyFree": f"{s.free_monthly_addresses:,}",
         "foundingAccounts": f"{s.founding_accounts:,}",
         "layerCount": len(LAYERS),
@@ -305,5 +393,7 @@ async def context(engine_url: str) -> dict[str, Any]:
         "outputs": [{"name": n, "detail": d} for n, d in OUTPUTS],
         "sample": _sample(),
         "mix": _mix(),
+        "preview": _preview(),
+        "proof": _proof(offer["open"]),
         "engineUrl": engine_url,
     }

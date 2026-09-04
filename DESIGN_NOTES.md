@@ -608,3 +608,92 @@ its copy true.
 - **Server-side paging** is now real on Contacts (Phase 4 left it client-side).
 - **No auth.** Everything above is a workaround for its absence, not a substitute.
   When sessions land, `workspace_identity()` is the single place that changes.
+
+---
+
+## Phase 6 — the landing page, rebuilt
+
+The first pass at `/` was a correct page with a template's manners. Its content
+was already honest (every figure derived, nothing typed twice) and that survives
+unchanged; what was replaced is the way it presented itself.
+
+### What was actually wrong
+
+1. **Alternating bands.** Five `.band` sections in `--canvas` against four in
+   white. Two background colours doing the work of a rule is the single fastest
+   way to make a page read as a template, and it also breaks the illusion that
+   the page is one document: the eye reads nine stacked slabs rather than one
+   argument.
+2. **Cards floating on a field.** Six benefit cards, four verdict cards and
+   three output cards, each with its own border and its own radius, gave the
+   page 13 competing rectangles and no grid.
+3. **No spatial memory.** Nothing told the reader where they were. Section
+   eyebrows existed but scrolled away with their heading.
+4. **The hero sold the wrong artifact.** It showed a verdict *mix*, which is a
+   summary. The promise being made is "your file back, every column where you
+   left it" — so the hero now shows the file.
+
+### The system now
+
+**One paper colour, one frame.** A single `--paper` column, max 1240px, held by
+a hairline on both sides against a warm `--ground` with a faint 88px grid that
+is only ever visible in the margins beside the frame. Sections are separated by
+rules. There is no second background colour anywhere except one panel, below.
+
+**A sticky rail.** Every section carries its caption (`03 / THE TRACE`) in a
+168px left rail that sticks as the section scrolls. It is the same string as the
+nav anchor, so a long page always says where you are without a scrollspy.
+
+**Panels, not cards.** Grids of three or four are now one bordered panel divided
+by hairlines. Thirteen rectangles became four.
+
+**One dark moment.** The API section is the page's only inverted surface. Spent
+once, it reads as emphasis; spent twice it would read as a theme.
+
+**Two weights, one typeface.** 400 for running text, 600 for headings and UI
+labels. The technical register comes from tracking, case and tabular figures,
+never from a second family. Every size is a named role in the scale
+(`--t-micro` through `--t-display`); nothing reaches for an arbitrary value.
+
+### Three pictures that carry information
+
+- **The hero sheet.** The uploaded file with the run's three columns appended,
+  and a drawn rule between the columns that arrived and the columns that were
+  added. The claim is the diagram.
+- **The pipeline spine.** A hairline runs through the layer ordinals from 1 to
+  7. A list of layers should look like a pipeline. The spine stops at the last
+  ordinal rather than running past it (`.layer:last-child::before` masks the
+  tail, because a container rule cannot know where the final circle sits).
+- **The trace rail.** Seven bars per address: the layers that ran, the layer
+  that settled it in that verdict's colour, and the layers it never reached,
+  with the layer numbers ticked underneath. The settling layer is marked with a
+  dot as well as a hue, so the picture still reads without colour vision.
+
+### Contrast, re-measured
+
+`--muted-2` (`#A8A29E`, 2.4:1) is the ramp step Phase 1 reserved for decorative
+marks and never for text. It had been used for section indices, the rail's layer
+numbers and the footer caption, all of which are read. Those move to `--muted`
+(4.9:1) and the caption label goes to `--ink-3` (7.5:1), which is also the
+hierarchy the rail wanted. The sample call's prompt and flags went from `#6F6C68`
+on the dark panel (3.3:1) to `#8A8680` (4.6:1).
+
+**Left as-is, deliberately:** the primary CTA is white on `--blue` (2.5:1). Every
+primary action in the app is white on `#35ABFF`; matching it is the point, and
+fixing it here alone would make the pitch and the product disagree about what a
+primary action looks like. Fixing it in both places is a product decision.
+
+### Motion
+
+One beat: the four returned rows arrive in sequence, 90ms apart. The header's
+rule fades in on scroll via `animation-timeline: scroll(root)` behind a
+`@supports` guard, so the page needs no script at all; without support the rule
+is simply always drawn.
+
+### Verification
+
+Rendered in headless Chrome at 500, 820 and 1440px and read section by section.
+The 500px floor is Chrome's own clamp on a headless window, so a narrower real
+phone viewport still wants a look. All 288 tests pass, including the invariants
+that guard this page: the palette is the product's, the percentages sum to 100,
+the layer count is spelled from the list, and the copy carries no em dashes.
