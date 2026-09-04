@@ -8,6 +8,7 @@ system runnable + testable with no external services. ``S3ObjectStore``
 """
 from __future__ import annotations
 
+import logging
 import shutil
 import uuid
 from abc import ABC, abstractmethod
@@ -16,6 +17,8 @@ from pathlib import Path
 from typing import BinaryIO
 
 from eve.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class ObjectStore(ABC):
@@ -28,16 +31,16 @@ class ObjectStore(ABC):
         """Open a binary stream for reading (caller closes)."""
 
     @abstractmethod
-    async def open_write(self, key: str) -> BinaryIO:
-        """Open a binary stream for writing (caller closes)."""
-
-    @abstractmethod
     def new_key(self, suffix: str = "") -> str:
         ...
 
     @abstractmethod
     async def presigned_download(self, key: str) -> str:
         ...
+
+    async def delete(self, key: str) -> bool:
+        """Remove an object. Returns False if it was already gone."""
+        raise NotImplementedError
 
 
 class LocalObjectStore(ObjectStore):
@@ -65,22 +68,40 @@ class LocalObjectStore(ObjectStore):
     async def open_read(self, key: str) -> BinaryIO:
         return self._path(key).open("rb")
 
-    async def open_write(self, key: str) -> BinaryIO:
-        return self._path(key).open("wb")
-
     async def presigned_download(self, key: str) -> str:
         # Local dev: served through the API's own download route.
         return f"/v1/files/{key}/raw"
 
+    async def delete(self, key: str) -> bool:
+        try:
+            self._path(key).unlink()
+            return True
+        except FileNotFoundError:
+            return False
+
 
 class S3ObjectStore(ObjectStore):  # pragma: no cover - exercised only with real S3
-    """S3 / R2 / MinIO backend. Requires the ``s3`` extra (aioboto3)."""
+    """S3 / R2 / MinIO backend. Requires the ``s3`` extra (aioboto3).
 
-    def __init__(self, endpoint: str, access_key: str, secret_key: str, bucket: str):
+    Note on ``open_read``: it buffers the object into memory rather than
+    streaming it. Uploads are bounded by ``EVE_MAX_UPLOAD_BYTES`` so this is
+    survivable, but it is the one place where the "flat memory" property of the
+    pipeline does not hold on the S3 backend.
+    """
+
+    def __init__(
+        self,
+        endpoint: str,
+        access_key: str,
+        secret_key: str,
+        bucket: str,
+        region: str = "",
+    ):
         self.endpoint = endpoint
         self.access_key = access_key
         self.secret_key = secret_key
         self.bucket = bucket
+        self.region = region
 
     def _session(self):
         import aioboto3  # lazy
@@ -91,12 +112,16 @@ class S3ObjectStore(ObjectStore):  # pragma: no cover - exercised only with real
         return f"{uuid.uuid4().hex}{suffix}"
 
     def _client(self):
-        return self._session().client(
-            "s3",
-            endpoint_url=self.endpoint,
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key,
-        )
+        kwargs = {
+            "aws_access_key_id": self.access_key,
+            "aws_secret_access_key": self.secret_key,
+        }
+        # Blank endpoint = real AWS S3; set it for R2/MinIO/Spaces.
+        if self.endpoint:
+            kwargs["endpoint_url"] = self.endpoint
+        if self.region:
+            kwargs["region_name"] = self.region
+        return self._session().client("s3", **kwargs)
 
     async def put(self, key: str, data: BinaryIO) -> str:
         async with self._client() as s3:
@@ -112,28 +137,52 @@ class S3ObjectStore(ObjectStore):  # pragma: no cover - exercised only with real
         buf.seek(0)
         return buf
 
-    async def open_write(self, key: str) -> BinaryIO:
-        # Callers write then call put(); for S3 we buffer and upload on close.
-        raise NotImplementedError("use put() for S3 writes")
-
     async def presigned_download(self, key: str) -> str:
         async with self._client() as s3:
             return await s3.generate_presigned_url(
                 "get_object", Params={"Bucket": self.bucket, "Key": key}, ExpiresIn=3600
             )
 
+    async def delete(self, key: str) -> bool:
+        async with self._client() as s3:
+            await s3.delete_object(Bucket=self.bucket, Key=key)
+        return True
+
 
 _store: ObjectStore | None = None
 
 
 def get_object_store() -> ObjectStore:
-    """Return the process-wide store. Local unless an S3 endpoint is configured
-    with credentials AND the ``s3`` extra is importable."""
+    """Return the process-wide store.
+
+    S3 when a bucket + credentials are configured and ``aioboto3`` imports;
+    local disk otherwise. A misconfigured S3 setup raises rather than silently
+    falling back to disk — on a multi-instance deploy that fallback would look
+    like it worked and then lose every upload.
+    """
     global _store
     if _store is not None:
         return _store
     s = get_settings()
-    _store = LocalObjectStore(s.local_storage_dir)
+    if s.s3_configured:
+        try:
+            import aioboto3  # noqa: F401
+        except ImportError as exc:
+            raise RuntimeError(
+                "EVE_S3_BUCKET is set but the 's3' extra is not installed. "
+                "Run: pip install -e '.[s3]'"
+            ) from exc
+        logger.info("object store: s3 bucket=%s endpoint=%s", s.s3_bucket, s.s3_endpoint or "aws")
+        _store = S3ObjectStore(
+            endpoint=s.s3_endpoint,
+            access_key=s.s3_access_key,
+            secret_key=s.s3_secret_key,
+            bucket=s.s3_bucket,
+            region=s.s3_region,
+        )
+    else:
+        logger.info("object store: local dir=%s", s.local_storage_dir)
+        _store = LocalObjectStore(s.local_storage_dir)
     return _store
 
 

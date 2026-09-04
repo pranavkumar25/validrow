@@ -10,24 +10,71 @@ Surface:
 """
 from __future__ import annotations
 
-from fastapi import FastAPI
-from fastapi.concurrency import run_in_threadpool
+import logging
+from contextlib import asynccontextmanager
 
-from eve.api import files, jobs
+from fastapi import Depends, FastAPI
+from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
+
+from eve.addresses import get_address_store
+from eve.api import files, jobs, workspace
 from eve.api.schemas import HealthResponse, VerifyRequest, VerifyResponse
 from eve.config import get_settings
 from eve.engine import validate
+from eve.jobs.store import get_job_store
+from eve.observability import (
+    configure_logging,
+    describe_backends,
+    init_sentry,
+    warn_about_configuration,
+)
+from eve.ratelimit import RateLimit
 
 VERSION = "0.1.0"
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    s = get_settings()
+    configure_logging(s)
+    init_sentry(s)
+
+    # Migrate to head on boot so a fresh checkout just runs and a deploy picks
+    # up schema changes without a separate step.
+    await get_address_store().init()
+    await get_job_store().init()
+
+    # Say which backend each subsystem picked. Every one of them falls back to
+    # a single-process default, and the failure mode is silent.
+    for name, backend in describe_backends(s).items():
+        logger.info("backend %s: %s", name, backend)
+    warn_about_configuration(s)
+    yield
+
 
 app = FastAPI(
     title="Email Validation Engine",
     version=VERSION,
     description="Layered email verification: syntax, normalize, typo, MX, classify, SMTP.",
+    lifespan=lifespan,
 )
+
+_cors = get_settings().cors_origin_list
+if _cors:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(files.router)
 app.include_router(jobs.router)
+app.include_router(workspace.router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])
@@ -41,7 +88,12 @@ async def health() -> HealthResponse:
     )
 
 
-@app.post("/v1/verify", response_model=VerifyResponse, tags=["verify"])
+@app.post(
+    "/v1/verify",
+    response_model=VerifyResponse,
+    tags=["verify"],
+    dependencies=[Depends(RateLimit())],
+)
 async def verify(req: VerifyRequest) -> VerifyResponse:
     """Validate a single address in real time.
 

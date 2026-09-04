@@ -1,5 +1,10 @@
-# Local dev stack. The API runs the M0 engine today; postgres/redis/minio are
-# here so the M1 file-pipeline work has its backing services ready.
+# Local stack running on the *production* backends: Postgres, Redis and an
+# S3-compatible store. Useful precisely because it is not the default path —
+# `make run` uses SQLite and local disk, so this is where you find out whether
+# the shared-backend code works before a deploy does.
+#
+# The worker is a separate service on purpose: that is the split a real
+# deployment has, where probe workers sit on port-25-capable egress hosts.
 services:
   api:
     build: .
@@ -7,10 +12,27 @@ services:
       - "8000:8000"
     env_file:
       - .env.example
-    environment:
-      EVE_DATABASE_URL: postgresql+asyncpg://eve:eve@postgres:5432/eve
+    environment: &backends
+      EVE_WORKSPACE_DB_URL: postgresql+asyncpg://eve:eve@postgres:5432/eve
       EVE_REDIS_URL: redis://redis:6379/0
       EVE_S3_ENDPOINT: http://minio:9000
+      EVE_S3_ACCESS_KEY: minioadmin
+      EVE_S3_SECRET_KEY: minioadmin
+      EVE_S3_BUCKET: eve-uploads
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - createbucket
+
+  # Bulk jobs run here rather than in the API, so an API restart cannot orphan
+  # a run half-way through.
+  worker:
+    build: .
+    command: ["arq", "eve.jobs.worker.WorkerSettings"]
+    env_file:
+      - .env.example
+    environment: *backends
     depends_on:
       - postgres
       - redis
@@ -43,6 +65,17 @@ services:
       - "9001:9001"
     volumes:
       - miniodata:/data
+
+  # S3 has no "create on first write", so the bucket has to exist up front.
+  createbucket:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      mc mb --ignore-existing local/eve-uploads;
+      "
 
 volumes:
   pgdata:

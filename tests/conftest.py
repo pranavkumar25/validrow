@@ -14,6 +14,7 @@ from eve.kv import InMemoryKV, set_kv
 from eve.layers import dns_mx
 from eve.smtp_infra import set_async_prober
 from eve.storage import LocalObjectStore, set_object_store
+from eve.tenancy import set_current_workspace_id
 
 
 @pytest.fixture(autouse=True)
@@ -24,6 +25,9 @@ def reset_state(tmp_path):
     set_job_store(InMemoryJobStore())
     set_kv(InMemoryKV())
     set_async_prober(NullAsyncProber())
+    # The workspace is a ContextVar, so it would otherwise leak into the next
+    # test and make an isolation failure look like a passing test.
+    set_current_workspace_id(None)
     yield
 
 

@@ -17,13 +17,16 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import functools
+import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Optional, Protocol
 
+from eve.addresses import AddressRecord, AddressStore
 from eve.config import Settings, get_settings
 from eve.engine import apply_probe_outcome, validate
 from eve.jobs import csv_io
-from eve.jobs.models import Job, JobStatus
+from eve.jobs.models import Job, JobStatus, Phase
 from eve.jobs.store import JobStore
 from eve.layers import dns_mx
 from eve.layers.normalize import normalize
@@ -31,6 +34,13 @@ from eve.layers.smtp import ProbeResult
 from eve.layers.syntax import check_syntax
 from eve.storage import ObjectStore
 from eve.verdict import Status, Verdict
+
+logger = logging.getLogger(__name__)
+
+
+def _now() -> float:
+    return datetime.now(timezone.utc).timestamp()
+
 
 # Statuses that go to the "removed" pile (do-not-send).
 _REMOVED_STATUSES = {Status.INVALID, Status.DISPOSABLE, Status.SPAM_TRAP}
@@ -91,13 +101,21 @@ async def run_job(
     job_store: JobStore,
     prober: Optional[AsyncProber] = None,
     settings: Optional[Settings] = None,
+    addresses: Optional[AddressStore] = None,
 ) -> Job:
+    """Run one bulk verification.
+
+    ``addresses`` is the workspace read-model the product reports from. Pass
+    ``None`` (the default in tests) to run verification without it.
+    """
     settings = settings or get_settings()
     prober = prober or NullAsyncProber()
     assert job.mapping is not None, "job requires a column mapping"
     email_col = job.mapping.email
 
     job.status = JobStatus.PROCESSING
+    job.phase = Phase.READING
+    job.started_at = _now()
     await job_store.save(job)
 
     try:
@@ -121,9 +139,15 @@ async def run_job(
         job.counts.total_rows = total_rows
         job.counts.unique_emails = len(unique)
         job.counts.duplicates = total_rows - len(unique)
+        # Progress is measured in unique addresses — that is the work, and it is
+        # what the user is charged for.
+        job.total = len(unique)
+        job.domains_total = len(domains)
         await job_store.save(job)
 
         # --- resolve (once per domain, in parallel) ----------------------
+        job.phase = Phase.RESOLVING
+        await job_store.save(job)
         if settings.enable_dns and domains:
             loop = asyncio.get_running_loop()
             rsem = asyncio.Semaphore(max(1, settings.verify_concurrency))
@@ -137,6 +161,7 @@ async def run_job(
             await asyncio.gather(*(_resolve(d) for d in domains))
 
         # --- verify (bounded concurrency, streamed progress) -------------
+        job.phase = Phase.VERIFYING
         verdicts: dict[str, Verdict] = {}
         sem = asyncio.Semaphore(max(1, settings.verify_concurrency))
 
@@ -151,27 +176,66 @@ async def run_job(
                 )
             verdicts[key] = v
             job.counts.bump(v.status.value)
+            job.processed += 1
 
         items = list(unique.items())
         batch = max(1, settings.chunk_size)
         for i in range(0, len(items), batch):
-            await asyncio.gather(*(_verify_one(k, w) for k, w in items[i : i + batch]))
+            chunk = items[i : i + batch]
+            await asyncio.gather(*(_verify_one(k, w) for k, w in chunk))
             await job_store.save(job)  # stream progress after each chunk
+            # Land results as they finish, so a job that fails part-way still
+            # leaves behind everything it did prove.
+            await _record_addresses(
+                job, [verdicts[k] for k, _ in chunk if k in verdicts], addresses
+            )
 
         # --- assemble ----------------------------------------------------
+        job.phase = Phase.ASSEMBLING
+        await job_store.save(job)
         await _assemble(
             job, store, delimiter, line_terminator, original_columns, unique, verdicts
         )
 
         job.status = JobStatus.COMPLETED
+        job.phase = Phase.DONE
+        job.finished_at = _now()
         await job_store.save(job)
     except Exception as exc:  # noqa: BLE001 - surface any failure on the job
         job.status = JobStatus.FAILED
         job.error = f"{type(exc).__name__}: {exc}"
+        job.finished_at = _now()
         await job_store.save(job)
         raise
 
     return job
+
+
+async def _record_addresses(job: Job, verdicts: list[Verdict], addresses) -> None:
+    """Write a batch of verdicts into the workspace read-model.
+
+    Best-effort: the read-model powers reporting, so a failure to write it must
+    never lose a validation run that already succeeded. The CSVs remain the
+    system of record.
+    """
+    if addresses is None or not verdicts:
+        return
+    try:
+        records = [
+            AddressRecord.from_verdict(
+                v,
+                job_id=job.id,
+                job_filename=job.filename,
+                list_type=job.list_type,
+            )
+            for v in verdicts
+            if (v.normalized_email or v.email)
+        ]
+        # Explicit rather than ambient: on a worker there is no request context
+        # to infer the workspace from, so the job carries it.
+        await addresses.upsert_many(records, workspace_id=job.workspace_id)
+    except Exception:  # noqa: BLE001 - reporting must not break verification
+        logger.warning("could not write addresses for job %s", job.id, exc_info=True)
 
 
 async def _verify_email(

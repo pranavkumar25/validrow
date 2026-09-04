@@ -88,6 +88,46 @@ async def detect_columns(store: ObjectStore, key: str, sample: int = 5) -> Colum
     )
 
 
+@dataclass
+class PreviewStats:
+    """What the file actually contains, counted rather than estimated.
+
+    The product tells you what you will be charged for *before* you spend
+    anything, so this number has to come from a real pass over the file — an
+    estimate from the first 64KB would be a guess presented as a price.
+    """
+
+    total_rows: int
+    unique_emails: int
+    blank_emails: int
+
+
+async def preview_stats(
+    store: ObjectStore, key: str, email_column: str, delimiter: str = ","
+) -> PreviewStats:
+    """Count rows and unique deliverable-candidate addresses in one pass."""
+    from eve.layers.normalize import normalize
+    from eve.layers.syntax import check_syntax
+
+    total = 0
+    blank = 0
+    seen: set[str] = set()
+    async for row in iter_rows(store, key, delimiter):
+        total += 1
+        raw = (row.get(email_column) or "").strip()
+        if not raw:
+            blank += 1
+            continue
+        syn = check_syntax(raw)
+        if syn.valid:
+            seen.add(normalize(syn.local_part or "", syn.domain or "").dedupe_key)
+        else:
+            # Malformed addresses are still charged work — they are validated
+            # (and rejected) at layer 1 — so they count toward the unique total.
+            seen.add(raw.lower())
+    return PreviewStats(total_rows=total, unique_emails=len(seen), blank_emails=blank)
+
+
 async def iter_rows(
     store: ObjectStore, key: str, delimiter: str = ","
 ) -> Iterator[dict[str, str]]:

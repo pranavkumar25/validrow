@@ -19,8 +19,14 @@ dependencies = [
     "dnspython>=2.6",
     "aiosmtplib>=3.0",
     "sqlalchemy[asyncio]>=2.0",
+    "alembic>=1.13",
     "aiosqlite>=0.19",
     "python-multipart>=0.0.9",
+    # Webhook delivery. Core rather than optional: a job that reports itself
+    # complete to nobody is a broken feature, not a deployment choice.
+    "httpx>=0.27",
+    # Server-rendered web app (served by the same process as the API).
+    "jinja2>=3.1",
 ]
 
 [project.optional-dependencies]
@@ -29,8 +35,9 @@ s3 = ["aioboto3>=12.0"]
 redis = ["redis>=5.0"]
 postgres = ["asyncpg>=0.29"]
 worker = ["arq>=0.26"]
-# Streamlit front-end (separate process; talks to the API).
-frontend = ["streamlit>=1.30", "requests>=2.31", "pandas>=2.0"]
+sentry = ["sentry-sdk[fastapi]>=2.0"]
+# The web app ships with the engine (jinja2 is a core dependency); there is no
+# separate front-end process and no extra to install.
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
@@ -44,7 +51,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-eve = ["data/*.txt"]
+eve = ["data/*.txt", "migrations/*.mako", "migrations/versions/*.py"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -58,6 +65,12 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI declares query/form/body parameters by calling Query()/Form()/Depends()
+# in the default. That is the framework's documented signature style, not the
+# mutable-default bug B008 exists to catch.
+extend-immutable-calls = ["fastapi.Query", "fastapi.Form", "fastapi.Depends", "fastapi.Body"]
 
 [tool.ruff.lint.pyupgrade]
 # Keep typing-module annotations (Optional/List/Dict) intact — Pydantic models

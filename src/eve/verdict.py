@@ -38,6 +38,66 @@ class SubStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class PrimaryVerdict(str, Enum):
+    """The four verdicts the product surfaces, in display order.
+
+    The engine emits six :class:`Status` values; ``disposable`` and ``spam_trap``
+    are not separate verdicts but *reasons* an address is undeliverable, so they
+    fold into ``UNDELIVERABLE`` and surface their specificity as sub-reason text.
+    Nothing about the underlying statuses changes — exports, filters and API
+    payloads still see all six.
+    """
+
+    DELIVERABLE = "deliverable"
+    RISKY = "risky"
+    UNKNOWN = "unknown"
+    UNDELIVERABLE = "undeliverable"
+
+
+#: Display order, used by every mix bar, donut and legend.
+VERDICT_ORDER = [
+    PrimaryVerdict.DELIVERABLE,
+    PrimaryVerdict.RISKY,
+    PrimaryVerdict.UNKNOWN,
+    PrimaryVerdict.UNDELIVERABLE,
+]
+
+_VERDICT_OF = {
+    Status.VALID: PrimaryVerdict.DELIVERABLE,
+    Status.RISKY: PrimaryVerdict.RISKY,
+    Status.UNKNOWN: PrimaryVerdict.UNKNOWN,
+    Status.INVALID: PrimaryVerdict.UNDELIVERABLE,
+    Status.DISPOSABLE: PrimaryVerdict.UNDELIVERABLE,
+    Status.SPAM_TRAP: PrimaryVerdict.UNDELIVERABLE,
+}
+
+
+def primary_verdict(status: Status | str) -> str:
+    """Map an engine status onto one of the four primary verdicts."""
+    try:
+        return _VERDICT_OF[Status(status)].value
+    except ValueError:
+        return PrimaryVerdict.UNKNOWN.value
+
+
+#: Human sub-reason for each machine sub_status, shown as secondary text under
+#: the verdict. ``None`` means the verdict alone says everything there is to say.
+SUB_REASON_LABEL = {
+    SubStatus.OK.value: None,
+    SubStatus.INVALID_SYNTAX.value: "Invalid syntax",
+    SubStatus.NO_MX.value: "No MX record",
+    SubStatus.DISPOSABLE.value: "Disposable domain",
+    SubStatus.ROLE_ACCOUNT.value: "Role account",
+    SubStatus.CATCH_ALL.value: "Catch-all domain",
+    SubStatus.MAILBOX_NOT_FOUND.value: "Mailbox not found",
+    SubStatus.GREYLISTED.value: "Greylisted",
+    SubStatus.TIMEOUT.value: "SMTP timeout",
+    SubStatus.DNS_ERROR.value: "DNS error",
+    SubStatus.ANTISPAM_BLOCK.value: "Antispam block",
+    SubStatus.UNKNOWN.value: None,
+}
+
+
 @dataclass
 class Verdict:
     """The full result of validating a single address.
