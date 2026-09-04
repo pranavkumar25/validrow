@@ -4,7 +4,7 @@
         <div style="display: flex; flex-direction: column; gap: 24px">
 
           <div class="vr-head" style="display: flex; align-items: center; gap: 12px">
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+            <div class="vr-head-main" style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
               <h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: #0A0A0A">Dashboard</h1>
               <span style="font-size: 14px; color: #79756C">Track deliverability and validation activity across all your lists.</span>
             </div>
@@ -39,7 +39,7 @@
           {% endif %}
 
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
-            <div class="vr-tabs" style="display: flex; align-items: stretch; height: 36px; overflow: hidden; border-radius: 8px; background: #FCFCFC; border: 1px solid #D8D4CC">
+            <div class="vr-tabs" style="display: flex; align-items: stretch; height: 36px; border-radius: 8px; background: #FCFCFC; border: 1px solid #D8D4CC">
               {% for t in tabs %}
                 <a class="nav hv-surface" href="{{ t.href }}" aria-pressed="{{ t.on2 }}" style="display: flex; align-items: center; padding: 0 15px; border: 0; background: {{ t.bg }}; font-size: 13.5px; font-weight: {{ t.w }}; color: {{ t.fg }}; box-shadow: {{ t.ring }}; transition: background 150ms ease-out">{{ t.label }}</a>
               {% endfor %}
@@ -47,9 +47,9 @@
           </div>
 
           {% if bannerOpen %}
-            <div role="status" data-banner class="vr-note" style="display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; background: {{ bannerBg }}; border: 1px solid {{ bannerBd }}">
+            <div role="status" data-banner class="vr-note" style="display: flex; gap: 12px; padding: 16px; border-radius: 12px; background: {{ bannerBg }}; border: 1px solid {{ bannerBd }}">
               <span style="width: 8px; height: 8px; flex: 0 0 8px; border-radius: 999px; background: {{ bannerDot }}"></span>
-              <span class="vr-note-text" style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0">
+              <span class="vr-note-text" style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
                 <span style="font-size: 14px; font-weight: 600; color: #0A0A0A">{{ bannerTitle }}</span>
                 <span style="font-size: 13.5px; color: #57534B">{{ bannerBody }}</span>
               </span>
@@ -58,7 +58,7 @@
             </div>
           {% endif %}
 
-          <div class="vr-kpis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr)); gap: 16px">
+          <div class="vr-kpis" style="display: grid; --cols: repeat(auto-fit, minmax(min(100%, 232px), 1fr)); gap: 16px">
             {% for s in figStats %}
               <div style="display: flex; flex-direction: column; gap: 16px; height: 176px; padding: 20px; border-radius: 12px; background: #FCFCFC; border: 1px solid #E7E4DE">
                 <div style="display: flex; align-items: center; gap: 8px">

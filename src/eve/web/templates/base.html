@@ -63,11 +63,12 @@ a.row:hover, a.nav:hover { color: inherit; }
    Responsive shell.
 
    The screens were ported from a desktop design file and carry their layout in
-   inline styles, which a stylesheet cannot politely override. Rather than
-   rewrite every screen, the rules below claim the few decisions that have to
-   change with the viewport, and each one is marked !important because that is
-   the only way to outrank an inline style. Every selector is a class this
-   template or a screen sets on purpose; none of them matches on a style string.
+   inline styles. Rather than rewrite every screen, each class below claims the
+   handful of properties that have to change with the viewport, and the markup
+   stops setting those inline: the cascade then works normally, so nothing here
+   needs !important. A value that differs per instance rides along as a custom
+   property, which is not the declaration these rules write. Every selector is a
+   class a template sets on purpose; none matches on a style string.
 
    Three sizes: a phone (<=720px) gets one column and a drawer, a tablet
    (721-1080px) keeps two columns of cards and still gets the drawer, and a
@@ -75,6 +76,7 @@ a.row:hover, a.nav:hover { color: inherit; }
    --------------------------------------------------------------------------- */
 
 .vr-shell { display: flex; min-height: 100vh; }
+.vr-sidebar { width: 280px; flex: 0 0 280px; position: sticky; top: 0; height: 100vh; }
 .vr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .vr-pad { flex: 1; padding: 28px 32px 36px; }
 
@@ -97,8 +99,8 @@ a.row:hover, a.nav:hover { color: inherit; }
   .vr-burger { display: grid; place-items: center; width: 38px; height: 38px; margin-left: -6px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; }
   .vr-burger:hover { background: #F4F3EF; }
   .vr-sidebar {
-    position: fixed !important; top: 0; left: 0; z-index: 60;
-    height: 100dvh !important; width: 284px !important; flex-basis: 284px !important;
+    position: fixed; top: 0; left: 0; z-index: 60;
+    height: 100dvh; width: 284px; flex: 0 0 284px;
     transform: translateX(-100%); transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
     box-shadow: 0 24px 60px -20px rgba(10,10,10,0.28);
   }
@@ -108,85 +110,110 @@ a.row:hover, a.nav:hover { color: inherit; }
   .vr-menu:focus-visible ~ .vr-shell .vr-burger { outline: 2px solid rgba(0,0,255,0.45); outline-offset: 2px; }
   .vr-pad { padding: 20px 20px 32px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .vr-sidebar, .vr-scrim { transition: none !important; }
-}
 @media (max-width: 720px) { .vr-pad { padding: 16px 14px 28px; } }
 
 /* --- Rules the screens opt into -------------------------------------------
-   A screen adds one of these classes beside the inline style it already has.
-   The class says what the block is; the media query says what that means on a
-   narrower viewport. */
+   Each class owns exactly the properties its media query has to change, and the
+   markup stops setting those inline, so the cascade works normally and nothing
+   below needs !important. Where the value differs per instance (three cards
+   here, four there; a 340px aside on Exports, a 150px rail on How) it stays in
+   the markup as a custom property, which is not the declaration these rules
+   write. Everything else about a block is still its own inline style. */
 
-/* A row of KPI cards, or any equal-width card row. Two-up is kept right down
-   to a small phone: a figure and a short label fit in half of 360px, and
-   stacking four of them puts 700px of scrolling in front of the content the
-   screen is actually about. One-up only where two would truly crowd. */
-@media (max-width: 1080px) { .vr-cards { grid-template-columns: repeat(2, 1fr) !important; } }
-@media (max-width: 380px)  { .vr-cards { grid-template-columns: 1fr !important; } }
+/* A row of equal-width cards. Two-up is kept right down to a small phone: a
+   figure and a short label fit in half of 360px, and stacking four of them puts
+   700px of scrolling in front of the content the screen is about. */
+.vr-cards { grid-template-columns: var(--cols, repeat(4, 1fr)); }
+@media (max-width: 1080px) { .vr-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 380px)  { .vr-cards { grid-template-columns: 1fr; } }
 
-/* The Dashboard's stat row is an auto-fit grid with a 232px floor, so a phone
-   gets one column of 176px-tall cards. On a phone the cards give up their fixed
-   height and pair up instead. */
+/* The Dashboard's stat row: an auto-fit grid whose 232px floor gives a phone one
+   column of 176px-tall cards, and a tablet three columns with the fourth alone
+   underneath. */
+.vr-kpis { grid-template-columns: var(--cols, repeat(auto-fit, minmax(min(100%, 232px), 1fr))); }
+@media (min-width: 721px) and (max-width: 1080px) { .vr-kpis { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 720px) {
-  .vr-kpis { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-  .vr-kpis > * { height: auto !important; min-height: 92px; padding: 14px !important; gap: 8px !important; }
+  .vr-kpis { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .vr-kpis > * { height: auto; min-height: 92px; }
 }
-@media (max-width: 380px) { .vr-kpis { grid-template-columns: 1fr !important; } }
-/* On a tablet the auto-fit floor gives three columns and leaves the fourth
-   card alone on a second row. Two by two is the same information without
-   the orphan. */
-@media (min-width: 721px) and (max-width: 1080px) { .vr-kpis { grid-template-columns: repeat(2, 1fr) !important; } }
+@media (max-width: 380px) { .vr-kpis { grid-template-columns: 1fr; } }
 
-/* Two panels side by side that become one column before they get cramped. */
-@media (max-width: 980px) { .vr-split { grid-template-columns: 1fr !important; } }
+/* Two panels side by side that stack before they get cramped. */
+.vr-split { grid-template-columns: var(--cols, 1fr 340px); }
+@media (max-width: 980px) { .vr-split { grid-template-columns: 1fr; } }
 
-/* A toolbar: filters, tabs, a search box and a button on one line. It wraps
-   rather than pushing the page sideways, and its controls stop being fixed. */
+/* A toolbar: filters, a search box, a pager. It wraps rather than pushing the
+   page sideways, and its fixed-width members stop being fixed. */
+.vr-bar { flex-wrap: wrap; height: var(--h, auto); }
+.vr-grow { width: var(--w, auto); }
 @media (max-width: 860px) {
-  .vr-bar { flex-wrap: wrap !important; height: auto !important; row-gap: 10px !important; }
+  .vr-bar { height: auto; row-gap: 10px; }
   .vr-bar > * { min-width: 0; }
-  .vr-grow { flex: 1 1 100% !important; width: auto !important; min-width: 0 !important; }
+  .vr-grow { flex: 1 1 100%; width: auto; min-width: 0; }
 }
-
-/* Content that is legitimately wider than a phone: a chart, a wide data grid.
-   It scrolls inside its own box instead of widening the document. */
-.vr-scroll { overflow-x: auto; max-width: 100%; }
-
-/* A single control that was drawn at a fixed width. */
-@media (max-width: 720px) { .vr-fluid { width: 100% !important; min-width: 0 !important; } }
 
 /* A page header: a title and its blurb, with a control on the right. The
    control drops under the title rather than squeezing it into a column two
    words wide. */
+.vr-head { flex-wrap: nowrap; }
+.vr-head-main { flex: 1; }
 @media (max-width: 720px) {
-  .vr-head { flex-wrap: wrap !important; row-gap: 14px !important; }
-  .vr-head > :first-child { flex: 1 1 100% !important; }
+  .vr-head { flex-wrap: wrap; row-gap: 14px; }
+  .vr-head-main { flex: 1 1 100%; }
 }
 
 /* A banner: an icon, a sentence, and one or two actions. The sentence is what
    the banner is for, so it keeps the width and the actions go underneath. */
+.vr-note { flex-wrap: nowrap; align-items: center; }
+.vr-note-text { flex: 1; }
 @media (max-width: 760px) {
-  .vr-note { flex-wrap: wrap !important; row-gap: 12px !important; align-items: flex-start !important; }
-  .vr-note > .vr-note-text { flex: 1 1 100% !important; }
-  .vr-note > .vr-note-acts { margin-left: 0 !important; }
+  .vr-note { flex-wrap: wrap; align-items: flex-start; row-gap: 12px; }
+  .vr-note-text { flex: 1 1 100%; }
+  .vr-note > .vr-note-acts { margin-left: 0; }
 }
 
-/* A row of tabs or filter pills. Wrapping them puts one orphan on its own
-   line and re-flows the page as the labels change, so the row scrolls
-   instead and every tab keeps its shape. */
+/* A row of tabs. Wrapping them puts one orphan on its own line and re-flows the
+   page as the labels change, so the row scrolls instead and every tab keeps its
+   shape. */
+.vr-tabs { flex-wrap: nowrap; overflow: hidden; }
 @media (max-width: 860px) {
-  .vr-tabs { overflow-x: auto !important; flex-wrap: nowrap !important; scrollbar-width: none; -ms-overflow-style: none; }
+  .vr-tabs { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
   .vr-tabs::-webkit-scrollbar { display: none; }
-  .vr-tabs > * { flex: 0 0 auto !important; white-space: nowrap; }
+  .vr-tabs > * { flex: 0 0 auto; white-space: nowrap; }
 }
 
-/* A wizard stepper. Four labels beside four circles is more than a phone
-   has room for, so only the step you are on names itself; the numbered
-   circles and the rule between them still say where you are. */
+/* Content that is legitimately wider than a phone. It scrolls inside its own
+   box instead of widening the document. */
+.vr-scroll { overflow-x: auto; max-width: 100%; }
+
+/* A wizard stepper. Four labels beside four circles is more than a phone has
+   room for, so only the step you are on names itself; the numbered circles and
+   the rule between them still say where you are. */
 @media (max-width: 720px) {
   .vr-step-label { display: none; }
   .vr-step-label[data-cur] { display: inline; }
+}
+
+/* --- Touch targets ---------------------------------------------------------
+   The screens were drawn for a mouse, so their controls run from 18px to 34px
+   tall. WCAG 2.2 puts the floor at 24x24 and several sat on or under it; a
+   finger wants considerably more than the floor.
+
+   min-height is the whole trick: an inline `height: 24px` does not stop a
+   stylesheet raising the minimum, because min-height wins over height by
+   specification. So every control grows on a phone without a single screen
+   being edited. Rows inside a scrolling data grid are excluded: they are not
+   targets, and stretching them would halve how much of a table a phone shows.
+   Width alone gates it rather than `pointer: coarse`, because a window this
+   narrow is a phone often enough, and a larger target has never hurt a mouse. */
+@media (max-width: 720px) {
+  .vr-pad a[href]:not(.row),
+  .vr-pad button:not([data-row-toggle]):not([data-check]),
+  .vr-pad select,
+  .vr-pad summary { min-height: 38px; }
+  /* Each of these centres its content with flex or grid, so a taller box keeps
+     its label centred without any other change. */
+  .vr-topbar a { min-height: 44px; display: inline-flex; align-items: center; }
 }
 </style>
 {% block head %}{% endblock %}
@@ -200,7 +227,7 @@ a.row:hover, a.nav:hover { color: inherit; }
      also closes from the hamburger, which is a real control. #}
   <label class="vr-scrim" for="vr-menu" aria-hidden="true"></label>
 
-  <nav aria-label="Main" class="vr-sidebar" style="width: 280px; flex: 0 0 280px; background: #FCFCFC; border-right: 1px solid #E7E4DE; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh">
+  <nav aria-label="Main" class="vr-sidebar" style="background: #FCFCFC; border-right: 1px solid #E7E4DE; display: flex; flex-direction: column">
     <div style="display: flex; flex-direction: column; gap: 20px; padding: 22px 16px 8px">
       <div style="display: flex; align-items: center; gap: 10px; padding: 0 6px; height: 22px">
         {% with h = 19 %}{% include "_wordmark.html" %}{% endwith %}

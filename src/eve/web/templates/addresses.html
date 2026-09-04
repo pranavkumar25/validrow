@@ -5,7 +5,7 @@
           <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">Addresses</div>
           <div style="font-size: 14px; color: #57534B; margin-top: 2px">Every address across all completed jobs, de-duplicated.</div>
 
-          <div class="vr-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
+          <div class="vr-cards" style="display: grid; --cols: repeat(4, 1fr); gap: 16px; margin-top: 20px">
             {% for s in aStats %}
               <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 20px">
                 <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">{{ s.eyebrow }}</div>
@@ -14,8 +14,8 @@
             {% endfor %}
           </div>
 
-          <div class="vr-bar" style="display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap">
-            <form action="{{ APP }}/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; width: 260px" class="vr-grow">
+          <div class="vr-bar" style="display: flex; align-items: center; gap: 8px; margin-top: 20px">
+            <form action="{{ APP }}/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; --w: 260px" class="vr-grow">
               {% for c in chipsAll %}{% if c.on %}<input type="hidden" name="verdict" value="{{ c.key }}">{% endif %}{% endfor %}
               <input type="hidden" name="sort" value="{{ aSort }}">
               <input type="hidden" name="size" value="{{ aSize }}">

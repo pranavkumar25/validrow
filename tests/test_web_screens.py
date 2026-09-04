@@ -575,3 +575,77 @@ def test_hidden_actually_hides(client):
     and it has to stay.
     """
     assert "[hidden] { display: none !important; }" in client.get("/app/dashboard").text
+
+
+# The properties each responsive class owns. A screen that sets one of these
+# inline takes it back off the stylesheet, and the media query silently stops
+# applying: this is the invariant that lets the responsive rules work with no
+# !important, so it is asserted rather than remembered.
+OWNED_PROPERTIES = {
+    "vr-cards": ["grid-template-columns"],
+    "vr-kpis": ["grid-template-columns"],
+    "vr-split": ["grid-template-columns"],
+    "vr-bar": ["flex-wrap", "height"],
+    "vr-head": ["flex-wrap"],
+    "vr-head-main": ["flex"],
+    "vr-note": ["flex-wrap", "align-items"],
+    "vr-note-text": ["flex"],
+    "vr-tabs": ["flex-wrap", "overflow"],
+    "vr-grow": ["width", "min-width"],
+    "vr-sidebar": ["width", "flex", "position", "height"],
+}
+
+
+def test_responsive_classes_still_own_their_properties():
+    """No screen sets inline what its responsive class is supposed to control."""
+    import re
+    from pathlib import Path
+
+    offenders = []
+    for tpl in sorted(Path("src/eve/web/templates").glob("*.html")):
+        html = tpl.read_text()
+        for cls, props in OWNED_PROPERTIES.items():
+            for m in re.finditer(
+                r'class="[^"]*\b' + cls + r'\b[^"]*"[^>]*?style="([^"]*)"'
+                r'|style="([^"]*)"[^>]*?class="[^"]*\b' + cls + r'\b[^"]*"',
+                html,
+            ):
+                style = m.group(1) or m.group(2) or ""
+                for decl in style.split(";"):
+                    prop = decl.split(":", 1)[0].strip()
+                    if prop in props:
+                        offenders.append(f"{tpl.name}: .{cls} sets {prop} inline")
+    assert not offenders, "\n".join(offenders)
+
+
+def test_the_responsive_rules_need_no_important():
+    """The whole point of the class split, pinned.
+
+    The five `!important` that remain are the hover rules the design shipped
+    with and the `[hidden]` fix, both of which override an inline *value* rather
+    than a layout decision. The responsive block adds none.
+    """
+    from pathlib import Path
+
+    import re
+
+    css = Path("src/eve/web/templates/base.html").read_text()
+    # Start at the comment that opens the block, not inside it, or the comment
+    # stripper below has no "/*" to match and leaves the first one in.
+    start = css.rindex("/*", 0, css.index("Responsive shell."))
+    block = css[start:css.index("</style>")]
+    # The comments explain why there is no !important, so they say the word.
+    block = re.sub(r"/\*.*?\*/", "", block, flags=re.S)
+    lines = [ln.strip() for ln in block.splitlines() if "!important" in ln]
+    assert not lines, "responsive rules regained !important:\n" + "\n".join(lines)
+
+
+def test_phone_controls_clear_the_touch_floor(client):
+    """Controls run from 18px to 34px tall; a finger wants more than that.
+
+    `min-height` is what makes this possible without editing every screen: an
+    inline `height: 24px` does not stop a stylesheet raising the minimum.
+    """
+    css = client.get("/app/dashboard").text
+    assert ".vr-pad a[href]:not(.row)" in css and "min-height: 38px" in css
+    assert ".vr-topbar a { min-height: 44px" in css

@@ -950,3 +950,94 @@ their fix reverted, because a test that cannot fail is not a test.
 The screens' layout stays in inline styles. Tokenising them so the responsive
 rules need no `!important` is the right change and a much larger one than this
 pass; the classes above are the seam to do it along when that happens.
+
+> **Done in Phase 10.** It turned out not to need the rewrite: only the handful
+> of properties the media queries actually write had to leave the markup.
+
+---
+
+## Phase 10 — paying off the `!important`, and the touch floor
+
+Phase 9 left two things: sixteen `!important` holding the responsive rules up,
+and an audit that had only ever looked at layout.
+
+### The `!important` was narrower than it looked
+
+The instinct was that clearing it meant rewriting ten screens out of inline
+styles. It did not. A media query only ever writes a **handful** of properties,
+and only *those* need to leave the markup:
+
+| Class | Properties it now owns |
+|---|---|
+| `.vr-cards` `.vr-kpis` `.vr-split` | `grid-template-columns` |
+| `.vr-bar` | `flex-wrap`, `height` |
+| `.vr-head` `.vr-head-main` `.vr-note` `.vr-note-text` | `flex-wrap`, `align-items`, `flex` |
+| `.vr-tabs` | `flex-wrap`, `overflow` |
+| `.vr-grow` `.vr-sidebar` | `width`, `flex`, `position`, `height` |
+
+Fourteen containers, one declaration or two each. Everything else about those
+blocks — colour, padding, radius, border, gap — is still its own inline style,
+and no control was touched at all.
+
+**The per-instance problem, and the answer.** These values are not uniform:
+Exports has three cards and Contacts four, Exports' aside is 340px and How's
+rail is 150px. A class cannot hold four values. So the value moves to a **custom
+property** (`--cols: repeat(3, 1fr)`), which is *not* the declaration the media
+query writes. The markup still shows what this instance is, the class reads it
+as a fallback-bearing default, and the override needs no weight at all.
+
+Every `!important` this work introduced is gone. Five remain and are not ours:
+the design's own `.hv-*:hover` rules, which override an inline *value* rather
+than a layout decision, and the `[hidden]` fix from Phase 9.
+
+**A test pins it**, because the failure is silent: a screen that starts setting
+`grid-template-columns` inline again takes it back off the stylesheet and the
+media query simply stops applying, with nothing to notice. One test asserts no
+tagged element sets a property its class owns; another asserts the responsive
+block has regained no `!important`. Both were confirmed to fail when broken.
+
+### Two attempts that were wrong, and why
+
+The first pass at de-inlining stripped `border` as "shape" and ate
+`border: 1px solid {{ c.bd }}` — the *selected* state of every filter chip. The
+rule that came out of it: **a declaration whose value is a template expression
+is never shape**, whatever its property name.
+
+The second pass tried to fold whole controls into classes (`.vr-chip`, `.vr-ctl`
+and so on). It converted 21 of them before the diff showed why not: their font
+sizes run 12, 12.5, 13 and 13.5px and their borders differ, so one class would
+have quietly restyled a third of them. Reverted. Controls keep their inline
+appearance; only containers were touched.
+
+### The touch floor, for free
+
+Controls on the screens run from 18px to 34px tall. WCAG 2.2 puts the floor at
+24×24 and several sat on or under it.
+
+`min-height` settles it without editing a single screen: an inline `height: 24px`
+does **not** stop a stylesheet raising the minimum, because `min-height` wins
+over `height` by specification rather than by weight. One rule takes every
+control in the content area to 38px on a phone and the top bar's wordmark to 44.
+Rows inside a scrolling data grid are excluded by selector: they are not targets,
+and stretching them would halve how much of a table a phone can show.
+
+Gated on width alone rather than `pointer: coarse`. A window that narrow is a
+phone often enough, a stylus reports `fine`, and a larger target has never hurt
+a mouse. (The pointer gate also silently did nothing in a headless browser,
+which is how it was caught.)
+
+### Also fixed
+
+The wordmark link on the auth screens had no accessible name. The SVG names
+itself with `role="img"`, but naming the link is what the landing page's brand
+link already does and what a link checker expects.
+
+### Verification
+
+Zero horizontal overflow and zero controls under 34px, across fifteen paths and
+seven widths from 360 to 1600, with data in the workspace. Desktop was compared
+against the previous render to confirm the de-inlining moved nothing.
+
+**One process note.** A `git checkout --` used to undo a deliberate mutation
+threw away the uncommitted rewrite in the same file. Revert the mutation, not
+the file.

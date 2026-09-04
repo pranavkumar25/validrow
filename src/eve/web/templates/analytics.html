@@ -4,7 +4,7 @@
         <div>
           <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">Analytics</div>
           <div style="font-size: 14px; color: #57534B; margin-top: 2px">Deliverability across every job in this workspace.</div>
-          <div class="vr-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
+          <div class="vr-cards" style="display: grid; --cols: repeat(4, 1fr); gap: 16px; margin-top: 20px">
             {% for s in anKpis %}
               <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 20px">
                 <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">{{ s.eyebrow }}</div>
