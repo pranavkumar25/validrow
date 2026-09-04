@@ -214,6 +214,30 @@ make migration m="add credits"    # new revision
 Revisions 0001–0003 tolerate a database that predates Alembic. Write anything
 from 0004 on strictly.
 
+## Greylisting
+
+A `4xx` reply defers us rather than answering us — which is precisely what
+greylisting does to a stranger — so settling that address is how a verifier
+reports `unknown` for mail that would have been delivered fine. Instead the
+address is queued for a re-probe (`900s`, `1800s`, `3600s` by default) and only
+settles `unknown` once the attempts run out.
+
+Greylisters clear in minutes, so the retry cannot happen inside the run. The
+durable record is a `reprobes` row, not a timer: a process that dies mid-wait
+loses nothing, because the next process to poll finds the row still due. That
+holds on the inline backend as well as on arq.
+
+**A cleared retry updates the address row, and only the address row.** The
+job's `cleaned` / `valid` / `removed` CSVs are a snapshot taken when the job
+finished, and a download must not change contents under someone who already has
+it. The read-model is the living record — the same reason `smtp_ran` is stored
+as a fact and the settling layer recomputed from it on read — so Contacts,
+Dashboard and Analytics show the cleared verdict while the export still says
+what was true when it was written.
+
+Retries can only improve on the verdict, never worsen it: the address was
+already `unknown` before the first one ran.
+
 ## Webhooks
 
 Pass `webhook_url` when creating a job and a callback is POSTed when it
@@ -233,6 +257,7 @@ restart; without it, it is a background task in the API process and does not.
 ```
 src/eve/
   layers/      syntax · normalize · typo · dns_mx · classify · smtp(seam)
+  reprobe.py   deferred retries for greylisted addresses (schedule + sweep)
   smtp_infra/  prober · providers · rate_limiter · ip_pool · blacklist · service   (M2)
   jobs/        models · store · csv_io · pipeline                                   (M1)
   data/        disposable / roles / free / top_domains lists
@@ -257,6 +282,10 @@ tests/         per-layer + pipeline e2e + SMTP integration (aiosmtpd) + SQL stor
 | `EVE_DNSBL_ENABLED` | `true` | scan the egress IPs for blacklist listings |
 | `EVE_DNSBL_ZONES` | `""` | comma-separated; empty = Spamhaus / Barracuda / SpamCop |
 | `EVE_DNSBL_INTERVAL_SECONDS` | `3600` | seconds between scans |
+| `EVE_REPROBE_ENABLED` | `true` | retry greylisted addresses |
+| `EVE_REPROBE_MAX_ATTEMPTS` | `3` | retries before settling `unknown` |
+| `EVE_REPROBE_DELAYS` | `900,1800,3600` | seconds before each retry |
+| `EVE_REPROBE_POLL_SECONDS` | `60` | how often a process looks for due retries |
 
 Infra — **empty means "use the local default"**, so these are also the switches
 that turn each shared backend on:

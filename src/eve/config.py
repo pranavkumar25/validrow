@@ -60,6 +60,17 @@ class Settings(BaseSettings):
     dnsbl_zones: str = ""  # comma-separated; empty = the built-in zone list
     dnsbl_interval_seconds: float = 3600.0
 
+    # Deferred re-probes for greylisted addresses. A 4xx is the receiver
+    # deferring us, not a verdict, so the address is retried on this schedule
+    # and only settles `unknown` once the attempts run out. The delays are in
+    # minutes for a reason: a greylister that cleared in seconds would not be
+    # doing its job, so a same-run retry would just collect a second 4xx.
+    reprobe_enabled: bool = True
+    reprobe_max_attempts: int = 3
+    reprobe_delays: str = "900,1800,3600"  # seconds before each retry
+    reprobe_poll_seconds: float = 60.0  # how often a process looks for due work
+    reprobe_batch: int = 50  # addresses re-probed per sweep
+
     # --- Infra backends -------------------------------------------------
     # Every one of these is *empty by default*, and empty means "use the
     # in-process/on-disk backend". That is deliberate: a placeholder default
@@ -107,6 +118,18 @@ class Settings(BaseSettings):
     @property
     def smtp_egress_ip_list(self) -> list[str]:
         return [ip.strip() for ip in self.smtp_egress_ips.split(",") if ip.strip()]
+
+    @property
+    def reprobe_delay_list(self) -> list[int]:
+        out = []
+        for part in self.reprobe_delays.split(","):
+            part = part.strip()
+            if part:
+                try:
+                    out.append(int(float(part)))
+                except ValueError:
+                    continue
+        return out
 
     @property
     def dnsbl_zone_list(self) -> list[str]:

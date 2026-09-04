@@ -85,6 +85,10 @@ async def delete_job(job_id: str, keep_addresses: bool = Query(True)) -> None:
             pass
     if not keep_addresses:
         await get_address_store().delete_by_job(job_id)
+        # Pending retries would have nothing left to update.
+        from eve.reprobe import get_reprobe_store
+
+        await get_reprobe_store().delete_by_job(job_id)
     await job_store.delete(job_id)
 
 

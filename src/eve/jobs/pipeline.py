@@ -33,7 +33,7 @@ from eve.layers.normalize import normalize
 from eve.layers.smtp import ProbeResult
 from eve.layers.syntax import check_syntax
 from eve.storage import ObjectStore
-from eve.verdict import Status, Verdict
+from eve.verdict import Status, SubStatus, Verdict
 
 logger = logging.getLogger(__name__)
 
@@ -186,9 +186,9 @@ async def run_job(
             await job_store.save(job)  # stream progress after each chunk
             # Land results as they finish, so a job that fails part-way still
             # leaves behind everything it did prove.
-            await _record_addresses(
-                job, [verdicts[k] for k, _ in chunk if k in verdicts], addresses
-            )
+            chunk_verdicts = [verdicts[k] for k, _ in chunk if k in verdicts]
+            await _record_addresses(job, chunk_verdicts, addresses)
+            await _schedule_reprobes(job, chunk_verdicts, settings, addresses)
 
         # --- assemble ----------------------------------------------------
         job.phase = Phase.ASSEMBLING
@@ -238,6 +238,48 @@ async def _record_addresses(job: Job, verdicts: list[Verdict], addresses) -> Non
         logger.warning("could not write addresses for job %s", job.id, exc_info=True)
 
 
+async def _schedule_reprobes(
+    job: Job, verdicts: list[Verdict], settings: Settings, addresses: Optional[AddressStore]
+) -> None:
+    """Queue a deferred retry for every address the receiver deferred.
+
+    Greylisters clear in minutes, not milliseconds, so this cannot be a retry
+    inside the run — the row would only collect a second 4xx and the job would
+    stall behind it. The address keeps the honest ``unknown`` it has now, and
+    the retry updates it later if the mailbox turns out to exist.
+
+    Tied to ``addresses`` for the same reason the retry exists: the address row
+    is the only thing a cleared greylist updates, so a run that is not keeping
+    the read-model has nothing to schedule a retry *for*.
+
+    Best-effort, like the read-model write: failing to schedule a retry must
+    never lose a verification run that already succeeded.
+    """
+    if addresses is None or not verdicts:
+        return
+    if not (settings.enable_smtp and settings.reprobe_enabled):
+        return
+    from eve.reprobe import get_reprobe_store, is_greylisted
+
+    pending = [
+        (
+            v.normalized_email or v.email,
+            int(((v.checks or {}).get("smtp") or {}).get("code") or 0),
+        )
+        for v in verdicts
+        if is_greylisted(v.checks) and (v.normalized_email or v.email)
+    ]
+    if not pending:
+        return
+    try:
+        count = await get_reprobe_store().schedule_many(
+            pending, workspace_id=job.workspace_id, job_id=job.id
+        )
+        logger.info("job %s: %d greylisted address(es) queued for re-probe", job.id, count)
+    except Exception:  # noqa: BLE001 - scheduling must not break verification
+        logger.warning("could not schedule re-probes for job %s", job.id, exc_info=True)
+
+
 async def _verify_email(
     email: str, *, enable_dns: bool, enable_smtp: bool, prober: AsyncProber, dns_timeout: float
 ) -> Verdict:
@@ -261,6 +303,11 @@ async def _verify_email(
     v.record("smtp", {"outcome": probe.outcome, "code": probe.smtp_code, "detail": probe.detail})
     if probe.is_catch_all or probe.outcome in ("valid", "invalid", "catch_all"):
         apply_probe_outcome(v, probe)
+    elif "greylist" in (probe.detail or ""):
+        # A 4xx defers us rather than answering us. The status stays whatever
+        # the cheaper layers concluded — naming the reason is what lets the
+        # address be picked up for a re-probe instead of read as settled.
+        v.sub_status = SubStatus.GREYLISTED
     return v
 
 

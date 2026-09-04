@@ -30,6 +30,7 @@ from eve.observability import (
     warn_about_configuration,
 )
 from eve.ratelimit import RateLimit
+from eve.reprobe import start_reprobe_runner, stop_reprobe_runner
 from eve.smtp_infra import start_blacklist_monitor, stop_blacklist_monitor
 from eve.web import mount_web
 
@@ -58,9 +59,13 @@ async def lifespan(app: FastAPI):
     # Watch the egress IPs for DNSBL listings while this process is probing.
     # No-op unless SMTP is on and EVE_SMTP_EGRESS_IPS names IPs to watch.
     start_blacklist_monitor(s)
+    # Retry the addresses a receiver deferred rather than answered. No-op with
+    # SMTP off, where nothing is ever deferred in the first place.
+    start_reprobe_runner(s)
     try:
         yield
     finally:
+        await stop_reprobe_runner()
         await stop_blacklist_monitor()
 
 

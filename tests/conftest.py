@@ -13,6 +13,7 @@ from eve.jobs.pipeline import NullAsyncProber
 from eve.jobs.store import InMemoryJobStore, set_job_store
 from eve.kv import InMemoryKV, set_kv
 from eve.layers import dns_mx
+from eve.reprobe import set_reprobe_store
 from eve.smtp_infra import set_async_prober
 from eve.storage import LocalObjectStore, set_object_store
 from eve.tenancy import set_current_workspace_id
@@ -32,8 +33,9 @@ def reset_state(tmp_path, monkeypatch):
     set_job_store(InMemoryJobStore())
     set_kv(InMemoryKV())
     set_async_prober(NullAsyncProber())
-    # A cached singleton: dropped so the next test resolves it against its own
+    # Cached singletons: dropped so the next test resolves them against its own
     # temp directory rather than reusing the previous test's database.
+    set_reprobe_store(None)
     set_address_store(None)
     # The workspace is a ContextVar, so it would otherwise leak into the next
     # test and make an isolation failure look like a passing test.

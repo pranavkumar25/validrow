@@ -47,6 +47,7 @@ async def startup(ctx: dict) -> None:
     from eve.config import get_settings
     from eve.jobs.store import get_job_store
     from eve.observability import configure_logging, init_sentry
+    from eve.reprobe import start_reprobe_runner
     from eve.smtp_infra import start_blacklist_monitor
 
     s = get_settings()
@@ -57,13 +58,18 @@ async def startup(ctx: dict) -> None:
     # The worker is where probes actually originate, so it watches its own
     # egress IPs. The pool lives in memory: each process scans the IPs it uses.
     start_blacklist_monitor(s)
+    # Every worker polls for due re-probes. The table is the durable schedule,
+    # so a restart resumes the retries rather than dropping them.
+    start_reprobe_runner(s)
     logger.info("worker ready (env=%s)", s.env)
 
 
 async def shutdown(ctx: dict) -> None:
-    """Unwind the background scan so the process can exit promptly."""
+    """Unwind the background loops so the process can exit promptly."""
+    from eve.reprobe import stop_reprobe_runner
     from eve.smtp_infra import stop_blacklist_monitor
 
+    await stop_reprobe_runner()
     await stop_blacklist_monitor()
 
 
