@@ -1,0 +1,43 @@
+# Lint and test on every push and pull request.
+#
+# The matrix ends at 3.9 on purpose: that is the floor pyproject declares and
+# the version the project is developed on, so it is the one that can actually
+# break. 3.12 rides along to catch a deprecation before it becomes the floor.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # Only the dev extra, deliberately: the production extras (s3, redis,
+      # postgres, worker) are imported lazily, and the backend-resolution tests
+      # assert what happens when they are absent. Installing them here would
+      # test a configuration no default deployment runs.
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests
+
+      - name: Test
+        run: pytest -q
