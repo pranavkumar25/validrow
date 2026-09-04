@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "email-validation-engine"
+name = "validrow"
 version = "0.1.0"
 description = "In-house email verification engine (syntax → normalize → typo → MX → classify → SMTP)"
 readme = "README.md"
