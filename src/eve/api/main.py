@@ -76,11 +76,18 @@ async def lifespan(app: FastAPI):
         await stop_blacklist_monitor()
 
 
+# `docs_url=None` retires Swagger UI. It is replaced, at the same URL, by a
+# reference rendered from this app's own OpenAPI document (`eve.web.apidocs`):
+# Swagger is fetched from a CDN, which is wrong for an engine that is meant to
+# run with no network access, and it looks like Swagger rather than like the
+# product. `/openapi.json` stays exactly where it was, for machines.
 app = FastAPI(
-    title="Email Validation Engine",
+    title="Validrow",
     version=VERSION,
     description="Layered email verification: syntax, normalize, typo, MX, classify, SMTP.",
     lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
 )
 
 # Outermost of the two: it publishes the caller's workspace before any route

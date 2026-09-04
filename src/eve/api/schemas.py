@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class VerifyRequest(BaseModel):
@@ -41,6 +41,27 @@ class VerifyRequest(BaseModel):
 
 
 class VerifyResponse(BaseModel):
+    #: A typo settled at layer 4: the domain resolves to nothing, and the
+    #: correction is offered rather than applied.
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "email": "john@gmial.com",
+        "status": "undeliverable",
+        "sub_status": "no_mx",
+        "score": 4,
+        "normalized_email": "john@gmial.com",
+        "dedupe_key": "john@gmial.com",
+        "domain": "gmial.com",
+        "suggested_correction": "john@gmail.com",
+        "is_disposable": False,
+        "is_role": False,
+        "is_free": False,
+        "is_catch_all": False,
+        "mx_found": False,
+        "tags": ["typo_suspected"],
+        "checks": {"syntax": "ok", "normalize": "ok", "typo": "gmial.com -> gmail.com", "mx": "none"},
+    }]})
+
+
     email: str = Field(..., description="The address exactly as it was sent.")
     status: str = Field(
         ...,
@@ -93,6 +114,11 @@ class VerifyResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "status": "ok", "version": "0.1.0", "smtp_enabled": True, "dns_enabled": True,
+    }]})
+
+
     status: str = Field(..., description='"ok" while the process is serving.')
     version: str = Field(..., description="The engine version answering.")
     smtp_enabled: bool = Field(
@@ -107,6 +133,16 @@ class HealthResponse(BaseModel):
 
 
 class ColumnDetection(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "columns": ["email", "company", "signed_up"],
+        "sample_rows": [{"email": "jane.doe@acme.io", "company": "Acme", "signed_up": "2026-01-14"}],
+        "guessed_email": "email",
+        "guessed_first_name": None,
+        "guessed_last_name": None,
+        "delimiter": ",",
+    }]})
+
+
     columns: list[str] = Field(..., description="The header row, in file order.")
     sample_rows: list[dict[str, Any]] = Field(
         ..., description="The first few rows, for confirming the mapping."
@@ -125,6 +161,20 @@ class ColumnDetection(BaseModel):
 
 
 class FileUploadResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "file_id": "f_8s21kd_list.csv",
+        "filename": "list.csv",
+        "detection": {
+            "columns": ["email", "company", "signed_up"],
+            "sample_rows": [{"email": "jane.doe@acme.io", "company": "Acme", "signed_up": "2026-01-14"}],
+            "guessed_email": "email",
+            "guessed_first_name": None,
+            "guessed_last_name": None,
+            "delimiter": ",",
+        },
+    }]})
+
+
     file_id: str = Field(
         ..., description="The storage key to pass to POST /v1/jobs."
     )
@@ -145,6 +195,13 @@ class ColumnMappingIn(BaseModel):
 
 
 class CreateJobRequest(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "file_id": "f_8s21kd_list.csv",
+        "mapping": {"email": "email"},
+        "filename": "list.csv",
+    }]})
+
+
     file_id: str = Field(..., description="A file_id returned by POST /v1/files.")
     mapping: ColumnMappingIn = Field(..., description="Which column holds the address.")
     webhook_url: Optional[str] = Field(
@@ -164,6 +221,17 @@ class CreateJobRequest(BaseModel):
 
 
 class JobResponse(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "id": "j_4c19be", "seq": 12, "filename": "list.csv", "status": "running",
+        "list_type": "Cold outreach",
+        "counts": {"deliverable": 1840, "risky": 402, "unknown": 311, "undeliverable": 297},
+        "error": None, "outputs": [], "mapping": {"email": "email"},
+        "phase": "smtp", "processed": 2850, "total": 4812, "domains_total": 731,
+        "progress": 0.59, "created_at": 1788000000.0, "started_at": 1788000004.0,
+        "finished_at": None, "duration": None,
+    }]})
+
+
     id: str = Field(..., description="The job id, used on every other job route.")
     seq: int = Field(0, description="This workspace's own run number.")
     filename: str = Field(..., description="The file the run was started from.")
@@ -195,6 +263,15 @@ class JobResponse(BaseModel):
 
 
 class AddressOut(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "email": "jane.doe@acme.io", "domain": "acme.io", "status": "valid",
+        "sub_status": "mailbox_confirmed", "verdict": "deliverable", "score": 96,
+        "job_id": "j_4c19be", "job_filename": "list.csv", "list_type": "Cold outreach",
+        "checked_at": 1788000412.0, "settled_at": 6, "mx_found": True,
+        "is_catch_all": False, "is_disposable": False, "is_role": False, "is_free": False,
+    }]})
+
+
     email: str = Field(..., description="The address as it was validated.")
     domain: Optional[str] = Field(None, description="The domain part.")
     status: str = Field(..., description="The engine's status for this address.")
@@ -219,6 +296,18 @@ class AddressOut(BaseModel):
 
 
 class AddressPage(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "rows": [{
+            "email": "jane.doe@acme.io", "domain": "acme.io", "status": "valid",
+            "sub_status": "mailbox_confirmed", "verdict": "deliverable", "score": 96,
+            "job_id": "j_4c19be", "job_filename": "list.csv", "list_type": "Cold outreach",
+            "checked_at": 1788000412.0, "settled_at": 6, "mx_found": True,
+            "is_catch_all": False, "is_disposable": False, "is_role": False, "is_free": False,
+        }],
+        "total": 4812, "page": 1, "size": 50,
+    }]})
+
+
     rows: list[AddressOut] = Field(..., description="This page of addresses.")
     total: int = Field(..., description="Addresses matching the filter, all pages.")
     page: int = Field(..., description="The 1-based page returned.")
@@ -226,6 +315,11 @@ class AddressPage(BaseModel):
 
 
 class ExportRequest(BaseModel):
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "verdicts": ["undeliverable"], "columns": "email", "exclude_disposable": True,
+    }]})
+
     """A slice of the workspace to take as CSV."""
 
     # Any of the four primary verdicts. Empty means every verdict.

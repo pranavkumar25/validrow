@@ -697,3 +697,99 @@ The 500px floor is Chrome's own clamp on a headless window, so a narrower real
 phone viewport still wants a look. All 288 tests pass, including the invariants
 that guard this page: the palette is the product's, the percentages sum to 100,
 the layer count is spelled from the list, and the copy carries no em dashes.
+
+---
+
+## Phase 7 — the brand, and the API reference
+
+### The brand set
+
+Three colours changed and only three: the primary from `#35ABFF` to `#0000FF`,
+the ink from `#101014` to `#0A0A0A`, and white from `#FFFFFF` to `#FCFCFC`. The
+verdict hues and the neutral ramp are untouched, so nothing a colour *means* on
+this product has moved.
+
+The primary also settles the exception Phase 6 had to document. White on
+`#35ABFF` measured **2.5:1**; white on `#0000FF` measures **8.6:1**. The primary
+action now passes AA at any size, in the app and on the pitch, and the "matching
+the product means keeping a failure" trade is gone rather than deferred.
+
+**One consequence, taken deliberately.** The landing page's ground moved from
+`#FAF9F7` to `#F2F2F3`. Against a `#FCFCFC` sheet the old warm ground was about
+one percent away and the framed-sheet device stopped reading at all, and a warm
+ground under a `#0000FF` brand reads as two systems in one page.
+
+The check-in-a-rounded-square is gone. The wordmark is inlined once in
+`_wordmark.html` and included by the landing page, the app shell, the auth
+screens and the reference. Its letterforms are `currentColor`, so one file
+serves a light page and a dark panel without a second asset; the two rules above
+the *v* keep the brand blue behind `.wm-rule`, which is the hook a dark surface
+overrides. The favicon is those same two rules.
+
+**Not fixed:** the brand colours still live as literals in the app's screen
+templates rather than as tokens those templates read. This pass rewrote the
+literals mechanically. Tokenising the app shell is the right change and is a
+larger one than a hue swap should carry.
+
+### `/docs`, rebuilt
+
+Swagger UI was retired (`docs_url=None`) and `/docs` is now rendered by
+`eve.web.apidocs`. Two things were wrong with what it replaced. Swagger is
+fetched from jsdelivr, so the one page documenting an engine that runs with no
+network access was the one page that needed the network. And it looked like
+Swagger, on a product whose two other public pages had just been rebuilt.
+
+**It is generated, not written.** Every endpoint, parameter, field, type,
+default and enum comes from `app.openapi()` at request time. A route added to a
+router appears on the page; a field renamed in `eve.api.schemas` is renamed on
+the page. The only strings typed in `apidocs.py` are the ones OpenAPI has
+nowhere to put: what the base URL is, how a key is sent, and what the four
+verdicts mean. The two numbers in "Getting started" are settings, so an engine
+with a different upload cap documents its own.
+
+That is also why `eve.api.schemas` grew a description on every public field. The
+descriptions are not decoration for this page: they land in `/openapi.json`, so
+a generated client and a reader get the same sentence.
+
+**The samples are derived and had to be argued about.**
+
+- A *request* sample carries the model's authored example if it has one, and
+  otherwise the **required fields only**. An optional field filled with a type
+  placeholder is not a neutral illustration, it is an instruction:
+  `"check_dns": false` on the verify sample reads as "turn DNS off".
+- A *response* sample is one authored example per model rather than one per
+  field. Per-field examples cannot be coherent with each other: they would
+  happily print `mx_found: true` beside a `no_mx` sub-status.
+- Both are highlighted server-side. A page that documents an offline-capable
+  engine should not fetch a highlighter to be readable.
+- The curl block is assembled with its own markup rather than pattern-matched. A
+  regex over a shell line cannot tell the port in a base URL from a number in a
+  body, and it painted `127.0.0.1:8899` as three numeric literals.
+
+**Layout.** The landing page's system exactly (framed column, hairlines, panels,
+one dark surface), with a reference's shape rather than an argument's: a sticky
+contents rail, and every endpoint a two-column block with what it takes on the
+left and the call and the answer on the right. Below 1180px the two columns
+stack rather than shrink; below 1080px the rail becomes a disclosure.
+
+**Two things it does and one it does not.** A field whose type is another model
+is followed one level and comes back as dotted rows (`mapping.email`), because
+printing `ColumnMappingIn` and stopping names a type the page never defines. An
+array response is unwrapped to its item and labelled "a list of these", because
+`GET /v1/jobs` otherwise had a response section with no fields in it.
+
+**Known and not fixed:** Pydantic sorts the keys of `json_schema_extra`
+recursively on their way into the schema. Top-level keys are put back into
+declaration order from the schema's own `properties`; a free-form nested object
+has no property order to restore it from, so `checks` in the verify example
+prints alphabetically rather than in pipeline order. The API returns it in
+order; only the illustration is sorted. Restoring it would mean typing the layer
+order into the docs module, which is the second copy this page exists to avoid.
+
+### Verification
+
+Rendered in headless Chrome at 500, 1000 and 1500px and read block by block. Six
+new tests cover the page, and they assert against the OpenAPI document rather
+than a list typed in the test: every route in the spec appears, every public
+field carries a description, no type placeholder leaks into a sample, the upload
+cap is the configured one, and the page loads nothing over the network.

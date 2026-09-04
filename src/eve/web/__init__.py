@@ -402,6 +402,20 @@ async def landing_page(request: Request) -> Response:
     return templates.TemplateResponse(request, "landing.html", ctx)
 
 
+# --- API reference --------------------------------------------------------- #
+@public.get("/docs", response_class=HTMLResponse)
+async def api_docs(request: Request) -> Response:
+    """The API reference, rendered from the engine's own OpenAPI document.
+
+    Public, and deliberately so: a 401 on the docs is how you make an API look
+    broken to someone deciding whether to use it.
+    """
+    from eve.web.apidocs import context
+
+    ctx = context(request.app.openapi(), str(request.base_url).rstrip("/"))
+    return templates.TemplateResponse(request, "docs.html", ctx)
+
+
 # --- Sign in / sign up ----------------------------------------------------- #
 def _safe_next(raw: str) -> str:
     """Where to go after signing in.

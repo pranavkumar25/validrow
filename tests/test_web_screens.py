@@ -381,3 +381,83 @@ def test_in_app_links_are_all_prefixed(client, path, _fragments):
         if href in allowed_root or href.startswith(("/static/", "/v1/")):
             continue
         assert href.startswith("/app/"), f"{path} links to {href}, which is not under /app"
+
+
+# --- The API reference ------------------------------------------------------ #
+
+
+def test_the_docs_page_is_ours_and_not_swagger(client):
+    """`/docs` is a rendered page, not the CDN-loaded Swagger UI.
+
+    Swagger pulls its bundle from jsdelivr, which is the wrong dependency for an
+    engine whose whole claim is that it runs on infrastructure you control.
+    """
+    html = client.get("/docs").text
+    assert "swagger" not in html.lower()
+    assert "cdn.jsdelivr.net" not in html and "unpkg.com" not in html
+    assert "API reference" in html
+    # The machine-readable document stays exactly where it was.
+    assert client.get("/openapi.json").status_code == 200
+
+
+def test_the_docs_page_lists_every_route_the_engine_serves(client):
+    """The page is generated, so a new route appears on it without an edit.
+
+    Asserted against the OpenAPI document rather than a hard-coded list: a list
+    typed here would be the second copy this page exists to avoid.
+    """
+    from eve.api.main import app
+
+    html = client.get("/docs").text
+    spec = app.openapi()
+    documented = 0
+    for path, item in spec["paths"].items():
+        for method in ("get", "post", "put", "patch", "delete"):
+            if method in item:
+                assert path in html, f"{method.upper()} {path} missing from /docs"
+                documented += 1
+    assert documented >= 10, "the API got smaller, or the spec is not being read"
+
+
+def test_the_docs_page_carries_the_field_descriptions_from_the_models(client):
+    """A description written on a Pydantic field is the one the reader sees."""
+    from eve.api.schemas import VerifyRequest, VerifyResponse
+
+    html = client.get("/docs").text
+    for model in (VerifyRequest, VerifyResponse):
+        for name, field in model.model_fields.items():
+            assert field.description, f"{model.__name__}.{name} has no description"
+            assert name in html, f"{model.__name__}.{name} missing from /docs"
+    assert "The address to verify" in html
+
+
+def test_the_docs_samples_are_built_from_the_schemas(client):
+    """The request sample carries required fields, and no optional ones.
+
+    An optional field filled with a type placeholder is not an illustration, it
+    is an instruction: `"check_dns": false` would read as "turn DNS off".
+    """
+    html = client.get("/docs").text
+    assert "john.doe@gmail.com" in html  # VerifyRequest.email's own example
+    assert '"check_dns"' not in html.split("REQUEST BODY")[0]
+    # The response sample is the model's authored example, not placeholders.
+    assert "suggested_correction" in html and "john@gmail.com" in html
+    assert '"string"' not in html, "a type placeholder leaked into a sample"
+
+
+def test_the_docs_page_reads_this_engines_own_limits(client):
+    """The numbers on the page are settings, not copy."""
+    from eve.config import get_settings
+
+    s = get_settings()
+    html = client.get("/docs").text
+    assert f"{s.max_upload_bytes // (1024 * 1024)} MB" in html
+
+
+def test_the_docs_page_needs_no_network(client):
+    """It renders with no external stylesheet, script or font."""
+    import re
+
+    html = client.get("/docs").text
+    external = re.findall(r'(?:src|href)="(https?://[^"]+)"', html)
+    assert not external, f"/docs reaches out to {external}"
