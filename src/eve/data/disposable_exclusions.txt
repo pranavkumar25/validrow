@@ -1,0 +1,20 @@
+# Domains upstream calls disposable that this engine must NOT, one per line.
+#
+# `make disposable` removes these from the vendored list on every refresh, so
+# they cannot come back silently.
+#
+# The bar for adding one is narrow: the domain must be a typo of a major
+# provider with no service of its own. For those, "did you mean gmail.com?" is
+# both true and the useful thing to say — it saves the lead, where reporting a
+# throwaway sends the row to the removed pile and the customer is lost. The
+# typo layer already produces the correction; this stops layer 5 from
+# overriding it.
+#
+# This is deliberately NOT "anything within edit distance 2 of a known
+# provider". yopmail.com is 2 edits from ymail.com and is a genuine disposable
+# service; tmail3.com, 33mail.com and lastmail.com are likewise real throwaway
+# providers that merely resemble one. Removing those would be a false negative
+# on a live abuse domain, which is the more expensive mistake. Curate by hand.
+gmial.com
+hotmial.com
+hotmai.com

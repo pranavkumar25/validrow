@@ -39,7 +39,7 @@ class DemoHandler:
         if domain in CATCH_ALL_DOMAINS or address.lower() in VALID_MAILBOXES:
             envelope.rcpt_tos.append(address)
             return "250 2.1.5 Recipient OK"
-        return "550 5.1.1 <%s>: Recipient address rejected: User unknown" % address
+        return f"550 5.1.1 <{address}>: Recipient address rejected: User unknown"
 
     async def handle_DATA(self, server, session, envelope):
         # The verifier should never reach DATA — but be safe if it does.
