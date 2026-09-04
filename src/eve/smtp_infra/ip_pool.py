@@ -6,13 +6,31 @@ starts getting tempfails/blocks, and caps daily volume for IPs still warming up.
 
 When the pool is empty (local dev / tests) ``acquire()`` returns ``None`` and the
 prober simply uses the OS default egress.
+
+**The daily roll happens on read, not on a timer.** `promote_warmup` was written
+to be "called once per day" by a scheduler that never existed, so `daily_count`
+never reset: every IP went permanently unavailable after `warmup_daily_cap`
+probes and `acquire()` silently returned `None` — falling back to the un-warmed,
+un-rotated OS default route, which is the exact address rotation exists to
+avoid. A background ticker would have fixed it only for processes that outlive a
+day; deploying every afternoon would have reintroduced it. Checking the date
+when an IP is taken cannot miss a boundary or be lost to a restart.
 """
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+def _utc_day() -> int:
+    """Days since the epoch, UTC. The unit the daily cap is denominated in."""
+    return int(datetime.now(timezone.utc).timestamp() // 86_400)
 
 
 @dataclass
@@ -31,6 +49,7 @@ class IpPool:
         self._cap = warmup_daily_cap
         self._cooldown = cooldown_seconds
         self._lock = asyncio.Lock()
+        self._day = _utc_day()
 
     def _find(self, ip: str) -> Optional[IpState]:
         return next((s for s in self._ips if s.ip == ip), None)
@@ -40,6 +59,7 @@ class IpPool:
         if not self._ips:
             return None
         async with self._lock:
+            self._roll_day()
             now = time.monotonic()
             n = len(self._ips)
             for _ in range(n):
@@ -76,11 +96,21 @@ class IpPool:
             if st:
                 st.cooldown_until = time.monotonic() + (seconds or self._cooldown)
 
-    def promote_warmup(self) -> None:
-        """Warm-up scheduler tick: advance stage + reset daily counters.
+    def _roll_day(self) -> None:
+        """Run the daily tick if the UTC day has turned. Caller holds the lock."""
+        today = _utc_day()
+        if today == self._day:
+            return
+        self._day = today
+        self.promote_warmup()
+        logger.info("egress pool: daily counters reset, warm-up advanced")
 
-        Call once per day. Real deployments ramp the cap by stage; here we simply
-        graduate IPs out of the capped stage after activity.
+    def promote_warmup(self) -> None:
+        """Warm-up tick: advance stage + reset daily counters.
+
+        Called by :meth:`_roll_day` when the UTC day turns, and safe to call by
+        hand. Real deployments ramp the cap by stage; here we simply graduate
+        IPs out of the capped stage after a day of acceptable behaviour.
         """
         for st in self._ips:
             if st.reputation >= 0.8:
