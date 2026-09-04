@@ -56,7 +56,7 @@
           <div style="display: flex; justify-content: flex-end; margin-top: 24px; position: relative">
             <button class="hv-danger" data-del-toggle style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #E7E4DE; border-radius: 8px; font-size: 12.5px; color: #B42318">Delete job</button>
             <div data-del-menu hidden style="position: absolute; right: 0; bottom: 42px; width: 340px; background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 16px; box-shadow: 0 12px 32px -8px rgba(15,13,8,0.18); padding: 18px; animation: vr-in 220ms cubic-bezier(0.16,1,0.3,1)">
-              <form action="/history/{{ hd.job_id }}/delete" method="post">
+              <form action="{{ APP }}/history/{{ hd.job_id }}/delete" method="post">
                 <div style="font-size: 14px; font-weight: 600">Delete this job?</div>
                 <div style="font-size: 13px; color: #57534B; margin-top: 6px; line-height: 19px">Deletes the cached results for <span style="font-family: Inter, system-ui, sans-serif">{{ hd.file }}</span>. The addresses stay in your workspace.</div>
                 <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; margin: 14px 0 6px">Type the filename to confirm</div>

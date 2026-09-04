@@ -63,7 +63,7 @@
                         <div style="font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ k.name }}</div>
                         <div style="font-size: 12px; color: #79756C; margin-top: 2px"><code style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace">{{ k.prefix }}…</code> · created {{ k.created }} · {{ k.used }}</div>
                       </div>
-                      <form method="post" action="/settings/keys/{{ k.id }}/revoke" style="flex: 0 0 auto">
+                      <form method="post" action="{{ APP }}/settings/keys/{{ k.id }}/revoke" style="flex: 0 0 auto">
                         <button class="hv-danger" style="height: 30px; padding: 0 12px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #B42318">Revoke</button>
                       </form>
                     </div>
@@ -73,7 +73,7 @@
                 <div style="margin-top: 14px; padding: 12px 14px; background: #F4F3EF; border-radius: 8px; font-size: 12.5px; color: #79756C; line-height: 19px">No keys yet. Everything the API can do, this app already does — a key is for driving it from your own code.</div>
               {% endif %}
 
-              <form method="post" action="/settings/keys" style="display: flex; gap: 10px; margin-top: 14px">
+              <form method="post" action="{{ APP }}/settings/keys" style="display: flex; gap: 10px; margin-top: 14px">
                 <input name="name" placeholder="What is this key for?" maxlength="200" style="flex: 1; height: 38px; padding: 0 11px; border: 1px solid #D8D4CC; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-size: 13px; outline: none">
                 <button class="hv-blue" style="height: 38px; padding: 0 15px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Create key</button>
               </form>

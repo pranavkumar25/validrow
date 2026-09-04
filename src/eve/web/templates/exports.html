@@ -4,7 +4,7 @@
         <div>
           <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">Exports</div>
           <div style="font-size: 14px; color: #57534B; margin-top: 2px">Slice the workspace and take the CSV.</div>
-          <form id="export-form" action="/exports/download" method="post">
+          <form id="export-form" action="{{ APP }}/exports/download" method="post">
           <input type="hidden" name="preset" value="{{ exPreset }}">
           <input type="hidden" name="columns" value="{{ exColumns }}">
           {% for c in customVerdicts %}{% if c.on %}<input type="hidden" name="verdicts" value="{{ c.key }}">{% endif %}{% endfor %}

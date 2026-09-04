@@ -19,7 +19,7 @@
             {% if vStep1 %}
               <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
                 <div style="font-size: 14px; font-weight: 600">Upload a list</div>
-                <form id="upload-form" action="/validate/upload" method="post" enctype="multipart/form-data">
+                <form id="upload-form" action="{{ APP }}/validate/upload" method="post" enctype="multipart/form-data">
                   <input id="file-input" type="file" name="file" accept=".csv,text/csv" hidden>
                   <button type="button" id="drop-zone" style="width: 100%; height: 200px; margin-top: 14px; border: 1.5px dashed #D8D4CC; border-radius: 12px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; transition: background 150ms ease-out">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M8 7l4-4 4 4M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" stroke="#79756C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -65,7 +65,7 @@
             {% endif %}
 
             {% if vStep3 %}
-              <form action="/validate/start" method="post" style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+              <form action="{{ APP }}/validate/start" method="post" style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
                 <input type="hidden" name="file_id" value="{{ fileId }}">
                 <input type="hidden" name="filename" value="{{ filename }}">
                 <div style="font-size: 14px; font-weight: 600">Map columns</div>
@@ -212,7 +212,7 @@
                   {% endfor %}
                 </div>
                 <div style="margin-top: 16px; text-align: center">
-                  <a href="/addresses" style="font-size: 13.5px">Open the full results in Addresses</a>
+                  <a href="{{ APP }}/addresses" style="font-size: 13.5px">Open the full results in Addresses</a>
                 </div>
               </div>
             {% endif %}

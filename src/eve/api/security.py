@@ -40,6 +40,9 @@ logger = logging.getLogger(__name__)
 #: `/health` is here because a load balancer cannot log in, and the API docs
 #: because a 401 on `/docs` is how you make an API look broken.
 PUBLIC_PATHS = frozenset({
+    # The landing page. It is what a stranger arrives on, so it cannot sit
+    # behind the gate that exists to send strangers to the login screen.
+    "/",
     "/health",
     "/login",
     "/signup",

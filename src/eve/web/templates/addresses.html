@@ -15,7 +15,7 @@
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap">
-            <form action="/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; width: 260px">
+            <form action="{{ APP }}/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; width: 260px">
               {% for c in chipsAll %}{% if c.on %}<input type="hidden" name="verdict" value="{{ c.key }}">{% endif %}{% endfor %}
               <input type="hidden" name="sort" value="{{ aSort }}">
               <input type="hidden" name="size" value="{{ aSize }}">

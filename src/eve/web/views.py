@@ -43,17 +43,22 @@ NAV_ICONS = {
     "how": "M12 21a9 9 0 110-18 9 9 0 010 18M12 16.5v.01M12 14c0-1.8 2-2.1 2-3.9A2 2 0 0010 9.6",
 }
 
+#: The app lives under a prefix so the root can serve a landing page. One
+#: definition, consumed everywhere — nav, redirects and templates all read it,
+#: so moving the app is this line rather than a search for string literals.
+APP_PREFIX = "/app"
+
 ROUTE_PATHS = {
-    "home": "/",
-    "dashboard": "/dashboard",
-    "validate": "/validate",
-    "single": "/single",
-    "addresses": "/addresses",
-    "analytics": "/analytics",
-    "exports": "/exports",
-    "history": "/history",
-    "settings": "/settings",
-    "how": "/how",
+    "home": APP_PREFIX + "/",
+    "dashboard": APP_PREFIX + "/dashboard",
+    "validate": APP_PREFIX + "/validate",
+    "single": APP_PREFIX + "/single",
+    "addresses": APP_PREFIX + "/addresses",
+    "analytics": APP_PREFIX + "/analytics",
+    "exports": APP_PREFIX + "/exports",
+    "history": APP_PREFIX + "/history",
+    "settings": APP_PREFIX + "/settings",
+    "how": APP_PREFIX + "/how",
 }
 
 
@@ -276,7 +281,8 @@ def _job_row(job: Job) -> dict[str, Any]:
         "running": running,
         "prog": F.fixed(job.progress * 100) + "%",
         "mix": F.mix(totals, only_present=False),
-        "href": f"/validate?job={job.id}" if running else f"/history/{job.id}",
+        "href": (f"{APP_PREFIX}/validate?job={job.id}" if running
+                 else f"{APP_PREFIX}/history/{job.id}"),
     }
 
 
@@ -346,7 +352,7 @@ async def dashboard(
         tabs.append(
             {
                 "label": label,
-                "href": f"/dashboard?tab={label.replace(' ', '+')}",
+                "href": f"{APP_PREFIX}/dashboard?tab={label.replace(' ', '+')}",
                 "bg": F.BLUE_WASH if active else "transparent",
                 "fg": F.BLUE_DARK if active else F.INK_3,
                 "w": "600" if active else "500",
@@ -363,7 +369,7 @@ async def dashboard(
             "pct": F.fixed(j.progress * 100) + "%",
             "phase": _phase_text(j),
             "elapsed": F.duration(j.duration),
-            "href": f"/validate?job={j.id}",
+            "href": f"{APP_PREFIX}/validate?job={j.id}",
         }
         for j in running_jobs
     ]
@@ -455,7 +461,7 @@ async def dashboard(
         "volGrains": [
             {
                 "label": g,
-                "href": f"/dashboard?tab={tab.replace(' ', '+')}&grain={g}",
+                "href": f"{APP_PREFIX}/dashboard?tab={tab.replace(' ', '+')}&grain={g}",
                 "bg": F.WHITE if grain == g else "transparent",
                 "fg": F.INK if grain == g else F.MUTED,
                 "sh": "0 1px 2px rgba(16,24,40,0.06)" if grain == g else "none",
@@ -479,7 +485,7 @@ def _dash_href(tab: str, q: str, grain: str, page: int) -> str:
         params["q"] = q
     if page > 1:
         params["page"] = page
-    return "/dashboard?" + urlencode(params)
+    return APP_PREFIX + "/dashboard?" + urlencode(params)
 
 
 def _chart_y(value: float, lo: float, hi: float, h: float) -> float:
@@ -577,7 +583,7 @@ async def addresses(
             params.append(("size", base["size"]))
         if base["page"] > 1:
             params.append(("page", base["page"]))
-        return "/addresses" + ("?" + urlencode(params) if params else "")
+        return APP_PREFIX + "/addresses" + ("?" + urlencode(params) if params else "")
 
     return {
         "aStats": [
@@ -665,7 +671,7 @@ async def analytics(*, grain: str = "Weekly") -> dict[str, Any]:
         "rateGrains": [
             {
                 "label": g,
-                "href": f"/analytics?grain={g}",
+                "href": f"{APP_PREFIX}/analytics?grain={g}",
                 "bg": F.WHITE if grain == g else "transparent",
                 "fg": F.INK if grain == g else F.MUTED,
                 "sh": "0 1px 2px rgba(16,24,40,0.06)" if grain == g else "none",
@@ -783,7 +789,7 @@ async def exports(
             params.append(("require_mx", "1"))
         if base["exclude_disposable"]:
             params.append(("exclude_disposable", "1"))
-        return "/exports?" + urlencode(params)
+        return APP_PREFIX + "/exports?" + urlencode(params)
 
     return {
         "presets": preset_rows,

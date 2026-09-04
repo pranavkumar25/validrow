@@ -21,11 +21,15 @@ from fastapi.templating import Jinja2Templates
 from eve.addresses import DEFAULT_LIST_TYPE, LIST_TYPES, get_address_store
 from eve.config import get_settings
 from eve.web import views
+from eve.web.views import APP_PREFIX
 
 HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 
-router = APIRouter(include_in_schema=False)
+# The app hangs off /app; the landing page, auth screens and static files sit
+# at the root, because those are the URLs a stranger arrives on.
+router = APIRouter(prefix=APP_PREFIX, include_in_schema=False)
+public = APIRouter(include_in_schema=False)
 
 # How many recent single-checks to remember, and the cookie that holds them.
 RECENT_COOKIE = "vr_recent"
@@ -209,7 +213,7 @@ async def settings_screen(request: Request) -> HTMLResponse:
         },
     )
     if new_key:
-        resp.delete_cookie("vr_new_key", path="/settings")
+        resp.delete_cookie("vr_new_key", path=APP_PREFIX + "/settings")
     return resp
 
 
@@ -326,7 +330,7 @@ async def validate_start(
     )
     _BACKGROUND.add(task)
     task.add_done_callback(_BACKGROUND.discard)
-    return RedirectResponse(f"/validate?job={job.id}", status_code=303)
+    return RedirectResponse(f"{APP_PREFIX}/validate?job={job.id}", status_code=303)
 
 
 _BACKGROUND: set = set()
@@ -375,9 +379,78 @@ async def delete_job_action(job_id: str, confirm: str = Form("")) -> RedirectRes
     if not job:
         raise HTTPException(status_code=404, detail="job not found")
     if confirm.strip() != job.filename:
-        return RedirectResponse(f"/history/{job_id}", status_code=303)
+        return RedirectResponse(f"{APP_PREFIX}/history/{job_id}", status_code=303)
     await delete_job(job_id, keep_addresses=True)
-    return RedirectResponse("/history", status_code=303)
+    return RedirectResponse(APP_PREFIX + "/history", status_code=303)
+
+
+# --- Landing --------------------------------------------------------------- #
+#: The seven layers, in the order the engine runs them. Kept beside the copy it
+#: feeds rather than in the template, so the marketing claim and the pipeline
+#: cannot drift apart silently.
+_LAYERS = [
+    ("Syntax", "RFC 5322. Malformed addresses never reach a network call."),
+    ("Normalise + dedupe", "Gmail dots and +tags collapse to one key, so a list is charged and "
+                           "reported once per person rather than once per spelling."),
+    ("Typo correction", "gmial.com becomes a suggestion, not a deletion. The row keeps its lead."),
+    ("DNS / MX", "Resolved once per domain and cached, so a million rows are not a million lookups."),
+    ("Classification", "Disposable domains, role accounts and free providers, from lists you can audit."),
+    ("SMTP mailbox probe", "EHLO, MAIL FROM, RCPT, QUIT — never DATA. We never send mail to your list."),
+    ("Catch-all detection", "One probe per domain. If it accepts everything, its acceptance proves "
+                            "nothing and the address is Risky, not Valid."),
+]
+
+_VERDICT_COPY = {
+    "deliverable": "The mailbox was probed and it exists. Send with confidence.",
+    "risky": "Real, but not a clean send: a role account, or a catch-all domain "
+             "whose acceptance proves nothing.",
+    "unknown": "The engine could not prove an answer — greylisting, a timeout, or a "
+               "provider that lies to probes. Never rounded up.",
+    "undeliverable": "Invalid syntax, no MX, a disposable domain, or a mailbox that does not exist.",
+}
+
+_OUTPUTS = [
+    ("cleaned.csv", "Every row you uploaded, every column preserved, with the verdict columns appended."),
+    ("valid.csv", "The rows worth sending to."),
+    ("removed.csv", "What was taken out, and why — so a removal is auditable rather than a disappearance."),
+]
+
+_SAMPLE = [
+    ("jane.doe@acme.io", "deliverable"),
+    ("sales@acme.io", "risky"),
+    ("john@gmial.com", "undeliverable"),
+    ("hello@bigco.com", "unknown"),
+]
+
+
+@public.get("/", response_class=HTMLResponse)
+async def landing(request: Request) -> Response:
+    """The public front page.
+
+    Signed-in visitors are sent straight to the app: showing the pitch to
+    someone who already bought it wastes their click.
+    """
+    from eve.api.security import current_user
+    from eve.web import format as F
+
+    if current_user(request) is not None:
+        return RedirectResponse(APP_PREFIX + "/", status_code=303)
+
+    return templates.TemplateResponse(
+        request,
+        "landing.html",
+        {
+            "layers": [{"name": n, "detail": d} for n, d in _LAYERS],
+            "verdicts": [
+                {**F.VERDICT_STYLE[k], "detail": _VERDICT_COPY[k]} for k in F.ORDER
+            ],
+            "outputs": [{"name": n, "detail": d} for n, d in _OUTPUTS],
+            "sample": [
+                {"email": e, **F.VERDICT_STYLE[v]} for e, v in _SAMPLE
+            ],
+            "engineUrl": str(request.base_url).rstrip("/"),
+        },
+    )
 
 
 # --- Sign in / sign up ----------------------------------------------------- #
@@ -448,8 +521,8 @@ def _sign_in(response: Response, token: str) -> None:
     )
 
 
-@router.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request, next: str = "/") -> Response:
+@public.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request, next: str = APP_PREFIX + "/") -> Response:
     from eve.api.security import current_user
     from eve.auth import get_auth_store
 
@@ -463,12 +536,12 @@ async def login_form(request: Request, next: str = "/") -> Response:
     return _auth_page(request, "login", next_url=_safe_next(next))
 
 
-@router.post("/login")
+@public.post("/login")
 async def login_submit(
     request: Request,
     email: str = Form(""),
     password: str = Form(""),
-    next: str = Form("/"),
+    next: str = Form(APP_PREFIX + "/"),
 ) -> Response:
     from eve.auth import get_auth_store
 
@@ -492,8 +565,8 @@ async def login_submit(
     return resp
 
 
-@router.get("/signup", response_class=HTMLResponse)
-async def signup_form(request: Request, next: str = "/") -> Response:
+@public.get("/signup", response_class=HTMLResponse)
+async def signup_form(request: Request, next: str = APP_PREFIX + "/") -> Response:
     from eve.api.security import current_user
     from eve.auth import get_auth_store
 
@@ -515,13 +588,13 @@ async def signup_form(request: Request, next: str = "/") -> Response:
     return page
 
 
-@router.post("/signup")
+@public.post("/signup")
 async def signup_submit(
     request: Request,
     email: str = Form(""),
     password: str = Form(""),
     name: str = Form(""),
-    next: str = Form("/"),
+    next: str = Form(APP_PREFIX + "/"),
 ) -> Response:
     from eve.auth import get_auth_store, password_problem
 
@@ -563,8 +636,8 @@ async def signup_submit(
     return resp
 
 
-@router.post("/logout")
-@router.get("/logout")
+@public.post("/logout")
+@public.get("/logout")
 async def logout(request: Request) -> Response:
     """Ends the session server-side, not just in the browser.
 
@@ -593,8 +666,11 @@ async def create_key(request: Request, name: str = Form("")) -> Response:
     # The plaintext exists only in this response. It is passed back through a
     # one-shot cookie rather than the URL, which would put a live credential in
     # the browser history and in any proxy log along the way.
-    resp = RedirectResponse("/settings", status_code=303)
-    resp.set_cookie("vr_new_key", key, max_age=120, httponly=False, samesite="lax", path="/settings")
+    resp = RedirectResponse(APP_PREFIX + "/settings", status_code=303)
+    resp.set_cookie(
+        "vr_new_key", key, max_age=120, httponly=False,
+        samesite="lax", path=APP_PREFIX + "/settings",
+    )
     return resp
 
 
@@ -605,12 +681,14 @@ async def revoke_key(request: Request, key_id: str) -> Response:
 
     user = require_user(request)
     await get_auth_store().revoke_api_key(key_id, user_id=user.id)
-    return RedirectResponse("/settings", status_code=303)
+    return RedirectResponse(APP_PREFIX + "/settings", status_code=303)
 
 
 def mount_web(app: FastAPI) -> None:
     """Attach the web app to an existing FastAPI instance."""
     app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
+    app.include_router(public)
     app.include_router(router)
-    # Expose a couple of helpers to templates.
-    templates.env.globals.update(settings=get_settings())
+    # Expose a couple of helpers to templates. APP is the prefix every in-app
+    # link is built from, so the app can move without touching markup.
+    templates.env.globals.update(settings=get_settings(), APP=APP_PREFIX)

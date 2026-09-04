@@ -68,21 +68,21 @@ async def test_a_browser_is_redirected_to_the_login_screen(client):
     _configure()
     await _make_user()
 
-    r = client.get("/dashboard")
+    r = client.get("/app/dashboard")
     assert r.status_code == 303
-    assert r.headers["location"] == "/login?next=%2Fdashboard"
+    assert r.headers["location"] == "/login?next=%2Fapp%2Fdashboard"
 
 
 async def test_the_original_destination_survives_the_login(client):
     _configure()
     await _make_user()
 
-    r = client.get("/addresses?verdict=risky&page=2")
-    assert r.headers["location"] == "/login?next=%2Faddresses%3Fverdict%3Drisky%26page%3D2"
+    r = client.get("/app/addresses?verdict=risky&page=2")
+    assert r.headers["location"] == "/login?next=%2Fapp%2Faddresses%3Fverdict%3Drisky%26page%3D2"
 
-    r = _login(client, next="/addresses?verdict=risky&page=2")
+    r = _login(client, next="/app/addresses?verdict=risky&page=2")
     assert r.status_code == 303
-    assert r.headers["location"] == "/addresses?verdict=risky&page=2"
+    assert r.headers["location"] == "/app/addresses?verdict=risky&page=2"
 
 
 async def test_an_api_caller_gets_a_401_not_a_login_page(client):
@@ -106,7 +106,7 @@ async def test_public_paths_stay_reachable(client, path):
 async def test_nothing_is_gated_when_auth_is_off(client):
     """The default. Turning auth on is opt-in; off must behave as it always did."""
     _configure(require_auth=False)
-    assert client.get("/dashboard").status_code == 200
+    assert client.get("/app/dashboard").status_code == 200
     assert client.post("/v1/verify", json={"email": "a@b.com"}).status_code == 200
 
 
@@ -122,7 +122,7 @@ async def test_a_good_password_starts_a_session(client):
     cookie = r.cookies.get("vr_session")
     assert cookie
 
-    assert client.get("/dashboard").status_code == 200
+    assert client.get("/app/dashboard").status_code == 200
 
 
 async def test_the_session_cookie_is_not_readable_from_javascript(client):
@@ -244,7 +244,7 @@ async def test_a_key_authenticates_the_json_api(client):
     await _make_user()
     _login(client)
 
-    r = client.post("/settings/keys", data={"name": "ci"})
+    r = client.post("/app/settings/keys", data={"name": "ci"})
     assert r.status_code == 303
     key = r.cookies.get("vr_new_key")
     assert key and key.startswith("eve_")
@@ -261,7 +261,7 @@ async def test_a_revoked_key_does_not_fall_back_to_a_session(client):
     _configure()
     await _make_user()
     _login(client)
-    key = client.post("/settings/keys", data={"name": "ci"}).cookies.get("vr_new_key")
+    key = client.post("/app/settings/keys", data={"name": "ci"}).cookies.get("vr_new_key")
 
     user = await get_auth_store().get_user_by_email("jane@acme.io")
     row = (await get_auth_store().list_api_keys(user["id"]))[0]
@@ -282,18 +282,18 @@ async def test_an_unknown_key_is_rejected(client):
 
 async def test_creating_a_key_needs_an_account(client):
     _configure(require_auth=False)  # open engine, but a key still belongs to someone
-    assert client.post("/settings/keys", data={"name": "ci"}).status_code == 401
+    assert client.post("/app/settings/keys", data={"name": "ci"}).status_code == 401
 
 
 async def test_the_plaintext_key_is_shown_once_then_cleared(client):
     _configure()
     await _make_user()
     _login(client)
-    key = client.post("/settings/keys", data={"name": "ci"}).cookies.get("vr_new_key")
+    key = client.post("/app/settings/keys", data={"name": "ci"}).cookies.get("vr_new_key")
 
-    first = client.get("/settings")
+    first = client.get("/app/settings")
     assert key in first.text
     assert "not shown again" in first.text
 
-    client.cookies.delete("vr_new_key", path="/settings")
-    assert key not in client.get("/settings").text
+    client.cookies.delete("vr_new_key", path="/app/settings")
+    assert key not in client.get("/app/settings").text

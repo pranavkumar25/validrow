@@ -1,0 +1,255 @@
+{#
+  The landing page at "/". Standalone rather than extending base.html: the shell
+  is a sidebar reporting on a workspace, and a stranger has none.
+
+  The copy is held to the same rule as the app — claim only what the engine can
+  prove. That is why the pitch is "we never report a mailbox as valid without
+  probing it" rather than an accuracy percentage nobody can audit.
+#}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validrow — email verification that refuses to guess</title>
+<meta name="description" content="Upload a list, get a cleaned sheet back. Seven layers, from syntax to the SMTP mailbox probe — and an honest Unknown wherever the engine could not prove an answer.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>✓</text></svg>">
+<style>
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('/static/InterVariable.woff2') format('woff2'); }
+* { box-sizing: border-box; }
+body { margin: 0; background: #FFFFFF; color: #101014; font-family: Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.5; }
+a { color: #35ABFF; text-decoration: none; }
+a:hover { color: #1C93EA; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid rgba(53,171,255,0.4); outline-offset: 2px; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.02em; font-weight: 600; }
+p { margin: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 20px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 9px; font-size: 14.5px; font-weight: 500; }
+.btn-primary:hover { background: #1C93EA; color: #FFFFFF; }
+.btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 18px; background: #FFFFFF; color: #101014; border: 1px solid #D8D4CC; border-radius: 9px; font-size: 14.5px; font-weight: 500; }
+.btn-ghost:hover { background: #F4F3EF; color: #101014; }
+.card { background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 14px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; }
+.lede { font-size: 16px; line-height: 26px; color: #57534B; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.layer { display: flex; align-items: flex-start; gap: 14px; padding: 15px 0; border-bottom: 1px solid #F4F3EF; }
+.layer:last-child { border-bottom: 0; }
+.num { flex: 0 0 26px; height: 26px; border-radius: 8px; background: #F4F3EF; color: #79756C; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; }
+@media (max-width: 860px) {
+  .grid-3 { grid-template-columns: 1fr; }
+  .hero-grid { grid-template-columns: 1fr !important; }
+  .nav-links { display: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header style="border-bottom: 1px solid #E7E4DE; position: sticky; top: 0; background: rgba(255,255,255,0.88); backdrop-filter: blur(8px); z-index: 10">
+  <div class="wrap" style="height: 64px; display: flex; align-items: center; gap: 16px">
+    <a href="/" style="display: flex; align-items: center; gap: 9px; color: #101014">
+      <span style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #35ABFF 14%, #6FC5FF 86%); color: #FFFFFF; display: grid; place-items: center; font-size: 15px; font-weight: 600">✓</span>
+      <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em">Validrow</span>
+    </a>
+    <nav class="nav-links" style="display: flex; gap: 22px; margin-left: 20px">
+      <a href="#how" style="font-size: 14px; color: #57534B">How it works</a>
+      <a href="#verdicts" style="font-size: 14px; color: #57534B">Verdicts</a>
+      <a href="#api" style="font-size: 14px; color: #57534B">API</a>
+    </nav>
+    <div style="flex: 1"></div>
+    <a href="/login" style="font-size: 14px; font-weight: 500; color: #101014">Sign in</a>
+    <a class="btn-primary" href="/signup" style="height: 36px; padding: 0 15px; font-size: 14px">Get started</a>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="wrap" style="padding: 76px 24px 64px">
+    <div class="hero-grid" style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: center">
+      <div>
+        <div style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 11px; background: #EAF6FF; border: 1px solid #D8ECFF; border-radius: 999px; font-size: 12.5px; color: #1C93EA; font-weight: 500">
+          <span style="width: 6px; height: 6px; border-radius: 999px; background: #35ABFF"></span>
+          Free while in beta
+        </div>
+        <h1 style="margin-top: 18px; font-size: 46px; line-height: 54px">Clean your list without<br>guessing at the answer.</h1>
+        <p class="lede" style="margin-top: 18px; max-width: 520px">
+          Upload a CSV. Validrow runs every address through seven layers — syntax, normalisation,
+          typo correction, MX, classification, and an in-house SMTP mailbox probe — and hands back
+          a cleaned sheet with every original column intact.
+        </p>
+        <p class="lede" style="margin-top: 14px; max-width: 520px">
+          Where it cannot prove an answer, it says <strong style="color: #101014; font-weight: 600">Unknown</strong>.
+          That is the whole point.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px">
+          <a class="btn-primary" href="/signup">Create a free account</a>
+          <a class="btn-ghost" href="#how">See the seven layers</a>
+        </div>
+        <p style="margin-top: 14px; font-size: 12.5px; color: #79756C">No card. Your list never leaves your workspace.</p>
+      </div>
+
+      <!-- A verdict card, using the app's own palette so the promise matches the product -->
+      <div class="card" style="padding: 18px; box-shadow: 0 18px 48px -22px rgba(15,13,8,0.25)">
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <span class="eyebrow">Result</span>
+          <span class="mono" style="font-size: 12px; color: #79756C">4,812 rows</span>
+        </div>
+        <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-top: 14px">
+          <span style="width: 61%; background: #12B76A"></span>
+          <span style="width: 13%; background: #F79009"></span>
+          <span style="width: 15%; background: #A8A29E"></span>
+          <span style="width: 11%; background: #F04438"></span>
+        </div>
+        <div style="margin-top: 16px; display: flex; flex-direction: column">
+          {% for row in sample %}
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; {% if not loop.last %}border-bottom: 1px solid #F4F3EF;{% endif %}">
+              <span style="width: 7px; height: 7px; flex: 0 0 7px; border-radius: 999px; background: {{ row.dot }}"></span>
+              <span class="mono" style="flex: 1; min-width: 0; font-size: 12.5px; color: #101014; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ row.email }}</span>
+              <span style="flex: 0 0 auto; padding: 2px 9px; border-radius: 999px; background: {{ row.wash }}; color: {{ row.ink }}; font-size: 11.5px; font-weight: 500">{{ row.label }}</span>
+            </div>
+          {% endfor %}
+        </div>
+        <div style="margin-top: 12px; padding: 11px 12px; background: #F4F3EF; border-radius: 9px; font-size: 12px; line-height: 18px; color: #57534B">
+          Every verdict carries the layer that settled it, so you can see <em>why</em> — not just what.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The honesty section: the actual differentiator -->
+  <section style="border-top: 1px solid #E7E4DE; border-bottom: 1px solid #E7E4DE; background: #FAF9F7">
+    <div class="wrap" style="padding: 56px 24px">
+      <div style="max-width: 720px">
+        <div class="eyebrow">Why Unknown is a feature</div>
+        <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Most verifiers round Unknown up to Valid.</h2>
+        <p class="lede" style="margin-top: 16px">
+          It flatters the report and it costs you the sender reputation. Gmail, Outlook and Yahoo
+          accept almost any recipient at the door and bounce it later, so a naive probe reads
+          "accepted" and calls it deliverable. Validrow knows which providers do this and refuses
+          to report a confident Valid for them.
+        </p>
+        <p class="lede" style="margin-top: 14px">
+          The same rule runs everywhere. A catch-all domain accepts every address, so its 250 proves
+          nothing and the address comes back <strong style="color: #101014; font-weight: 600">Risky</strong>,
+          not Valid. A greylisted address is deferred, not answered, so it is retried on a schedule
+          rather than written off. A DNS timeout is credited to DNS, never to a probe that never ran.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seven layers -->
+  <section id="how" class="wrap" style="padding: 64px 24px">
+    <div style="max-width: 640px">
+      <div class="eyebrow">How it works</div>
+      <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Seven layers, cheapest first.</h2>
+      <p class="lede" style="margin-top: 14px">
+        Each layer can settle an address on its own. Most never reach the expensive ones, which is
+        why a million-row list finishes without a million SMTP connections.
+      </p>
+    </div>
+    <div class="card" style="margin-top: 28px; padding: 6px 20px">
+      {% for layer in layers %}
+        <div class="layer">
+          <span class="num">{{ loop.index }}</span>
+          <div style="flex: 1; min-width: 0">
+            <div style="font-size: 14px; font-weight: 500">{{ layer.name }}</div>
+            <div style="font-size: 13px; line-height: 20px; color: #57534B; margin-top: 2px">{{ layer.detail }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Verdicts -->
+  <section id="verdicts" style="border-top: 1px solid #E7E4DE; background: #FAF9F7">
+    <div class="wrap" style="padding: 64px 24px">
+      <div style="max-width: 640px">
+        <div class="eyebrow">Verdicts</div>
+        <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Four answers, and each one means something.</h2>
+      </div>
+      <div class="grid-3" style="margin-top: 28px; grid-template-columns: repeat(4, 1fr)">
+        {% for v in verdicts %}
+          <div class="card" style="padding: 18px">
+            <span style="display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border-radius: 999px; background: {{ v.wash }}; color: {{ v.ink }}; font-size: 12.5px; font-weight: 500">
+              <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ v.dot }}"></span>{{ v.label }}
+            </span>
+            <p style="margin-top: 12px; font-size: 13px; line-height: 20px; color: #57534B">{{ v.detail }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- What you get back -->
+  <section class="wrap" style="padding: 64px 24px">
+    <div style="max-width: 640px">
+      <div class="eyebrow">What you get back</div>
+      <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Three sheets, and your columns untouched.</h2>
+    </div>
+    <div class="grid-3" style="margin-top: 28px">
+      {% for out in outputs %}
+        <div class="card" style="padding: 20px">
+          <div class="mono" style="font-size: 13px; font-weight: 600">{{ out.name }}</div>
+          <p style="margin-top: 8px; font-size: 13px; line-height: 20px; color: #57534B">{{ out.detail }}</p>
+        </div>
+      {% endfor %}
+    </div>
+    <p style="margin-top: 18px; font-size: 13px; line-height: 21px; color: #79756C; max-width: 720px">
+      The cleaned sheet keeps every column you uploaded and appends the verdict, the sub-reason, a
+      0–100 score, the normalised address, any suggested correction, and the duplicate it collapsed
+      into. Your delimiter and line endings come back exactly as they went in.
+    </p>
+  </section>
+
+  <!-- API -->
+  <section id="api" style="border-top: 1px solid #E7E4DE; background: #FAF9F7">
+    <div class="wrap" style="padding: 64px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center" class="hero-grid">
+      <div>
+        <div class="eyebrow">API</div>
+        <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Same engine, one header.</h2>
+        <p class="lede" style="margin-top: 14px">
+          Everything the app does is available over HTTP: verify one address in real time, or push a
+          file through the bulk pipeline and poll it. Create a key in Settings; it is shown once.
+        </p>
+        <a class="btn-ghost" href="/docs" style="margin-top: 20px">Read the API docs</a>
+      </div>
+      <div class="card mono" style="padding: 16px 18px; font-size: 12.5px; line-height: 21px; color: #44413B; overflow-x: auto">
+<span style="color: #79756C">$</span> curl -s {{ engineUrl }}/v1/verify \
+  <span style="color: #79756C">-H</span> <span style="color: #027A48">"X-API-Key: eve_…"</span> \
+  <span style="color: #79756C">-d</span> <span style="color: #027A48">'{"email":"john@gmial.com"}'</span>
+
+{
+  <span style="color: #1C93EA">"status"</span>: <span style="color: #027A48">"unknown"</span>,
+  <span style="color: #1C93EA">"suggested_correction"</span>: <span style="color: #027A48">"john@gmail.com"</span>,
+  <span style="color: #1C93EA">"score"</span>: <span style="color: #B54708">60</span>
+}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="wrap" style="padding: 76px 24px; text-align: center">
+    <h2 style="font-size: 32px; line-height: 40px">Start with a list you already have.</h2>
+    <p class="lede" style="margin: 14px auto 0; max-width: 480px">
+      Free while in beta. Upload a CSV and see the seven-layer trace for every address in it.
+    </p>
+    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 26px">
+      <a class="btn-primary" href="/signup">Create a free account</a>
+      <a class="btn-ghost" href="/login">Sign in</a>
+    </div>
+  </section>
+</main>
+
+<footer style="border-top: 1px solid #E7E4DE">
+  <div class="wrap" style="padding: 26px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+    <span style="font-size: 13px; color: #79756C">Validrow — in-house email verification.</span>
+    <div style="flex: 1"></div>
+    <a href="/login" style="font-size: 13px; color: #57534B">Sign in</a>
+    <a href="/signup" style="font-size: 13px; color: #57534B">Create account</a>
+    <a href="/docs" style="font-size: 13px; color: #57534B">API</a>
+  </div>
+</footer>
+
+</body>
+</html>
