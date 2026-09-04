@@ -273,3 +273,36 @@ async def test_two_accounts_do_not_see_each_others_addresses(tmp_path, store):
     assert [r["email"] for r in b["rows"]] == ["lead@bob-corp.com"]
     assert a["total"] == 1 and b["total"] == 1
     set_address_store(None)
+
+
+# --- the session janitor -------------------------------------------------
+
+
+async def test_the_janitor_clears_expired_sessions(store):
+    import asyncio
+
+    from eve.auth import start_session_janitor, stop_session_janitor
+
+    set_settings(_settings())
+    user = await store.create_user("jane@acme.io", "a-long-enough-password")
+    await store.start_session(user.id, ttl_seconds=-1)
+    live = await store.start_session(user.id)
+
+    task = start_session_janitor(_settings(), interval=0.01)
+    assert task is not None
+    try:
+        for _ in range(200):
+            if len(await store.pending_sessions()) == 1:
+                break
+            await asyncio.sleep(0.01)
+    finally:
+        await stop_session_janitor()
+
+    assert len(await store.pending_sessions()) == 1
+    assert await store.user_for_session(live) is not None
+
+
+async def test_the_janitor_stays_off_when_auth_is_off(store):
+    from eve.auth import start_session_janitor
+
+    assert start_session_janitor(_settings(require_auth=False)) is None

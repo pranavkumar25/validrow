@@ -21,7 +21,7 @@ from eve.addresses import get_address_store
 from eve.api import files, jobs, workspace
 from eve.api.schemas import HealthResponse, VerifyRequest, VerifyResponse
 from eve.api.security import AuthMiddleware
-from eve.auth import get_auth_store
+from eve.auth import get_auth_store, start_session_janitor, stop_session_janitor
 from eve.config import get_settings
 from eve.engine import validate
 from eve.jobs.store import get_job_store
@@ -65,9 +65,13 @@ async def lifespan(app: FastAPI):
     # Retry the addresses a receiver deferred rather than answered. No-op with
     # SMTP off, where nothing is ever deferred in the first place.
     start_reprobe_runner(s)
+    # Expired sessions are refused at read time anyway; this keeps the table
+    # from growing a row for every session ever issued. No-op with auth off.
+    start_session_janitor(s)
     try:
         yield
     finally:
+        await stop_session_janitor()
         await stop_reprobe_runner()
         await stop_blacklist_monitor()
 

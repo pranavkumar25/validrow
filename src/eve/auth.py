@@ -437,6 +437,14 @@ class AuthStore:
             res = await conn.execute(delete(self.sessions).where(self.sessions.c.user_id == user_id))
             return res.rowcount or 0
 
+    async def pending_sessions(self) -> list[dict]:
+        """Every session row. Small by construction, and the janitor's evidence."""
+        from sqlalchemy import select
+
+        async with self._engine.connect() as conn:
+            rows = (await conn.execute(select(self.sessions))).mappings().all()
+        return [dict(r) for r in rows]
+
     async def purge_expired_sessions(self) -> int:
         from sqlalchemy import delete
 
@@ -547,6 +555,63 @@ class AuthStore:
         async with self._engine.begin() as conn:
             res = await conn.execute(update(self.api_keys).where(where).values(revoked_at=_now()))
             return bool(res.rowcount)
+
+
+# --- the session janitor -------------------------------------------------
+
+_janitor_task = None
+
+
+async def _purge_forever(interval: float) -> None:
+    import asyncio
+
+    while True:
+        try:
+            removed = await get_auth_store().purge_expired_sessions()
+            if removed:
+                logger.info("purged %d expired session(s)", removed)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 - runs for the life of the process
+            logger.exception("session purge failed; retrying in %.0fs", interval)
+        await asyncio.sleep(interval)
+
+
+def start_session_janitor(settings=None, *, interval: float = 60 * 60 * 6):
+    """Delete sessions that have already expired. Idempotent.
+
+    An expired session is refused at read time regardless, so this is about the
+    table rather than about access: without it, every session ever issued stays
+    a row forever. Returns ``None`` when auth is off, because then no session is
+    ever issued.
+    """
+    import asyncio
+
+    global _janitor_task
+    if _janitor_task is not None and not _janitor_task.done():
+        return _janitor_task
+
+    s = settings or get_settings()
+    if not s.require_auth:
+        return None
+
+    _janitor_task = asyncio.create_task(_purge_forever(interval))
+    return _janitor_task
+
+
+async def stop_session_janitor() -> None:
+    """Cancel the janitor and wait for it to unwind. Safe when not running."""
+    import asyncio
+
+    global _janitor_task
+    task, _janitor_task = _janitor_task, None
+    if task is None or task.done():
+        return
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 _store: Optional[AuthStore] = None
