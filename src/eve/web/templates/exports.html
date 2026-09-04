@@ -26,7 +26,7 @@
                 </a>
               </div>
               {% if customOpen %}
-                <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
+                <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
                   <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Verdicts</div>
                   <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
                     {% for c in customVerdicts %}
@@ -39,18 +39,18 @@
                     {% for t in customToggles %}
                       <a class="nav" href="{{ toggleHrefs[t.key] }}" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border: 0; background: transparent; text-align: left; border-bottom: 1px solid #F4F3EF">
                         <span style="flex: 1">
-                          <span style="display: block; font-size: 13.5px; color: #101014">{{ t.label }}</span>
+                          <span style="display: block; font-size: 13.5px; color: #0A0A0A">{{ t.label }}</span>
                           <span style="display: block; font-size: 12px; color: #79756C; margin-top: 2px">{{ t.note }}</span>
                         </span>
                         <span style="width: 36px; height: 20px; flex: 0 0 36px; border-radius: 999px; background: {{ t.trackBg }}; padding: 2px; transition: background 150ms ease-out">
-                          <span style="display: block; width: 16px; height: 16px; border-radius: 999px; background: #FFFFFF; transform: translateX({{ t.knob }}); transition: transform 150ms ease-out"></span>
+                          <span style="display: block; width: 16px; height: 16px; border-radius: 999px; background: #FCFCFC; transform: translateX({{ t.knob }}); transition: transform 150ms ease-out"></span>
                         </span>
                       </a>
                     {% endfor %}
                   </div>
                 </div>
               {% endif %}
-              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
+              <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
                   <div>
                     <div style="font-size: 13.5px; font-weight: 600">Columns</div>
@@ -63,7 +63,7 @@
                   </div>
                 </div>
               </div>
-              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 16px; overflow: hidden">
+              <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 16px; overflow: hidden">
                 <div style="padding: 16px 20px; border-bottom: 1px solid #E7E4DE; font-size: 14px; font-weight: 600">Finished jobs, re-downloadable from cache</div>
                 {% for j in hJobs %}
                   <div class="hv-white" style="display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 48px; border-bottom: 1px solid #E7E4DE">
@@ -78,7 +78,7 @@
                 {% endif %}
               </div>
             </div>
-            <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; position: sticky; top: 84px">
+            <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; position: sticky; top: 84px">
               <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Preview</div>
               <div style="font-size: 13.5px; font-weight: 600; margin-top: 8px">{{ exPrev.label }}</div>
               <div style="font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 4px">{{ exPrev.count }}</div>
@@ -96,7 +96,7 @@
                   <span style="font-size: 12px; color: #79756C">Nothing in this slice yet.</span>
                 {% endif %}
               </div>
-              <button type="submit" class="hv-blue" style="width: 100%; height: 38px; margin-top: 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Export CSV</button>
+              <button type="submit" class="hv-blue" style="width: 100%; height: 38px; margin-top: 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Export CSV</button>
             </div>
           </div>
           </form>

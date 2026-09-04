@@ -36,7 +36,11 @@ PALETTE = {
     "line": F.LINE,
     "line-2": F.LINE_2,
     "surface": F.SURFACE,
-    "canvas": "#FAF9F7",
+    # The ground the framed sheet sits on. Deepened and de-warmed when the
+    # brand white became #FCFCFC: against the old #FAF9F7 the sheet and the
+    # ground were a percent apart and the frame stopped reading as a sheet,
+    # and a warm ground under a #0000FF brand reads as a different system.
+    "canvas": "#F2F2F3",
     "white": F.WHITE,
 }
 

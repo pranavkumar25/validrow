@@ -77,7 +77,7 @@
         return '<div style="display: flex; align-items: center; gap: 8px">' +
           '<span style="width: 6px; height: 6px; border-radius: 999px; background: ' + r.dot + '"></span>' +
           '<span style="flex: 1; font-size: 12px; color: #D8D4CC">' + r.label + '</span>' +
-          '<span style="font-size: 12px; font-weight: 500; color: #FFFFFF; font-variant-numeric: tabular-nums">' + r.value + '</span>' +
+          '<span style="font-size: 12px; font-weight: 500; color: #FCFCFC; font-variant-numeric: tabular-nums">' + r.value + '</span>' +
           '</div>';
       }).join('');
     };
@@ -138,13 +138,13 @@
     var box = el.matches('[data-check]') ? el : $('[data-box]', el);
     var row = el.matches('[data-check]') ? el.closest('[data-row-toggle]') : el;
     if (box) {
-      box.style.background = on ? '#35ABFF' : '#FFFFFF';
-      box.style.borderColor = on ? '#35ABFF' : '#D8D4CC';
+      box.style.background = on ? '#0000FF' : '#FCFCFC';
+      box.style.borderColor = on ? '#0000FF' : '#D8D4CC';
       var tick = box.querySelector('svg');
       if (tick) tick.style.opacity = on ? '1' : '0';
     }
     if (row) {
-      row.style.background = on ? '#EAF6FF' : 'transparent';
+      row.style.background = on ? '#EFEFFF' : 'transparent';
       row.setAttribute('aria-checked', on ? 'true' : 'false');
     }
   };
@@ -162,7 +162,7 @@
       var all = rowEls.length > 0 && selected.size === rowEls.length;
       paint(selectAll, all);
       // Distinguish "some" from "none" without a third icon.
-      selectAll.style.borderColor = selected.size && !all ? '#35ABFF' : (all ? '#35ABFF' : '#D8D4CC');
+      selectAll.style.borderColor = selected.size && !all ? '#0000FF' : (all ? '#0000FF' : '#D8D4CC');
     }
   };
 
@@ -313,15 +313,15 @@
     ['dragenter', 'dragover'].forEach(function (ev) {
       zone.addEventListener(ev, function (e) {
         e.preventDefault();
-        zone.style.borderColor = '#35ABFF';
-        zone.style.background = '#EAF6FF';
+        zone.style.borderColor = '#0000FF';
+        zone.style.background = '#EFEFFF';
       });
     });
     ['dragleave', 'drop'].forEach(function (ev) {
       zone.addEventListener(ev, function (e) {
         e.preventDefault();
         zone.style.borderColor = '#D8D4CC';
-        zone.style.background = '#FFFFFF';
+        zone.style.background = '#FCFCFC';
       });
     });
     zone.addEventListener('drop', function (e) {

@@ -6,7 +6,7 @@
           <div style="font-size: 15px; color: #57534B; margin-top: 6px; line-height: 23px; max-width: 620px; text-wrap: pretty">Seven layers, in a fixed order, each one able to settle the verdict on its own. When a layer cannot reach a conclusion we say so — we never promote a guess to a certainty.</div>
           <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 28px">
             {% for s in stages %}
-              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 44px 1fr; gap: 16px">
+              <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 44px 1fr; gap: 16px">
                 <span style="font-family: Inter, system-ui, sans-serif; font-size: 13px; color: #A8A29E; padding-top: 2px">{{ s.n }}</span>
                 <div>
                   <div style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em">{{ s.title }}</div>
@@ -16,7 +16,7 @@
             {% endfor %}
           </div>
           <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 36px 0 12px">What each verdict means</div>
-          <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; overflow: hidden">
+          <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; overflow: hidden">
             {% for v in verdictRef %}
               <div style="display: grid; grid-template-columns: 150px 1fr; gap: 20px; padding: 18px 20px; border-bottom: 1px solid #E7E4DE">
                 <span style="padding-top: 1px">
@@ -25,14 +25,14 @@
                   </span>
                 </span>
                 <div>
-                  <div style="font-size: 14px; color: #101014; line-height: 21px; text-wrap: pretty">{{ v.def }}</div>
+                  <div style="font-size: 14px; color: #0A0A0A; line-height: 21px; text-wrap: pretty">{{ v.def }}</div>
                   <div style="font-size: 13px; color: #79756C; margin-top: 6px; line-height: 20px; text-wrap: pretty">{{ v.never }}</div>
                 </div>
               </div>
             {% endfor %}
           </div>
           <div style="text-align: center; margin-top: 28px">
-            <button class="hv-blue" onclick="location.href='/single'" style="height: 38px; padding: 0 18px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Check a single address</button>
+            <button class="hv-blue" onclick="location.href='/single'" style="height: 38px; padding: 0 18px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Check a single address</button>
           </div>
         </div>
 {% endblock %}

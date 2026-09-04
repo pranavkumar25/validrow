@@ -4,9 +4,9 @@
         <div>
           <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">History</div>
           <div style="font-size: 14px; color: #57534B; margin-top: 2px">Every job this workspace has run.</div>
-          <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 20px; overflow: hidden">
+          <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 20px; overflow: hidden">
             <div style="overflow-x: auto">
-            <div style="display: grid; grid-template-columns: minmax(240px, 1.6fr) 120px 110px 120px 1fr 160px; min-width: 1000px; padding: 0 20px; height: 38px; align-items: center; background: #FFFFFF; border-bottom: 1px solid #E7E4DE">
+            <div style="display: grid; grid-template-columns: minmax(240px, 1.6fr) 120px 110px 120px 1fr 160px; min-width: 1000px; padding: 0 20px; height: 38px; align-items: center; background: #FCFCFC; border-bottom: 1px solid #E7E4DE">
               <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">File</span>
               <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">State</span>
               <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Addresses</span>
@@ -22,11 +22,11 @@
                 </span>
                 <span><span style="font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 999px; background: {{ j.tagBg }}; color: {{ j.tagFg }}">{{ j.state }}</span></span>
                 <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ j.addr }}</span>
-                <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #101014; font-variant-numeric: tabular-nums">{{ j.dr }}</span>
+                <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #0A0A0A; font-variant-numeric: tabular-nums">{{ j.dr }}</span>
                 <span style="padding-right: 24px">
                   {% if j.running %}
                     <span style="display: block; height: 4px; border-radius: 999px; background: #E7E4DE; overflow: hidden">
-                      <span style="display: block; height: 4px; border-radius: 999px; background: #35ABFF; width: {{ j.prog }}; transition: width 200ms linear"></span>
+                      <span style="display: block; height: 4px; border-radius: 999px; background: #0000FF; width: {{ j.prog }}; transition: width 200ms linear"></span>
                     </span>
                   {% endif %}
                   <span style="display: flex; gap: 2px">
@@ -45,7 +45,7 @@
                 </div>
                 <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">No runs yet</div>
                 <div style="font-size: 14px; color: #57534B; margin-top: 4px">Every list you validate shows up here with its full breakdown.</div>
-                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
+                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
               </div>
             {% endif %}
             </div>

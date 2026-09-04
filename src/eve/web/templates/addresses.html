@@ -7,7 +7,7 @@
 
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
             {% for s in aStats %}
-              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 20px">
+              <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 20px">
                 <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">{{ s.eyebrow }}</div>
                 <div style="font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 8px">{{ s.value }}</div>
               </div>
@@ -15,7 +15,7 @@
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap">
-            <form action="{{ APP }}/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; width: 260px">
+            <form action="{{ APP }}/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; width: 260px">
               {% for c in chipsAll %}{% if c.on %}<input type="hidden" name="verdict" value="{{ c.key }}">{% endif %}{% endfor %}
               <input type="hidden" name="sort" value="{{ aSort }}">
               <input type="hidden" name="size" value="{{ aSize }}">
@@ -28,8 +28,8 @@
               </a>
             {% endfor %}
             <div data-sort style="position: relative; margin-left: auto">
-              <button data-sort-toggle style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Sort: {{ sortLabel }} <span style="color: #A8A29E">⌄</span></button>
-              <div data-sort-menu hidden style="position: absolute; right: 0; top: 40px; z-index: 30; min-width: 168px; background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 16px; box-shadow: 0 12px 32px -8px rgba(15,13,8,0.18); padding: 6px; animation: vr-in 220ms cubic-bezier(0.16,1,0.3,1)">
+              <button data-sort-toggle style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Sort: {{ sortLabel }} <span style="color: #A8A29E">⌄</span></button>
+              <div data-sort-menu hidden style="position: absolute; right: 0; top: 40px; z-index: 30; min-width: 168px; background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 16px; box-shadow: 0 12px 32px -8px rgba(15,13,8,0.18); padding: 6px; animation: vr-in 220ms cubic-bezier(0.16,1,0.3,1)">
                 {% for o in sortOpts %}
                   <a class="nav hv-surface" href="{{ sortHrefs[o.key] }}" style="display: flex; align-items: center; width: 100%; height: 32px; padding: 0 10px; background: transparent; border: 0; border-radius: 8px; text-align: left; font-size: 13px; color: {{ o.fg }}">{{ o.label }}</a>
                 {% endfor %}
@@ -37,9 +37,9 @@
             </div>
           </div>
 
-          <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 16px; overflow: hidden">
+          <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 16px; overflow: hidden">
             <div style="overflow-x: auto">
-            <div style="display: grid; grid-template-columns: 40px minmax(230px, 1.8fr) 250px 150px 190px 106px; min-width: 1000px; padding: 0 16px; height: 38px; align-items: center; background: #FFFFFF; border-bottom: 1px solid #E7E4DE">
+            <div style="display: grid; grid-template-columns: 40px minmax(230px, 1.8fr) 250px 150px 190px 106px; min-width: 1000px; padding: 0 16px; height: 38px; align-items: center; background: #FCFCFC; border-bottom: 1px solid #E7E4DE">
               <span></span>
               <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Address</span>
               <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Verdict</span>
@@ -51,8 +51,8 @@
             {% for r in aRows %}
               <div data-arow>
                 <div data-row-toggle class="hv-white" style="display: grid; grid-template-columns: 40px minmax(230px, 1.8fr) 250px 150px 190px 106px; min-width: 1000px; padding: 0 16px; height: 40px; align-items: center; border-bottom: 1px solid #E7E4DE; cursor: pointer; background: transparent; transition: background 150ms ease-out">
-                  <span data-check data-select="{{ r.email }}" style="width: 16px; height: 16px; border: 1.5px solid #D8D4CC; background: #FFFFFF; border-radius: 4px; display: grid; place-items: center">
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style="opacity: 0"><path d="M2.5 6.2l2.4 2.4L9.5 4" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  <span data-check data-select="{{ r.email }}" style="width: 16px; height: 16px; border: 1.5px solid #D8D4CC; background: #FCFCFC; border-radius: 4px; display: grid; place-items: center">
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style="opacity: 0"><path d="M2.5 6.2l2.4 2.4L9.5 4" stroke="#FCFCFC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                   </span>
                   <span style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 12px">{{ r.email }}</span>
                   <span style="display: flex; align-items: center; gap: 6px; padding-right: 12px; overflow: hidden">
@@ -69,7 +69,7 @@
                   <span style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 12.5px; color: #57534B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 12px">{{ r.job }}</span>
                   <span style="font-size: 12.5px; color: #79756C; text-align: right; font-variant-numeric: tabular-nums">{{ r.date }}</span>
                 </div>
-                <div data-row-detail data-email="{{ r.email }}" hidden style="background: #FFFFFF; border-bottom: 1px solid #E7E4DE; padding: 20px; display: grid; grid-template-columns: 260px 1fr; min-width: 1000px; gap: 24px; animation: vr-in 220ms cubic-bezier(0.16,1,0.3,1)"></div>
+                <div data-row-detail data-email="{{ r.email }}" hidden style="background: #FCFCFC; border-bottom: 1px solid #E7E4DE; padding: 20px; display: grid; grid-template-columns: 260px 1fr; min-width: 1000px; gap: 24px; animation: vr-in 220ms cubic-bezier(0.16,1,0.3,1)"></div>
               </div>
             {% endfor %}
             </div>
@@ -81,7 +81,7 @@
                 </div>
                 <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Nothing validated yet</div>
                 <div style="font-size: 14px; color: #57534B; margin-top: 4px">Upload a list and Validrow will clean it in a few minutes.</div>
-                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
+                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
               </div>
             {% endif %}
             {% if aEmptyFilters %}
@@ -91,7 +91,7 @@
                 </div>
                 <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">No addresses match these filters</div>
                 <div style="font-size: 14px; color: #57534B; margin-top: 4px">Try widening the verdict filter or clearing the search.</div>
-                <button onclick="location.href='/addresses'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #101014">Clear filters</button>
+                <button onclick="location.href='/addresses'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #0A0A0A">Clear filters</button>
               </div>
             {% endif %}
 
@@ -105,9 +105,9 @@
                       <a class="nav" href="{{ sizeHrefs[p.size] }}" style="display: grid; place-items: center; height: 24px; padding: 0 9px; border: 0; border-radius: 6px; font-size: 12px; background: {{ p.bg }}; color: {{ p.fg }}; font-variant-numeric: tabular-nums">{{ p.label }}</a>
                     {% endfor %}
                   </div>
-                  <button class="hv-white" {% if hasPrev %}onclick="location.href='{{ prevHref }}'"{% else %}disabled style="opacity:.5"{% endif %} style="height: 30px; padding: 0 11px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #57534B">Prev</button>
+                  <button class="hv-white" {% if hasPrev %}onclick="location.href='{{ prevHref }}'"{% else %}disabled style="opacity:.5"{% endif %} style="height: 30px; padding: 0 11px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #57534B">Prev</button>
                   <span style="font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ aPageLabel }}</span>
-                  <button class="hv-white" {% if hasNext %}onclick="location.href='{{ nextHref }}'"{% else %}disabled style="opacity:.5"{% endif %} style="height: 30px; padding: 0 11px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #57534B">Next</button>
+                  <button class="hv-white" {% if hasNext %}onclick="location.href='{{ nextHref }}'"{% else %}disabled style="opacity:.5"{% endif %} style="height: 30px; padding: 0 11px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #57534B">Next</button>
                 </div>
               </div>
             {% endif %}
@@ -115,10 +115,10 @@
 
           <div style="font-size: 12.5px; color: #79756C; margin-top: 12px">An address belongs to the job that produced it — nothing here can be deleted.</div>
 
-          <div data-selbar hidden style="position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 8px 0 18px; background: #101014; border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(15,13,8,0.32); animation: vr-up 220ms cubic-bezier(0.16,1,0.3,1)">
-            <span data-selcount style="font-size: 13px; color: #FFFFFF; font-variant-numeric: tabular-nums"></span>
+          <div data-selbar hidden style="position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 8px 0 18px; background: #0A0A0A; border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(15,13,8,0.32); animation: vr-up 220ms cubic-bezier(0.16,1,0.3,1)">
+            <span data-selcount style="font-size: 13px; color: #FCFCFC; font-variant-numeric: tabular-nums"></span>
             <span style="width: 1px; height: 20px; background: rgba(255,255,255,0.16)"></span>
-            <button class="hv-onDark" data-export-selected style="height: 32px; padding: 0 12px; background: rgba(255,255,255,0.1); color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13px">Export selected</button>
+            <button class="hv-onDark" data-export-selected style="height: 32px; padding: 0 12px; background: rgba(255,255,255,0.1); color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13px">Export selected</button>
             <button class="hv-inkText" data-clear-sel style="height: 32px; padding: 0 12px; background: transparent; color: #A8A29E; border: 0; border-radius: 8px; font-size: 13px">Clear</button>
           </div>
         </div>

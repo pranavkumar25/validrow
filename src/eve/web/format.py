@@ -35,12 +35,19 @@ SHORT_LABEL = {
 
 ORDER = ["deliverable", "risky", "unknown", "undeliverable"]
 
-# Brand + neutrals, lifted from the design.
-BLUE = "#35ABFF"
-BLUE_DARK = "#1C93EA"
-BLUE_WASH = "#EAF6FF"
-BLUE_LINE = "#D8ECFF"
-INK = "#101014"
+# Brand + neutrals. The brand set is three colours: a primary blue, a brand
+# black and a brand white. Everything else on this list is a neutral or a
+# verdict hue and is unchanged by the brand.
+#
+# The blue is a pure #0000FF rather than the old #35ABFF. That is a brand
+# decision, and it happens to settle the one contrast failure the landing page
+# had to document: white on #35ABFF measured 2.5:1, and white on #0000FF
+# measures 8.6:1, so the primary action now passes AA at any size.
+BLUE = "#0000FF"
+BLUE_DARK = "#0000C7"   # hover and pressed, and blue used as text
+BLUE_WASH = "#EFEFFF"   # pill and inset fills
+BLUE_LINE = "#D4D4FF"   # the hairline that goes with the wash
+INK = "#0A0A0A"
 INK_2 = "#44413B"
 INK_3 = "#57534B"
 MUTED = "#79756C"
@@ -48,7 +55,7 @@ MUTED_2 = "#A8A29E"
 LINE = "#E7E4DE"
 LINE_2 = "#D8D4CC"
 SURFACE = "#F4F3EF"
-WHITE = "#FFFFFF"
+WHITE = "#FCFCFC"
 GREEN = "#12B76A"
 GREEN_INK = "#027A48"
 AMBER = "#F79009"

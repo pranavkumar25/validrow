@@ -24,7 +24,7 @@
 <title>Validrow · Email verification that proves the mailbox</title>
 <meta name="description" content="Seven layers, from syntax to an SMTP mailbox probe run on our own infrastructure. Upload a CSV, get every column back with a verdict on every row. Free for the first {{ foundingAccounts }} accounts.">
 <link rel="preload" href="/static/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='9' fill='%2335ABFF'/><path d='M9 16.6l4.6 4.6L23 11.4' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230000FF'/><rect x='7' y='11.4' width='18' height='2.6' rx='1.3' fill='%23FCFCFC'/><rect x='7' y='17.8' width='9.4' height='2.6' rx='1.3' fill='%23FCFCFC'/></svg>">
 <style>
 @font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('/static/InterVariable.woff2') format('woff2'); }
 
@@ -107,7 +107,7 @@ a { color: inherit; text-decoration: none; }
 h1, h2, h3 { margin: 0; font-weight: 600; text-wrap: balance; }
 p { margin: 0; text-wrap: pretty; }
 ::selection { background: var(--blue-line); color: var(--ink); }
-:focus-visible { outline: 2px solid rgba(53,171,255,0.55); outline-offset: 3px; border-radius: 3px; }
+:focus-visible { outline: 2px solid rgba(0,0,255,0.5); outline-offset: 3px; border-radius: 3px; }
 
 /* Figures never jitter between rows. */
 .tnum, table, .stat, .mono { font-variant-numeric: tabular-nums; }
@@ -212,8 +212,9 @@ p { margin: 0; text-wrap: pretty; }
   }
 }
 .bar-inner { display: flex; align-items: center; gap: 10px; height: 68px; }
-.brand { display: inline-flex; align-items: center; gap: 10px; font-size: 16.5px; font-weight: 600; letter-spacing: -0.028em; }
-.mark { width: 26px; height: 26px; border-radius: 8px; flex: 0 0 26px; }
+.brand { display: inline-flex; align-items: center; color: var(--ink); }
+.wordmark { height: 21px; width: auto; display: block; }
+.wm-rule { fill: var(--blue); }
 .nav { display: none; margin-inline: auto; }
 .nav a { padding: 10px 14px; border-radius: var(--r-sm); font-size: var(--t-small); color: var(--ink-3); transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
 .nav a:hover { color: var(--ink); background: var(--wash); }
@@ -342,10 +343,6 @@ table.mix td.share { text-align: right; width: 56px; color: var(--muted); }
 </head>
 <body>
 
-{% macro mark(size, radius) -%}
-<svg class="mark" width="{{ size }}" height="{{ size }}" viewBox="0 0 26 26" aria-hidden="true" style="flex-basis: {{ size }}px; width: {{ size }}px; height: {{ size }}px"><rect width="26" height="26" rx="{{ radius }}" fill="{{ palette['blue'] }}"></rect><path d="M7.4 13.4l3.8 3.8 7.4-7.6" fill="none" stroke="{{ palette['white'] }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-{%- endmacro %}
-
 {% macro arrow() -%}
 <svg class="arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h13M12.5 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 {%- endmacro %}
@@ -353,7 +350,7 @@ table.mix td.share { text-align: right; width: 56px; color: var(--muted); }
 <header class="bar">
   <div class="frame">
     <div class="gut bar-inner">
-      <a class="brand" href="/">{{ mark(26, 8) }}Validrow</a>
+      <a class="brand" href="/" aria-label="Validrow home">{% with h = 21 %}{% include "_wordmark.html" %}{% endwith %}</a>
       <nav class="nav" aria-label="Sections">
         <a href="#why">Why the depth</a>
         <a href="#layers">The layers</a>
@@ -624,7 +621,7 @@ table.mix td.share { text-align: right; width: 56px; color: var(--muted); }
 <footer class="gut" style="border-top: 1px solid var(--hair)">
   <div class="foot-top">
     <div style="max-width: 38ch">
-      <a class="brand" href="/">{{ mark(22, 7) }}Validrow</a>
+      <a class="brand" href="/" aria-label="Validrow home">{% with h = 19 %}{% include "_wordmark.html" %}{% endwith %}</a>
       <p class="body" style="margin-top: 14px">
         Email verification run on our own infrastructure, with a verdict you can
         take apart layer by layer.
