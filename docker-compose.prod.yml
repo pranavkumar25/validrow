@@ -1,0 +1,120 @@
+# Production stack for validrow.inboxrow.com. One box, because the worker has
+# to sit on the port-25-capable host anyway — putting the API on a PaaS as well
+# would mean paying twice for a split nothing needs at this size.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences from docker-compose.yml that matter, each of which is a way the
+# dev file would hurt you on a public host:
+#
+#   * Reads `.env`, not `.env.example`. The example ships EVE_REQUIRE_AUTH=false
+#     and EVE_RATE_LIMIT_PER_MINUTE=0, so deploying it verbatim publishes an
+#     open, unmetered app.
+#   * Postgres, Redis and MinIO publish no host ports. In the dev file they bind
+#     0.0.0.0, which on a VPS means the internet can reach your database — with
+#     the password `eve`.
+#   * Credentials come from the environment with no defaults, so a missing one
+#     fails the deploy instead of silently standing up `minioadmin`.
+#   * Caddy terminates TLS. EVE_SESSION_COOKIE_SECURE=true means the browser
+#     drops the session cookie over plain HTTP, which presents as a login that
+#     silently does nothing rather than as a certificate error.
+#   * Everything restarts unless stopped.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data      # certificates — losing this re-issues them, and
+      - caddyconfig:/config  # Let's Encrypt rate-limits how often you may
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN, e.g. validrow.inboxrow.com}
+    depends_on:
+      - api
+
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: [.env]
+    environment: &backends
+      EVE_ENV: production
+      EVE_WORKSPACE_DB_URL: postgresql+asyncpg://eve:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/eve
+      EVE_REDIS_URL: redis://redis:6379/0
+      EVE_S3_ENDPOINT: ${EVE_S3_ENDPOINT:-http://minio:9000}
+      EVE_S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+      EVE_S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+      EVE_S3_BUCKET: ${S3_BUCKET:-eve-uploads}
+    # No published ports: Caddy is the only way in.
+    expose: ["8000"]
+    depends_on: [postgres, redis]
+
+  # Bulk jobs and every SMTP probe originate here. Run this on the host whose
+  # IP has the PTR record — that is what makes a probe's identity match its
+  # HELO, and what stops receivers dropping the connection.
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["arq", "eve.jobs.worker.WorkerSettings"]
+    env_file: [.env]
+    environment: *backends
+    depends_on: [postgres, redis]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eve
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: eve
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Deliberately no `ports:`. Reachable only from the compose network.
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    # Redis has no password here because it is not reachable off the network.
+    # If you ever publish a port, set `requirepass` in the same commit.
+
+  # Only used when EVE_S3_ENDPOINT points at it. Cloudflare R2 is worth
+  # preferring: it keeps uploads and result CSVs off the same disk as the
+  # database, and its free tier has no egress charge. Point EVE_S3_ENDPOINT at
+  # R2 and this service can be removed entirely.
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+    volumes:
+      - miniodata:/data
+    profiles: ["minio"]
+
+  # S3 has no "create on first write", so the bucket has to exist up front.
+  createbucket:
+    image: minio/mc:latest
+    depends_on: [minio]
+    profiles: ["minio"]
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${S3_ACCESS_KEY} $${S3_SECRET_KEY}; do sleep 1; done;
+      mc mb --ignore-existing local/$${S3_BUCKET:-eve-uploads};
+      "
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-eve-uploads}
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  caddydata:
+  caddyconfig:

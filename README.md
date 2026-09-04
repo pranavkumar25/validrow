@@ -235,6 +235,43 @@ Compose runs the **production** backends, which is the point: `make run` uses
 SQLite and local disk, so this is where the shared-backend paths actually get
 exercised before a deploy does it for you.
 
+## Deploying
+
+Served at **validrow.inboxrow.com** — landing page at `/`, sign-in at `/login`
+and `/signup`, the app at `/app`, the JSON API at `/v1`. One process serves all
+four, so there is nothing to route by path.
+
+```bash
+cp .env.production.example .env && $EDITOR .env    # secrets, domain, auth
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+One box, deliberately. The worker has to sit on the port-25-capable host
+anyway (see **Config** below), so putting the API on a PaaS as well would mean
+paying twice for a split nothing needs at this size.
+
+`docker-compose.yml` is for *local* testing of the production backends and is
+not safe to deploy: it reads `.env.example` (which ships `EVE_REQUIRE_AUTH=false`
+and `EVE_RATE_LIMIT_PER_MINUTE=0`), and it binds Postgres, Redis and MinIO to
+`0.0.0.0` with default passwords. On a VPS that publishes your database to the
+internet. `docker-compose.prod.yml` reads `.env`, gives the internal services no
+host ports at all, and fails the deploy on a missing secret rather than
+standing up `minioadmin`.
+
+**Caddy is a functional requirement, not hardening.** `EVE_SESSION_COOKIE_SECURE`
+defaults to true and a browser silently discards a Secure cookie sent over plain
+HTTP — which presents as a login that does nothing, not as a certificate error.
+Caddy obtains and renews the certificate for `SITE_DOMAIN` on its own.
+
+Object storage defaults to the bundled MinIO (`--profile minio`). Pointing
+`EVE_S3_ENDPOINT` at Cloudflare R2 instead keeps uploads and result CSVs off the
+same disk as the database.
+
+The API logs which backend each subsystem resolved to at startup and warns about
+every setting that is fine locally and wrong in production — auth off, rate
+limiting off, SQLite, local disk, a placeholder SMTP identity. Read that output
+once after the first deploy; it is the checklist.
+
 ## Running jobs
 
 Bulk jobs go wherever `EVE_QUEUE_BACKEND` resolves:

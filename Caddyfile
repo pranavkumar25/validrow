@@ -1,0 +1,36 @@
+# TLS for validrow.inboxrow.com. Caddy obtains and renews the certificate on
+# its own, which is the whole reason it is here: EVE_SESSION_COOKIE_SECURE is
+# on by default, and a browser silently discards a Secure cookie sent over
+# plain HTTP. That presents as a login that does nothing — not as an error —
+# so the certificate is a functional requirement, not hardening.
+#
+# SITE_DOMAIN comes from .env (validrow.inboxrow.com).
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# The engine serves the landing page, the app and the API from one process,
+	# so there is nothing to route by path.
+	reverse_proxy api:8000
+
+	header {
+		# Sent over HTTPS only, which is exactly when it is safe to promise.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# An upload is bounded by EVE_MAX_UPLOAD_BYTES (100 MB) in the app, which
+	# returns a 413 with a message. This is the same limit at the edge so a
+	# hostile body is dropped before it reaches a worker.
+	request_body {
+		max_size 100MB
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
