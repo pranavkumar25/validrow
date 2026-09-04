@@ -30,6 +30,7 @@ from eve.observability import (
     warn_about_configuration,
 )
 from eve.ratelimit import RateLimit
+from eve.smtp_infra import start_blacklist_monitor, stop_blacklist_monitor
 from eve.web import mount_web
 
 VERSION = "0.1.0"
@@ -53,7 +54,14 @@ async def lifespan(app: FastAPI):
     for name, backend in describe_backends(s).items():
         logger.info("backend %s: %s", name, backend)
     warn_about_configuration(s)
-    yield
+
+    # Watch the egress IPs for DNSBL listings while this process is probing.
+    # No-op unless SMTP is on and EVE_SMTP_EGRESS_IPS names IPs to watch.
+    start_blacklist_monitor(s)
+    try:
+        yield
+    finally:
+        await stop_blacklist_monitor()
 
 
 app = FastAPI(

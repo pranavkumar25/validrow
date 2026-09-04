@@ -165,6 +165,13 @@ footer reads *Local workspace* over the engine host by default. Set
   `ip_pool` (reputation / rotation / cooldown / warm-up), `blacklist` (DNSBL
   monitoring), composed by `service.SmtpService`. Needs port-25-capable egress
   IPs in production (set `EVE_SMTP_EGRESS_IPS`).
+- **The DNSBL monitor runs, it is not just available.** Every process that
+  probes — the API and each worker — scans its own egress IPs on a loop while
+  SMTP is on. A listing pulls the IP from rotation via the pool's cooldown and
+  logs at `ERROR`, which is the level that should page someone: a listed IP
+  invalidates every verdict it produces. With no `EVE_SMTP_EGRESS_IPS` the scan
+  does not start, because probes then leave on the OS default route — an
+  address rotation cannot avoid and this process has no business cooling down.
 
 ## Docker
 
@@ -247,6 +254,9 @@ tests/         per-layer + pipeline e2e + SMTP integration (aiosmtpd) + SQL stor
 | `EVE_SMTP_EGRESS_IPS` | `""` | comma-separated port-25 source IPs (empty = OS default) |
 | `EVE_PER_MX_RATE` | `5.0` | probes/sec per destination MX |
 | `EVE_IP_WARMUP_DAILY_CAP` | `50` | per-IP daily probes while warming |
+| `EVE_DNSBL_ENABLED` | `true` | scan the egress IPs for blacklist listings |
+| `EVE_DNSBL_ZONES` | `""` | comma-separated; empty = Spamhaus / Barracuda / SpamCop |
+| `EVE_DNSBL_INTERVAL_SECONDS` | `3600` | seconds between scans |
 
 Infra — **empty means "use the local default"**, so these are also the switches
 that turn each shared backend on:

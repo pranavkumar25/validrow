@@ -7,11 +7,14 @@ the IP from rotation (via the pool's cooldown) and fires an alert hook.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable
 from typing import Callable, Optional
 
 import dns.exception
 import dns.resolver
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_ZONES = ["zen.spamhaus.org", "b.barracudacentral.org", "bl.spamcop.net"]
 
@@ -63,7 +66,19 @@ class BlacklistMonitor:
                     await self.alert(st.ip, listed)
         return results
 
-    async def run_forever(self, interval: float = 3600.0) -> None:  # pragma: no cover
+    async def run_forever(self, interval: float = 3600.0) -> None:
+        """Scan on a loop until cancelled.
+
+        A failed scan must not end the loop. This runs for the life of the
+        process, so one transient resolver failure taking monitoring down for
+        the next fortnight is the more expensive outcome — the scan is retried
+        at the next interval instead.
+        """
         while True:
-            await self.scan_once()
+            try:
+                await self.scan_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("DNSBL scan failed; retrying in %.0fs", interval)
             await asyncio.sleep(interval)

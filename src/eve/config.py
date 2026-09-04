@@ -51,6 +51,15 @@ class Settings(BaseSettings):
     smtp_target_host: str = ""
     smtp_target_port: int = 0
 
+    # DNSBL monitoring of the egress IPs. A listing poisons every result from
+    # that IP, so the monitor pulls it from rotation and logs at ERROR. It only
+    # runs when SMTP is enabled *and* EVE_SMTP_EGRESS_IPS names IPs to watch:
+    # an empty pool means probes leave on the OS default route, which is not an
+    # address this process is entitled to cool down.
+    dnsbl_enabled: bool = True
+    dnsbl_zones: str = ""  # comma-separated; empty = the built-in zone list
+    dnsbl_interval_seconds: float = 3600.0
+
     # --- Infra backends -------------------------------------------------
     # Every one of these is *empty by default*, and empty means "use the
     # in-process/on-disk backend". That is deliberate: a placeholder default
@@ -94,6 +103,15 @@ class Settings(BaseSettings):
     @property
     def redis_configured(self) -> bool:
         return bool(self.redis_url)
+
+    @property
+    def smtp_egress_ip_list(self) -> list[str]:
+        return [ip.strip() for ip in self.smtp_egress_ips.split(",") if ip.strip()]
+
+    @property
+    def dnsbl_zone_list(self) -> list[str]:
+        """Configured zones, or ``[]`` meaning "use the built-in list"."""
+        return [z.strip() for z in self.dnsbl_zones.split(",") if z.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:

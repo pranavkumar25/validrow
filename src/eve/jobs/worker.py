@@ -47,13 +47,24 @@ async def startup(ctx: dict) -> None:
     from eve.config import get_settings
     from eve.jobs.store import get_job_store
     from eve.observability import configure_logging, init_sentry
+    from eve.smtp_infra import start_blacklist_monitor
 
     s = get_settings()
     configure_logging(s)
     init_sentry(s)
     await get_address_store().init()
     await get_job_store().init()
+    # The worker is where probes actually originate, so it watches its own
+    # egress IPs. The pool lives in memory: each process scans the IPs it uses.
+    start_blacklist_monitor(s)
     logger.info("worker ready (env=%s)", s.env)
+
+
+async def shutdown(ctx: dict) -> None:
+    """Unwind the background scan so the process can exit promptly."""
+    from eve.smtp_infra import stop_blacklist_monitor
+
+    await stop_blacklist_monitor()
 
 
 def _redis_settings():
@@ -79,6 +90,7 @@ class WorkerSettings:
 
     functions = [verify_file_job, deliver_webhook_job]
     on_startup = startup
+    on_shutdown = shutdown
     max_jobs = 20
     # A bulk run can legitimately take hours; arq's 300s default would kill it
     # partway and leave the job stuck in "processing".

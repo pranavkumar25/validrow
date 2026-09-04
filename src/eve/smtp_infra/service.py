@@ -54,7 +54,7 @@ class SmtpService:
 
     @classmethod
     def from_settings(cls, s: Settings) -> SmtpService:
-        ips = [ip.strip() for ip in s.smtp_egress_ips.split(",") if ip.strip()]
+        ips = s.smtp_egress_ip_list
         return cls(
             port=s.smtp_port,
             helo=s.smtp_helo_hostname,
