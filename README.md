@@ -259,6 +259,58 @@ make migration m="add credits"    # new revision
 Revisions 0001–0003 tolerate a database that predates Alembic. Write anything
 from 0004 on strictly.
 
+## Accounts and API keys
+
+Auth is **off by default** (`EVE_REQUIRE_AUTH=false`), which is the same shape
+as rate limiting and for the same reason: turning it on breaks every existing
+caller, so the default cannot be the production-safe one without breaking every
+dev loop instead. The startup warning is what stops "off" from being silent —
+outside `local`, the API says plainly that anyone who can reach it has full
+access with no credential.
+
+```bash
+EVE_REQUIRE_AUTH=true uvicorn eve.api.main:app --port 8000
+```
+
+The first visit goes to `/signup`, because a fresh install has nobody to sign
+in as. **The first account adopts `EVE_WORKSPACE_ID`**, so an engine that has
+been running without auth keeps every job and address it already has; accounts
+after it get their own workspace and see none of it. With
+`EVE_OPEN_SIGNUP=false` (the default) registration closes after that first
+account — set it true for a public sign-up.
+
+`workspace_id` was always a real column; what changed is that it is now
+*proven* rather than declared. `tenancy.current_workspace_id` became the
+request-scoped lookup it always said it would be, and no store changed: each
+one still filters on the column it always did.
+
+**Two credentials, one identity.** The web app uses a session cookie —
+`HttpOnly`, `SameSite=Lax`, `Secure` unless you turn that off — and signing out
+ends the session server-side, so a copied token dies with it. Scripts send an
+API key:
+
+```bash
+curl -s localhost:8000/v1/verify -H "X-API-Key: eve_..." \
+  -H 'content-type: application/json' -d '{"email":"john@acme.io"}'
+```
+
+Keys are created and revoked on the Settings screen. The plaintext is shown
+**once**: only its SHA-256 is stored, so nobody — including this app — can show
+it again. A revoked key is kept rather than deleted, so a key seen in a log
+stays identifiable. Rate limiting counts the *key* when one is used, because
+two keys behind one office NAT are two callers and one key across a fleet of
+workers is one caller — neither is true of the IP address.
+
+Passwords are hashed with a standard-library KDF: scrypt where the build has it,
+PBKDF2-HMAC-SHA256 at 600k iterations where it does not (`hashlib.scrypt` needs
+an OpenSSL that exposes it, and macOS system Python is built against LibreSSL).
+The scheme is recorded in the stored hash and upgraded on the owner's next
+login, so no dependency is added and no database is stranded.
+
+**Not built:** password reset and email verification, both of which need a way
+to send mail. Until then an operator resets a password directly against the
+`users` table.
+
 ## Greylisting
 
 A `4xx` reply defers us rather than answering us — which is precisely what
@@ -302,6 +354,7 @@ restart; without it, it is a background task in the API process and does not.
 ```
 src/eve/
   layers/      syntax · normalize · typo · dns_mx · classify · smtp(seam)
+  auth.py      accounts · sessions · API keys (api/security.py resolves them)
   reprobe.py   deferred retries for greylisted addresses (schedule + sweep)
   smtp_infra/  prober · providers · rate_limiter · ip_pool · blacklist · service   (M2)
   jobs/        models · store · csv_io · pipeline                                   (M1)
@@ -347,6 +400,10 @@ that turn each shared backend on:
 | `EVE_MAX_UPLOAD_BYTES` | `104857600` | rejected with 413 above this |
 | `EVE_RATE_LIMIT_PER_MINUTE` | `0` | per client IP; `0` disables |
 | `EVE_CORS_ORIGINS` | `""` | comma-separated; empty = same-origin only |
+| `EVE_REQUIRE_AUTH` | `false` | gate the UI and `/v1` behind an account |
+| `EVE_OPEN_SIGNUP` | `false` | `false` = only the first account may register |
+| `EVE_SESSION_TTL_SECONDS` | `1209600` | how long a session lasts (14 days) |
+| `EVE_SESSION_COOKIE_SECURE` | `true` | never send the cookie over plain HTTP |
 | `EVE_WEBHOOK_SECRET` | `""` | HMAC signing key; empty = unsigned |
 | `EVE_SENTRY_DSN` | `""` | needs the `sentry` extra |
 

@@ -20,6 +20,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from eve.addresses import get_address_store
 from eve.api import files, jobs, workspace
 from eve.api.schemas import HealthResponse, VerifyRequest, VerifyResponse
+from eve.api.security import AuthMiddleware
+from eve.auth import get_auth_store
 from eve.config import get_settings
 from eve.engine import validate
 from eve.jobs.store import get_job_store
@@ -49,6 +51,7 @@ async def lifespan(app: FastAPI):
     # up schema changes without a separate step.
     await get_address_store().init()
     await get_job_store().init()
+    await get_auth_store().init()
 
     # Say which backend each subsystem picked. Every one of them falls back to
     # a single-process default, and the failure mode is silent.
@@ -75,6 +78,10 @@ app = FastAPI(
     description="Layered email verification: syntax, normalize, typo, MX, classify, SMTP.",
     lifespan=lifespan,
 )
+
+# Outermost of the two: it publishes the caller's workspace before any route
+# runs, and CORS still has to answer a preflight that carries no credentials.
+app.add_middleware(AuthMiddleware)
 
 _cors = get_settings().cors_origin_list
 if _cors:

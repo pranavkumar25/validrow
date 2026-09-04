@@ -44,16 +44,32 @@ def _initials(name: str) -> str:
 def workspace_identity(request: Request) -> dict[str, str]:
     """Who the sidebar says this workspace belongs to.
 
-    There is no auth, so a name and address rendered here would be a claim the
-    app cannot back up. Configure ``EVE_WORKSPACE_NAME`` / ``EVE_WORKSPACE_EMAIL``
-    and they are shown as given; leave them unset — the default — and the block
-    names the workspace and the engine serving it, both of which are true.
+    Signed in, this is now a fact rather than a configured claim: the account's
+    own name and address, and a menu that can sign it out.
+
+    Signed out — which is still the default, since ``EVE_REQUIRE_AUTH`` is off —
+    the original rule holds. Rendering a person there would be a claim the app
+    cannot back up, so ``EVE_WORKSPACE_NAME`` / ``EVE_WORKSPACE_EMAIL`` are shown
+    if set, and otherwise the block names the workspace and the engine serving
+    it, both of which are true.
     """
+    from eve.api.security import current_user
+
+    user = current_user(request)
+    if user is not None:
+        name = user.name.strip() or user.email.split("@")[0]
+        return {
+            "name": name,
+            "email": user.email,
+            "initials": _initials(name),
+            "signedIn": True,
+        }
+
     s = get_settings()
     host = request.base_url.netloc or "local engine"
     name = s.workspace_name.strip() or "Local workspace"
     subtitle = s.workspace_email.strip() or host
-    return {"name": name, "email": subtitle, "initials": _initials(name)}
+    return {"name": name, "email": subtitle, "initials": _initials(name), "signedIn": False}
 
 
 async def _render(
@@ -160,8 +176,41 @@ async def history_detail(request: Request, job_id: str) -> HTMLResponse:
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_screen(request: Request) -> HTMLResponse:
-    # engineUrl is supplied by _render for every screen.
-    return await _render(request, "settings.html", "settings", {"version": views.VERSION})
+    from eve.api.security import current_user
+    from eve.auth import get_auth_store
+
+    user = current_user(request)
+    keys: list[dict] = []
+    if user is not None:
+        keys = [
+            {
+                "id": k["id"],
+                "name": k["name"],
+                "prefix": k["prefix"],
+                "created": views._long_when(k["created_at"]),
+                "used": views._when(k["last_used_at"]) if k["last_used_at"] else "Never used",
+            }
+            for k in await get_auth_store().list_api_keys(user.id)
+        ]
+
+    # Shown once, from the one-shot cookie the create route set, then cleared:
+    # this is the only moment the plaintext exists anywhere we control.
+    new_key = request.cookies.get("vr_new_key", "")
+    resp = await _render(
+        request,
+        "settings.html",
+        "settings",
+        {
+            "version": views.VERSION,
+            "keys": keys,
+            "newKey": new_key,
+            "signedIn": user is not None,
+            "authOn": get_settings().require_auth,
+        },
+    )
+    if new_key:
+        resp.delete_cookie("vr_new_key", path="/settings")
+    return resp
 
 
 @router.get("/how", response_class=HTMLResponse)
@@ -329,6 +378,234 @@ async def delete_job_action(job_id: str, confirm: str = Form("")) -> RedirectRes
         return RedirectResponse(f"/history/{job_id}", status_code=303)
     await delete_job(job_id, keep_addresses=True)
     return RedirectResponse("/history", status_code=303)
+
+
+# --- Sign in / sign up ----------------------------------------------------- #
+def _safe_next(raw: str) -> str:
+    """Where to go after signing in.
+
+    Only a path on this site. An open redirect on a login form is how a
+    phishing page borrows your domain for its credibility, and ``//host`` is a
+    protocol-relative URL, so checking for a leading ``/`` alone is not enough.
+    """
+    nxt = (raw or "").strip()
+    if not nxt.startswith("/") or nxt.startswith("//"):
+        return "/"
+    return nxt
+
+
+def _auth_page(
+    request: Request,
+    mode: str,
+    *,
+    error: str = "",
+    email: str = "",
+    name: str = "",
+    next_url: str = "/",
+    status_code: int = 200,
+) -> HTMLResponse:
+    from eve.auth import MIN_PASSWORD_LENGTH
+
+    s = get_settings()
+    signup = mode == "signup"
+    ctx = {
+        "mode": mode,
+        "heading": "Create your account" if signup else "Sign in",
+        "subheading": (
+            "One account, one workspace. Everything you validate stays inside it."
+            if signup
+            else "Validrow verifies your lists in-house — sign in to pick up where you left off."
+        ),
+        "action": "/signup" if signup else "/login",
+        "submit": "Create account" if signup else "Sign in",
+        "error": error,
+        "notice": "",
+        "email": email,
+        "name": name,
+        "next": next_url,
+        "minPassword": MIN_PASSWORD_LENGTH,
+        "altText": "",
+        "altHref": "",
+        "altLabel": "",
+    }
+    if signup:
+        ctx.update(altText="Already have an account?", altHref="/login", altLabel="Sign in")
+    elif s.open_signup:
+        ctx.update(altText="No account?", altHref="/signup", altLabel="Create one")
+    return templates.TemplateResponse(request, "auth.html", ctx, status_code=status_code)
+
+
+def _sign_in(response: Response, token: str) -> None:
+    s = get_settings()
+    response.set_cookie(
+        s.session_cookie,
+        token,
+        max_age=int(s.session_ttl_seconds),
+        httponly=True,          # never readable from JavaScript
+        samesite="lax",         # survives a normal navigation, not a cross-site POST
+        secure=s.session_cookie_secure,
+        path="/",
+    )
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request, next: str = "/") -> Response:
+    from eve.api.security import current_user
+    from eve.auth import get_auth_store
+
+    if current_user(request) is not None:
+        return RedirectResponse(_safe_next(next), status_code=303)
+
+    # A fresh install has nobody to sign in as. Send the first visitor to the
+    # form that can actually help them rather than one that never will.
+    if await get_auth_store().count_users() == 0:
+        return RedirectResponse("/signup", status_code=303)
+    return _auth_page(request, "login", next_url=_safe_next(next))
+
+
+@router.post("/login")
+async def login_submit(
+    request: Request,
+    email: str = Form(""),
+    password: str = Form(""),
+    next: str = Form("/"),
+) -> Response:
+    from eve.auth import get_auth_store
+
+    store = get_auth_store()
+    user = await store.authenticate(email, password)
+    if user is None:
+        # One message for a wrong address and a wrong password alike: which of
+        # the two it was is exactly what someone enumerating accounts wants.
+        return _auth_page(
+            request,
+            "login",
+            error="That email and password do not match an account.",
+            email=email,
+            next_url=_safe_next(next),
+            status_code=401,
+        )
+
+    token = await store.start_session(user.id)
+    resp = RedirectResponse(_safe_next(next), status_code=303)
+    _sign_in(resp, token)
+    return resp
+
+
+@router.get("/signup", response_class=HTMLResponse)
+async def signup_form(request: Request, next: str = "/") -> Response:
+    from eve.api.security import current_user
+    from eve.auth import get_auth_store
+
+    if current_user(request) is not None:
+        return RedirectResponse(_safe_next(next), status_code=303)
+
+    s = get_settings()
+    first = await get_auth_store().count_users() == 0
+    if not (s.open_signup or first):
+        return _auth_page(
+            request,
+            "login",
+            error="This engine is not open for registration. Ask its owner for an account.",
+            next_url=_safe_next(next),
+            status_code=403,
+        )
+
+    page = _auth_page(request, "signup", next_url=_safe_next(next))
+    return page
+
+
+@router.post("/signup")
+async def signup_submit(
+    request: Request,
+    email: str = Form(""),
+    password: str = Form(""),
+    name: str = Form(""),
+    next: str = Form("/"),
+) -> Response:
+    from eve.auth import get_auth_store, password_problem
+
+    s = get_settings()
+    store = get_auth_store()
+    first = await store.count_users() == 0
+    if not (s.open_signup or first):
+        return _auth_page(
+            request,
+            "login",
+            error="This engine is not open for registration. Ask its owner for an account.",
+            next_url=_safe_next(next),
+            status_code=403,
+        )
+
+    problem = password_problem(password)
+    if problem:
+        return _auth_page(
+            request, "signup", error=problem, email=email, name=name,
+            next_url=_safe_next(next), status_code=400,
+        )
+
+    try:
+        user = await store.create_user(email, password, name=name)
+    except ValueError:
+        return _auth_page(
+            request,
+            "signup",
+            error="An account with that email already exists.",
+            email=email,
+            name=name,
+            next_url=_safe_next(next),
+            status_code=409,
+        )
+
+    token = await store.start_session(user.id)
+    resp = RedirectResponse(_safe_next(next), status_code=303)
+    _sign_in(resp, token)
+    return resp
+
+
+@router.post("/logout")
+@router.get("/logout")
+async def logout(request: Request) -> Response:
+    """Ends the session server-side, not just in the browser.
+
+    Clearing the cookie alone would leave a working token behind for anyone who
+    had already copied it.
+    """
+    from eve.auth import get_auth_store
+
+    s = get_settings()
+    token = request.cookies.get(s.session_cookie, "")
+    if token:
+        await get_auth_store().end_session(token)
+    resp = RedirectResponse("/login", status_code=303)
+    resp.delete_cookie(s.session_cookie, path="/")
+    return resp
+
+
+# --- API keys -------------------------------------------------------------- #
+@router.post("/settings/keys")
+async def create_key(request: Request, name: str = Form("")) -> Response:
+    from eve.api.security import require_user
+    from eve.auth import get_auth_store
+
+    user = require_user(request)
+    key, row = await get_auth_store().create_api_key(user.id, name=name or "API key")
+    # The plaintext exists only in this response. It is passed back through a
+    # one-shot cookie rather than the URL, which would put a live credential in
+    # the browser history and in any proxy log along the way.
+    resp = RedirectResponse("/settings", status_code=303)
+    resp.set_cookie("vr_new_key", key, max_age=120, httponly=False, samesite="lax", path="/settings")
+    return resp
+
+
+@router.post("/settings/keys/{key_id}/revoke")
+async def revoke_key(request: Request, key_id: str) -> Response:
+    from eve.api.security import require_user
+    from eve.auth import get_auth_store
+
+    user = require_user(request)
+    await get_auth_store().revoke_api_key(key_id, user_id=user.id)
+    return RedirectResponse("/settings", status_code=303)
 
 
 def mount_web(app: FastAPI) -> None:

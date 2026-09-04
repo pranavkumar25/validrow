@@ -114,6 +114,13 @@ a.row:hover, a.nav:hover { color: inherit; }
         <a class="nav hv-surface" role="menuitem" href="/settings" style="display: flex; align-items: center; height: 32px; padding: 0 10px; border-radius: 8px; font-size: 13px; color: #101014">Engine settings</a>
         <a class="nav hv-surface" role="menuitem" href="/docs" style="display: flex; align-items: center; height: 32px; padding: 0 10px; border-radius: 8px; font-size: 13px; color: #101014">API docs</a>
         <button class="hv-surface" role="menuitem" data-copy data-copy-value="{{ engineUrl }}" style="display: flex; align-items: center; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; font-size: 13px; color: #101014">Copy engine URL</button>
+{# Only when there is a session to end. Offering "Sign out" to someone who was
+   never signed in is the same class of lie as naming a person who isn't there. #}
+{% if user.signedIn %}
+        <form method="post" action="/logout" style="margin: 4px 0 0; border-top: 1px solid #F4F3EF; padding-top: 4px">
+          <button class="hv-surface" role="menuitem" type="submit" style="display: flex; align-items: center; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; font-size: 13px; color: #101014">Sign out</button>
+        </form>
+{% endif %}
       </div>
     </div>
   </nav>

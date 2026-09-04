@@ -88,6 +88,23 @@ class Settings(BaseSettings):
     # process otherwise. "inline" and "arq" force the choice.
     queue_backend: str = "auto"
 
+    # --- Auth ------------------------------------------------------------
+    # Off by default, and warned about outside `local` — the same shape as
+    # rate limiting, and for the same reason: turning it on breaks every
+    # existing caller, so the default cannot be the safe-for-production one
+    # without breaking every existing dev loop instead. The startup warning is
+    # what stops "off" from being silent.
+    require_auth: bool = False
+    # When auth is on and this is off, only the *first* account can be created
+    # — the bootstrap for a self-hosted install. Turn it on to let anyone
+    # register, which is what a public free tier needs.
+    open_signup: bool = False
+    session_ttl_seconds: float = 60 * 60 * 24 * 14  # 14 days
+    session_cookie: str = "vr_session"
+    # Set false only if something in front of this terminates TLS and you are
+    # certain the cookie never crosses plain HTTP.
+    session_cookie_secure: bool = True
+
     # --- API hardening ---------------------------------------------------
     max_upload_bytes: int = 100 * 1024 * 1024  # 100 MB
     cors_origins: str = ""  # comma-separated; empty = same-origin only

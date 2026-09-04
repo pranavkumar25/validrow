@@ -28,10 +28,19 @@ logger = logging.getLogger(__name__)
 def client_key(request: Request) -> str:
     """Who to count against.
 
+    An API key when one was used, because that is the caller: two keys behind
+    one office NAT are two callers sharing an address, and one key spread over
+    a fleet of workers is one caller spread over many. The address answers
+    neither question, and it is the only thing available for a browser session
+    or an anonymous request, which is why it remains the fallback.
+
     ``X-Forwarded-For`` is trusted only because this is expected to sit behind
     a proxy that sets it; exposed directly, a client could spoof it and get a
     fresh bucket per request. That is a deployment requirement, not a detail.
     """
+    key_id = getattr(request.state, "api_key_id", None)
+    if key_id:
+        return f"key:{key_id}"
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
         return forwarded.split(",")[0].strip()

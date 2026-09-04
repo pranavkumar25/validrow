@@ -8,6 +8,7 @@ import io
 import pytest
 
 from eve.addresses import set_address_store
+from eve.auth import set_auth_store
 from eve.config import Settings, set_settings
 from eve.jobs.pipeline import NullAsyncProber
 from eve.jobs.store import InMemoryJobStore, set_job_store
@@ -37,6 +38,7 @@ def reset_state(tmp_path, monkeypatch):
     # temp directory rather than reusing the previous test's database.
     set_reprobe_store(None)
     set_address_store(None)
+    set_auth_store(None)
     # The workspace is a ContextVar, so it would otherwise leak into the next
     # test and make an isolation failure look like a passing test.
     set_current_workspace_id(None)

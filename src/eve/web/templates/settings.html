@@ -36,6 +36,50 @@
             {% endif %}
           </div>
           <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
+            <div style="font-size: 14px; font-weight: 600">API keys</div>
+            <div style="font-size: 13px; color: #57534B; margin-top: 3px">Send one as an <code style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">X-API-Key</code> header to use <code style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">/v1/*</code> from a script. A key acts on this workspace only.</div>
+
+            {% if newKey %}
+              <div style="margin-top: 14px; padding: 13px 14px; background: #ECFDF3; border: 1px solid #A6F4C5; border-radius: 8px">
+                <div style="font-size: 12.5px; font-weight: 600; color: #027A48">Copy this key now — it is not shown again.</div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 9px">
+                  <code data-copy-src style="flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #101014">{{ newKey }}</code>
+                  <button data-copy class="hv-white" style="flex: 0 0 auto; height: 28px; padding: 0 10px; background: #FFFFFF; border: 1px solid #A6F4C5; border-radius: 8px; font-size: 12px; color: #027A48">Copy</button>
+                </div>
+                <div style="font-size: 12px; color: #57534B; margin-top: 8px; line-height: 18px">Only its hash is stored, so nobody — including this app — can show it to you again. Lose it and you revoke it and make another.</div>
+              </div>
+            {% endif %}
+
+            {% if not signedIn %}
+              <div style="margin-top: 14px; padding: 12px 14px; background: #F4F3EF; border-radius: 8px; font-size: 12.5px; color: #79756C; line-height: 19px">
+                {% if authOn %}<a href="/login">Sign in</a> to create an API key.{% else %}API keys belong to an account. This engine is running with <code style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">EVE_REQUIRE_AUTH=false</code>, so <code style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px">/v1/*</code> is open and needs no key — <a href="/signup">create an account</a> to start scoping access.{% endif %}
+              </div>
+            {% else %}
+              {% if keys %}
+                <div style="margin-top: 14px; border: 1px solid #E7E4DE; border-radius: 10px; overflow: hidden">
+                  {% for k in keys %}
+                    <div style="display: flex; align-items: center; gap: 14px; padding: 12px 14px; {% if not loop.last %}border-bottom: 1px solid #F4F3EF;{% endif %}">
+                      <div style="flex: 1; min-width: 0">
+                        <div style="font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ k.name }}</div>
+                        <div style="font-size: 12px; color: #79756C; margin-top: 2px"><code style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace">{{ k.prefix }}…</code> · created {{ k.created }} · {{ k.used }}</div>
+                      </div>
+                      <form method="post" action="/settings/keys/{{ k.id }}/revoke" style="flex: 0 0 auto">
+                        <button class="hv-danger" style="height: 30px; padding: 0 12px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #B42318">Revoke</button>
+                      </form>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div style="margin-top: 14px; padding: 12px 14px; background: #F4F3EF; border-radius: 8px; font-size: 12.5px; color: #79756C; line-height: 19px">No keys yet. Everything the API can do, this app already does — a key is for driving it from your own code.</div>
+              {% endif %}
+
+              <form method="post" action="/settings/keys" style="display: flex; gap: 10px; margin-top: 14px">
+                <input name="name" placeholder="What is this key for?" maxlength="200" style="flex: 1; height: 38px; padding: 0 11px; border: 1px solid #D8D4CC; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-size: 13px; outline: none">
+                <button class="hv-blue" style="height: 38px; padding: 0 15px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Create key</button>
+              </form>
+            {% endif %}
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
             <div style="font-size: 14px; font-weight: 600">Changing engine settings</div>
             <div style="font-size: 13px; color: #57534B; margin-top: 3px">DNS and the SMTP probe are engine-level flags. Set them in the environment and restart.</div>
             <div style="margin-top: 14px; padding: 14px; background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 16px">

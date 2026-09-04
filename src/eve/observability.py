@@ -117,6 +117,19 @@ def warn_about_configuration(settings=None) -> list[str]:
                 "probe budget against the same provider"
             )
 
+        if not s.require_auth:
+            warnings.append(
+                "auth is off (EVE_REQUIRE_AUTH=false) on a non-local environment — "
+                "anyone who can reach this process gets full access to the "
+                f"'{s.workspace_id}' workspace and to /v1, with no credential"
+            )
+
+    if s.require_auth and s.open_signup and s.env != "local":
+        warnings.append(
+            "EVE_OPEN_SIGNUP is on: anyone who can reach the sign-up page can "
+            "create an account and start jobs on this engine"
+        )
+
     if s.enable_smtp and s.smtp_identity_is_placeholder:
         warnings.append(
             f"SMTP is enabled but the probe identity is still a placeholder "
