@@ -227,6 +227,22 @@ def test_static_assets_are_self_hosted(client):
     assert "fonts.googleapis.com" not in client.get("/app/dashboard").text
 
 
+def test_every_page_shares_one_favicon(client):
+    """The mark is an asset, not four data URIs that can drift apart."""
+    icon = client.get("/static/favicon.svg")
+    assert icon.status_code == 200
+    body = icon.text
+    # It follows the tab strip: a black mark on a dark chrome is an empty tab.
+    assert "prefers-color-scheme: dark" in body
+    assert "#0A0A0A" in body and "#0000FF" in body
+    assert client.get("/static/apple-touch-icon.png").status_code == 200
+
+    for path in ("/", "/docs", "/login", "/app/dashboard"):
+        html = client.get(path).text
+        assert 'href="/static/favicon.svg"' in html, f"{path} has no favicon"
+        assert "data:image/svg+xml" not in html, f"{path} still inlines an icon"
+
+
 # --- Landing page and the /app split --------------------------------------- #
 
 
