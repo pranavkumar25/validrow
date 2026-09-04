@@ -281,9 +281,9 @@ def _job_row(job: Job) -> dict[str, Any]:
 
 
 def _counts_to_verdicts(counts: dict[str, int]) -> dict[str, int]:
-    """Fold the engine's six statuses into the four displayed verdicts."""
+    """Fold the engine's five statuses into the four displayed verdicts."""
     out = {k: 0 for k in F.ORDER}
-    for status in ("valid", "risky", "unknown", "invalid", "disposable", "spam_trap"):
+    for status in ("valid", "risky", "unknown", "invalid", "disposable"):
         out[primary_verdict(status)] += counts.get(status, 0)
     return out
 

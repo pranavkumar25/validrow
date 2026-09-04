@@ -472,7 +472,7 @@ class AddressStore:
         return dict(row) if row else None
 
 
-_STATUSES = ["valid", "invalid", "risky", "unknown", "disposable", "spam_trap"]
+_STATUSES = ["valid", "invalid", "risky", "unknown", "disposable"]
 
 _store: Optional[AddressStore] = None
 

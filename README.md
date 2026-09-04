@@ -28,8 +28,15 @@ Orchestrated by `eve/engine.py::validate(email) -> Verdict` (single address) and
 
 ### Statuses
 
-`valid` · `invalid` · `risky` (role / catch-all) · `unknown` · `disposable` · `spam_trap`,
+`valid` · `invalid` · `risky` (role / catch-all) · `unknown` · `disposable`,
 plus a `0–100` deliverability score.
+
+There is deliberately no `spam_trap`. Detecting one needs a list of seed
+addresses, and a trap only works while its addresses are secret — so no such
+list is published, for sale or otherwise. The status used to be declared and
+counted everywhere while no layer could emit it, which made every spam-trap
+figure a structural zero and invited the reader to conclude a list was
+trap-free when nothing had looked.
 
 With SMTP **disabled**, a valid address on a mail-accepting domain returns
 **`unknown`** (honest — the mailbox wasn't probed). With SMTP **enabled**, the

@@ -58,7 +58,6 @@ class Counts:
     risky: int = 0
     unknown: int = 0
     disposable: int = 0
-    spam_trap: int = 0
 
     def bump(self, status: str) -> None:
         if hasattr(self, status):
@@ -74,7 +73,6 @@ class Counts:
             "risky": self.risky,
             "unknown": self.unknown,
             "disposable": self.disposable,
-            "spam_trap": self.spam_trap,
         }
 
 

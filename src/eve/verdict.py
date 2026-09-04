@@ -11,6 +11,15 @@ class Status(str, Enum):
 
     Mirrors the industry convention (ZeroBounce/NeverBounce/Bouncer) so it maps
     cleanly onto a Smartlead-style UI.
+
+    There is deliberately no ``spam_trap``. It was declared here and counted
+    everywhere downstream, but no layer could ever emit it, so every spam-trap
+    figure the product showed was a structural zero. Detecting one needs a list
+    of seed addresses, and a trap only works while its addresses are secret —
+    which is why no such list is published, for sale or otherwise. A status
+    that cannot be reached is worse than an absent one: it invites the reader
+    to conclude a list is trap-free when nothing looked. Re-add it the day a
+    real feed exists; it is one line here and a mapping below.
     """
 
     VALID = "valid"
@@ -18,7 +27,6 @@ class Status(str, Enum):
     RISKY = "risky"
     UNKNOWN = "unknown"
     DISPOSABLE = "disposable"
-    SPAM_TRAP = "spam_trap"
 
 
 class SubStatus(str, Enum):
@@ -41,11 +49,11 @@ class SubStatus(str, Enum):
 class PrimaryVerdict(str, Enum):
     """The four verdicts the product surfaces, in display order.
 
-    The engine emits six :class:`Status` values; ``disposable`` and ``spam_trap``
-    are not separate verdicts but *reasons* an address is undeliverable, so they
-    fold into ``UNDELIVERABLE`` and surface their specificity as sub-reason text.
+    The engine emits five :class:`Status` values; ``disposable`` is not a
+    separate verdict but a *reason* an address is undeliverable, so it folds
+    into ``UNDELIVERABLE`` and surfaces its specificity as sub-reason text.
     Nothing about the underlying statuses changes — exports, filters and API
-    payloads still see all six.
+    payloads still see all five.
     """
 
     DELIVERABLE = "deliverable"
@@ -68,7 +76,6 @@ _VERDICT_OF = {
     Status.UNKNOWN: PrimaryVerdict.UNKNOWN,
     Status.INVALID: PrimaryVerdict.UNDELIVERABLE,
     Status.DISPOSABLE: PrimaryVerdict.UNDELIVERABLE,
-    Status.SPAM_TRAP: PrimaryVerdict.UNDELIVERABLE,
 }
 
 

@@ -43,7 +43,7 @@ def _now() -> float:
 
 
 # Statuses that go to the "removed" pile (do-not-send).
-_REMOVED_STATUSES = {Status.INVALID, Status.DISPOSABLE, Status.SPAM_TRAP}
+_REMOVED_STATUSES = {Status.INVALID, Status.DISPOSABLE}
 
 # DNS/validation is I/O-bound (network). asyncio.to_thread caps at ~CPU+4
 # threads, which serializes thousands of MX lookups; give this work its own
