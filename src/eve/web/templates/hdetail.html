@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ hd.file }} · Validrow{% endblock %}
+{% block content %}
+        <div>
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px">
+            <div>
+              <div style="font-family: Inter, system-ui, sans-serif; font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">{{ hd.file }}</div>
+              <div style="font-size: 13.5px; color: #57534B; margin-top: 4px; font-variant-numeric: tabular-nums">{{ hd.id }} · run {{ hd.date }} · took {{ hd.dur }} · {{ hd.rows }} source rows → {{ hd.addr }} unique</div>
+            </div>
+            <button class="hv-white" onclick="location.href='/history'" style="height: 34px; padding: 0 13px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Back to history</button>
+          </div>
+          {% if hd.failed %}
+            <div style="background: #FEF3F2; border: 1px solid #FECDCA; border-radius: 12px; padding: 16px 20px; margin-top: 20px">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#F04438" stroke-width="1.9"></circle><path d="M9 9l6 6M15 9l-6 6" stroke="#F04438" stroke-width="1.9" stroke-linecap="round"></path></svg>
+                <span style="font-size: 14px; font-weight: 600; color: #B42318">This run failed</span>
+              </div>
+              <div style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #B42318; margin-top: 10px; padding: 10px 12px; background: #FFFFFF; border: 1px solid #FECDCA; border-radius: 8px">{{ hd.error }}</div>
+            </div>
+          {% endif %}
+          <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 20px">
+            <div style="display: flex; gap: 2px">
+              {% for m in hd.mix %}
+                <div style="height: 14px; border-radius: 999px; background: {{ m.dot }}; width: {{ m.pct }}%; min-width: 2px; display: grid; place-items: center; color: #FFFFFF; font-size: 10.5px; font-weight: 600">{{ m.pct_label }}</div>
+              {% endfor %}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px">
+              {% for m in hd.mix %}
+                <div style="display: flex; align-items: center; gap: 7px">
+                  <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ m.dot }}"></span>
+                  <span style="font-size: 12.5px; color: #57534B">{{ m.label }}</span>
+                  <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; font-variant-numeric: tabular-nums">{{ m.count }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
+            {% for c in hd.cards %}
+              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 18px">
+                <div style="display: flex; align-items: center; gap: 7px">
+                  <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ c.dot }}"></span>
+                  <span style="font-size: 12.5px; color: #57534B">{{ c.label }}</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px">
+                  <span style="font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">{{ c.count }}</span>
+                  <span style="font-size: 12.5px; color: #79756C; font-variant-numeric: tabular-nums">{{ c.pct }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <div style="display: flex; gap: 12px; margin-top: 16px">
+            {% for seg, label in [('cleaned', 'Cleaned list (cached)'), ('valid', 'Deliverable only'), ('removed', 'Removed')] %}
+              <button class="hv-white" {% if seg in hd.outputs %}onclick="location.href='/v1/jobs/{{ hd.job_id }}/download?segment={{ seg }}'"{% else %}disabled{% endif %} style="flex: 1; height: 44px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #101014{% if seg not in hd.outputs %}; opacity: .5{% endif %}">{{ label }}</button>
+            {% endfor %}
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 24px; position: relative">
+            <button class="hv-danger" data-del-toggle style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid #E7E4DE; border-radius: 8px; font-size: 12.5px; color: #B42318">Delete job</button>
+            <div data-del-menu hidden style="position: absolute; right: 0; bottom: 42px; width: 340px; background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 16px; box-shadow: 0 12px 32px -8px rgba(15,13,8,0.18); padding: 18px; animation: vr-in 220ms cubic-bezier(0.16,1,0.3,1)">
+              <form action="/history/{{ hd.job_id }}/delete" method="post">
+                <div style="font-size: 14px; font-weight: 600">Delete this job?</div>
+                <div style="font-size: 13px; color: #57534B; margin-top: 6px; line-height: 19px">Deletes the cached results for <span style="font-family: Inter, system-ui, sans-serif">{{ hd.file }}</span>. The addresses stay in your workspace.</div>
+                <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; margin: 14px 0 6px">Type the filename to confirm</div>
+                <input data-del-input data-expect="{{ hd.file }}" name="confirm" placeholder="{{ hd.file }}" autocomplete="off" style="width: 100%; height: 34px; padding: 0 10px; border: 1px solid #D8D4CC; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-size: 12.5px; outline: none">
+                <div style="display: flex; gap: 8px; margin-top: 14px">
+                  <button type="button" data-del-toggle style="flex: 1; height: 34px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Cancel</button>
+                  <button type="submit" data-del-submit disabled style="flex: 1; height: 34px; background: #FEF3F2; border: 1px solid #FECDCA; border-radius: 8px; font-size: 13px; color: #B42318; font-weight: 500; opacity: .5">Delete job</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+{% endblock %}

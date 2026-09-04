@@ -1,10 +1,16 @@
 # Validrow — design notes
 
-Running log of the UI/UX pass on the Streamlit front-end. Decisions, tokens, and
-issues found but deliberately not fixed.
+Running log of the UI/UX work. Decisions, tokens, and issues found but
+deliberately not fixed.
 
-**Stack:** Streamlit 1.50.0 · `frontend/app.py` · `.streamlit/config.toml`
-**Run:** `make ui` (needs `make run` for the API on :8000)
+**Stack:** FastAPI + Jinja, server-rendered · `src/eve/web/`
+**Run:** `make run` — the engine serves the API and the UI on :8000
+
+> Phases 1–4 document the Streamlit front-end that preceded this and has since
+> been deleted. They are kept because the *reasoning* still governs the product
+> — the taxonomy, the precision rules and the contrast method all carried over.
+> Anything referring to `frontend/app.py`, `.streamlit/config.toml`, `make ui` or
+> a Streamlit API is historical. Phase 5 describes what actually runs.
 
 ---
 
@@ -268,6 +274,129 @@ parsed rows *before* any column choice.
 contacts/mailboxes), Deliverable (not Valid) — applied to labels, empty states,
 error messages and export filenames.
 
+---
+
+## Phase 4 — the reference pass
+
+> **Historical.** Phases 1–4 describe the Streamlit front-end, which was replaced
+> in Phase 5 by the Validrow design and deleted. The Streamlit-specific findings
+> below (`df_height`, `.stat .v`, the sidebar toggle, Streamlit's mobile
+> breakpoint) no longer apply to any running code. The *rules* they established
+> do — see Phase 5 for the two that were carried across.
+
+Driven by ten reference screens (Sellfinity, sparkpixel, Untitled UI ×2, NexusAI,
+Vocalyn, Jookë, Shakuro, Iron). They disagree on accent — orange, purple, blue,
+black — so **accent was not taken from them**: `#1560d0` stays, because it is
+contrast-verified and swapping it is a one-token change if ever wanted. What all
+ten *do* agree on is structure, and that is what was adopted.
+
+### What the references share, and what we now have
+
+| Reference pattern | Before | Now |
+|---|---|---|
+| Persistent **topbar** — breadcrumb, account, system state | none; pages began at the title | sticky `.topbar`: breadcrumb, engine chip, help, workspace chip |
+| **Grouped sidebar**, neutral raised active chip, real search, footer block | accent-filled active pill + rail; no search; status line only | white active chip on a tinted sidebar; working search; workspace summary card |
+| **Page toolbar** of filter controls | filters buried inside the results card | page-level toolbar on Addresses; panel-scoped controls elsewhere |
+| KPI: **icon tile → label → numeral + delta → caption → sparkline** | label → numeral → caption | full composition; `verdict_cards` now *is* `stat_card` |
+| Panel headers with a **leading icon** | text only | every panel identified by icon |
+| **Soft status pills** | dot + label, unfilled | dot + label in a soft-tinted pill |
+| **Pagination** — "Showing 1–8 of 8" | virtualised scroll only | `page_slice` / `render_pager` on Addresses and job results |
+| **Row selection → floating dark action bar** | none | multi-row select, sticky bar, export-selected |
+| **Inline record detail** | none | one row selected opens `.detail` under the table |
+
+The pill deserves a note, because it looks like a reversal of Phase 1's "never a
+saturated pill". It isn't: the pill is a ~5%-alpha wash of the status's own
+colour, the contents are still dot + text label, and the **label still carries
+the meaning**. Every pair was re-measured on its own tint (below).
+
+### Bugs this pass found in the running app
+
+1. **`df_height()` stopped being exact under selection.** Enabling
+   `on_select` adds a checkbox column, which pushed the grid past its container
+   width; the resulting horizontal scrollbar ate 10px and clipped the last row
+   to a sliver — the exact "blank strip under the table" Phase 3 removed.
+   `df_height(selectable=True)` now budgets the scrollbar gutter.
+2. **`.stat .v` was a descendant selector.** It reached into whatever a card's
+   `extra` slot held, so the Exports legend inherited the 30px display numeral
+   and rendered its counts as headlines. All stat internals are now `>` children:
+   a card's anatomy must not style content placed inside it.
+3. **The sidebar toggle was hidden.** `header[data-testid="stHeader"]` was hidden
+   wholesale, which also hid `stExpandSidebarButton`. Invisible while the sidebar
+   was pinned open — but it collapses to a drawer below Streamlit's mobile
+   breakpoint, so **navigation was unreachable on a phone**. The button is now
+   exempted and pinned top-left under 768px.
+4. **`initial_sidebar_state="expanded"`** pinned that drawer *open* on mobile,
+   covering the content. Now `"auto"`.
+5. **A duplicate `style` attribute** on the Settings engine-status rows meant the
+   colour never applied — the browser keeps the first and drops the second.
+6. **`.stag` was used for a percentage** in the History and Exports lists. A
+   percentage is a number, not a verdict; it now renders as a right-aligned
+   numeric cell, and History gained a real **State** column (`job_state_tag`).
+7. **A one-point chart drew a lone dot** in an empty grid, which reads as broken
+   rather than as "not enough history". `volume_area` returns `None` below two
+   points and the caller shows the empty state.
+8. **`.rstrip("ly")`** on "Daily" — `rstrip` strips *characters*, not a suffix —
+   produced "more than one dai".
+
+### Contrast, re-measured on the new surfaces
+
+Status labels now sit on their own soft tint, which was not in Phase 1's
+measured set. Worst case across own-pill / white / canvas / inset:
+
+| Verdict | Colour | On own pill | Worst of four |
+|---|---|---|---|
+| Deliverable | `#16744a` | 5.29 | 5.17 |
+| Risky | `#9a6410` | 4.53 | 4.46 |
+| Undeliverable | `#c43c2f` | 4.60 | 4.60 |
+| Unknown | `#5b5f68` | **5.72** | **5.72** |
+
+**Unknown moved `--n600` → `--n700`.** On its own `#f1f2f5` tint the old
+`#6c707a` measured **4.43:1** — under AA, a regression the pill introduced. The
+darker step reaches 5.72:1, stays a neutral ramp value (absence, not a fifth
+category), and lifts the app's worst-case status contrast with it. Mirrored into
+`--st-unk`, `grayColor`/`grayTextColor` and `chartCategoricalColors`.
+
+Risky's 4.46 is the pre-existing bare-on-inset figure and is unchanged; in
+practice the pill's own tint (4.53) is the surface it renders on.
+
+Three micro-labels were introduced at **10px**, off the 8-style scale. Corrected
+to `--fs-caption` (11px).
+
+### Verification
+
+- **Static audit** — 0 gradients, 0 hashed class selectors, 0 `blur()`, 0 raw hex
+  outside `:root`. 83 tokens declared, 81 referenced (the two are `--st-unk-soft`
+  and `--st-unk`, kept deliberately — see *Decisions*). Centring still confined
+  to `.empty` and to marks.
+- **`.st-key-*` selectors** are author-supplied container keys
+  (`st.container(key=…)`), not generated class names — they do not violate the
+  rule against hashed selectors.
+- **Responsive genuinely confirmed this time.** Phase 3 could not resize the
+  viewport (`innerWidth` stayed 1920). It now moves: verified at **1728**, **606**
+  and **545** px — no horizontal overflow at any width (`scrollWidth ==
+  clientWidth`), the mobile drawer opens and closes, and the topbar sheds the
+  workspace subtitle, engine chip and crumb trail in that order.
+- **All nine routes** render with no exception; single check, row selection,
+  detail panel, pagination and the selection bar exercised in the browser.
+- `pytest` — 58 passed. `ruff` — clean.
+
+### Still not fixed
+
+Items 1–6 of *Found but NOT fixed* below stand, with two updates:
+
+- **Contacts pagination (item 4) is now client-side**, which is the display-layer
+  half. Server-side paging still needs an API change.
+- **Credits (item 1)** were deliberately *not* faked. The reference's sidebar
+  footer is a usage meter with a quota bar; ours reports addresses and jobs
+  instead, because there is no balance in the product and a progress bar against
+  an invented denominator is the one thing this app cannot afford to ship.
+
+The workspace chip says "Local workspace" and the engine host for the same
+reason: there is no auth, so it names what is actually true rather than inventing
+a signed-in person.
+
+---
+
 ## Precision rules
 
 Beyond "one decimal place", two guards were added after edge-case testing found
@@ -360,3 +489,122 @@ API docs:
 | the file's rows | contacts, addresses, mailboxes, emails | **addresses** |
 | the good verdict | Valid, Deliverable | **Deliverable** |
 | unit of spend | credits, validations | **credits** |
+
+---
+
+## Phase 5 — the Validrow design, server-rendered
+
+The Streamlit front-end was replaced by the `Validrow.dc.html` design, rendered
+from Python and served by the engine itself (`src/eve/web/`). Streamlit could not
+express this design: it wraps everything in its own DOM, forces a top-down block
+layout, and reruns the script per interaction, so the chart hover, expandable
+rows, instant selection and sticky action bar would all have become page reloads.
+
+The markup and inline styles are carried over from the design file verbatim. The
+only additions are six CSS rules standing in for its `style-hover` attribute,
+which has no CSS equivalent, and a self-hosted Inter face so the app renders with
+no network access.
+
+### What the design assumed, and what was built to make it true
+
+The prototype's data was invented and always present. Four things had to become
+real before the screens could report anything:
+
+| Screen need | Built |
+|---|---|
+| "every address across all jobs, de-duplicated" | `eve/addresses.py` — a workspace read-model keyed by normalized address, so re-running a list refreshes rows instead of double-counting |
+| live progress, elapsed, run duration | `phase`/`processed`/`total`/`started_at`/`finished_at` on `Job`, reported as the pipeline streams |
+| the seven-layer trace | `eve/trace.py`, built only from `verdict.checks` |
+| the dashboard's segment tabs | a **list type** chosen at upload, stored per address — the prototype assigned these by hashing a row id |
+
+### Two rules carried across from Phase 4
+
+Both were found by the Streamlit pass and both were violated by the first cut of
+this one:
+
+1. **A percentage may not claim an absolute it has not reached.** `share()`
+   renders `<1%` for a non-zero count that rounds to zero and `>99%` for a
+   partial that rounds to a hundred. A genuine zero or whole still reads plainly.
+2. **A chart through one reading is a spike, not a trend.** Below two populated
+   buckets the volume card states the limit and the sparklines are withheld,
+   rather than drawing a shape that reads as broken.
+
+### Where the trace refuses to guess
+
+The engine runs classification *before* DNS, because a disposable domain settles
+an address without a lookup. The product numbers DNS as layer 4 and
+classification as 5. Rather than reorder the engine or imply a lookup that never
+happened, the DNS row reads *"Not run — settled at layer 5"*. Likewise, with the
+SMTP probe disabled layer 6 says so; it never fabricates a 250. Verified against
+the mock MX: a confirmed mailbox reads `250 accepted — RCPT confirmed`, and a
+catch-all's *identical* 250 is marked **Soft** with "acceptance proves nothing".
+
+One bug this found: a DNS timeout was credited to layer 6. `TIMEOUT` is reported
+by both the resolver and the probe, so the settling layer now depends on whether
+the probe ran at all.
+
+### Facts, not derivations
+
+`settled_at` was stored at write time, so the DNS-timeout fix left every row
+written before it claiming the wrong layer. The column stays for query
+convenience, but the **fact** the rule needs — did the mailbox probe actually
+run — is now stored alongside it as `smtp_ran`, and the settled-by-layer rollup
+recomputes from that on read. A future change to the rule takes effect
+immediately instead of waiting for every address to be re-validated.
+
+`AddressStore.init()` carries the one migration this needed: `create_all` only
+creates missing tables, so an existing workspace keeps its old columns. The
+migration adds `smtp_ran`, backfills it from `checks`, and recomputes
+`settled_at`. It is idempotent and covered by `tests/test_addresses_migration.py`,
+which builds a database in the old shape and asserts the timeout row moves from
+layer 6 to layer 4 while a genuine layer-6 result is left alone.
+
+### Degraded is a real state now
+
+The design has three engine states and the architecture made two of them
+unreachable — the UI is served by the engine, so it cannot be offline. **DNS
+off** is now reported as *degraded* (amber), because without an MX lookup
+nothing about a domain can be proven and layers 4–7 never run. The SMTP probe
+being off stays *online* with a banner: it is the documented default and it
+produces honest Unknowns rather than wrong answers. The banner reports the most
+serious condition rather than stacking one per flag.
+
+### The identity block, resolved
+
+The design puts a name and email address in the sidebar footer; there is still no
+auth, so rendering them would be a claim the app cannot back up — exactly what
+Phase 4 refused to do with credits. Neither dropping the block (losing the design)
+nor hard-coding a person (inventing a fact) was acceptable.
+
+**The component is unchanged and the content is declared, not fabricated.**
+`EVE_WORKSPACE_NAME` / `EVE_WORKSPACE_EMAIL` are shown verbatim when set. Unset —
+the default — the block reads **Local workspace** over the engine's own host, with
+initials derived from the name rather than invented. Both lines are then true.
+
+The chevron beside it implied a menu that did not exist. It now opens one, with
+three destinations that do: Engine settings, API docs, and Copy engine URL. A
+control that suggests an affordance has to honour it.
+
+### The offline screen, removed
+
+`offline.html` was deleted rather than kept as unreachable markup. Its copy rests
+on a premise this architecture does not have:
+
+> Validation needs a live engine. … **History and Addresses stay browsable.**
+
+That sentence describes a client holding cached data *separately from* the engine.
+Here the UI is served by the engine, so an engine that is not responding cannot
+render the screen that says so — and History and Addresses, which read the same
+process, would not stay browsable either. The screen cannot be made accurate
+without rewriting its copy, at which point it is a different screen.
+
+The two states that *can* occur are now both real and both reported (online,
+degraded). The markup remains in `Validrow.dc.html` and in git history for the day
+the web app becomes a true remote client, which is the only condition that makes
+its copy true.
+
+### Still open
+
+- **Server-side paging** is now real on Contacts (Phase 4 left it client-side).
+- **No auth.** Everything above is a workaround for its absence, not a substitute.
+  When sessions land, `workspace_identity()` is the single place that changes.

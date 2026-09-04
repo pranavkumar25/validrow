@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Analytics · Validrow{% endblock %}
+{% block content %}
+        <div>
+          <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">Analytics</div>
+          <div style="font-size: 14px; color: #57534B; margin-top: 2px">Deliverability across every job in this workspace.</div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
+            {% for s in anKpis %}
+              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 20px">
+                <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">{{ s.eyebrow }}</div>
+                <div style="font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 8px">{{ s.value }}</div>
+              </div>
+            {% endfor %}
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin-top: 24px">
+            <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+                <div style="font-size: 14px; font-weight: 600">Deliverable rate over time</div>
+                <div style="display: flex; gap: 2px; padding: 2px; background: #F4F3EF; border-radius: 8px">
+                  {% for g in rateGrains %}
+                    <a class="nav" href="{{ g.href }}" style="display: grid; place-items: center; height: 24px; padding: 0 10px; border: 0; border-radius: 6px; font-size: 12px; background: {{ g.bg }}; color: {{ g.fg }}; box-shadow: {{ g.sh }}">{{ g.label }}</a>
+                  {% endfor %}
+                </div>
+              </div>
+              <svg width="100%" height="172" viewBox="0 0 720 172" preserveAspectRatio="none" style="display: block; margin-top: 16px">
+                <line x1="0" y1="40" x2="720" y2="40" stroke="#F4F3EF" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="100" x2="720" y2="100" stroke="#F4F3EF" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="160" x2="720" y2="160" stroke="#E7E4DE" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+                <path d="{{ ratePath }}" fill="none" stroke="#12B76A" stroke-width="1.75" vector-effect="non-scaling-stroke" stroke-linejoin="round"></path>
+              </svg>
+              <div style="font-size: 11.5px; color: #79756C; margin-top: 8px">{{ rateNote }}</div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+              <div style="font-size: 14px; font-weight: 600">Volume by weekday</div>
+              <div style="display: flex; align-items: flex-end; gap: 10px; height: 148px; margin-top: 18px">
+                {% for b in wk %}
+                  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px">
+                    <div title="{{ b.v }}" style="width: 100%; border-radius: 4px 4px 0 0; background: #35ABFF; height: {{ b.h }}"></div>
+                    <span style="font-size: 11.5px; color: #79756C">{{ b.d }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+              <div style="font-size: 14px; font-weight: 600">Verdict mix</div>
+              <div style="position: relative; width: 148px; height: 148px; margin: 16px auto 0">
+                <svg width="148" height="148" viewBox="0 0 180 180" style="transform: rotate(-90deg)">
+                  <circle cx="90" cy="90" r="80" fill="none" stroke="#F4F3EF" stroke-width="20"></circle>
+                  {% for d in donutFig %}
+                    <circle cx="90" cy="90" r="80" fill="none" stroke="{{ d.dot }}" stroke-width="20" stroke-dasharray="{{ d.dash }}" stroke-dashoffset="{{ d.offset }}"></circle>
+                  {% endfor %}
+                </svg>
+                <div style="position: absolute; inset: 0; display: grid; place-items: center; text-align: center">
+                  <div>
+                    <div style="font-size: 21px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">{{ donutTotal }}</div>
+                    <div style="font-size: 11.5px; color: #79756C">addresses</div>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #F4F3EF">
+                {% for d in donutFig %}
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ d.dot }}"></span>
+                    <span style="flex: 1; font-size: 13px; color: #57534B">{{ d.label }}</span>
+                    <span style="font-size: 12.5px; color: #79756C; font-variant-numeric: tabular-nums">{{ d.count }}</span>
+                    <span style="width: 38px; text-align: right; font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums">{{ d.pct }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 24px; overflow: hidden">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E7E4DE">
+              <div style="font-size: 14px; font-weight: 600">Top domains</div>
+              <button class="hv-white" onclick="location.href='/exports'" style="height: 30px; padding: 0 12px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #57534B">Export a slice</button>
+            </div>
+            <div style="overflow-x: auto">
+            <div style="display: grid; grid-template-columns: minmax(220px, 1.4fr) 120px 190px 1fr; min-width: 860px; padding: 0 20px; height: 36px; align-items: center; background: #FFFFFF; border-bottom: 1px solid #E7E4DE">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Domain</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Addresses</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Deliverable</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Verdict mix</span>
+            </div>
+            {% for d in topDomains %}
+              <div class="hv-white" style="display: grid; grid-template-columns: minmax(220px, 1.4fr) 120px 190px 1fr; min-width: 860px; padding: 0 20px; height: 40px; align-items: center; border-bottom: 1px solid #E7E4DE">
+                <span style="font-family: Inter, system-ui, sans-serif; font-size: 13px">{{ d.domain }}</span>
+                <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ d.count }}</span>
+                <span style="display: flex; align-items: center; gap: 8px; padding-right: 20px">
+                  <span style="flex: 1; height: 4px; border-radius: 999px; background: #F4F3EF; overflow: hidden">
+                    <span style="display: block; height: 4px; border-radius: 999px; background: #12B76A; width: {{ d.drW }}"></span>
+                  </span>
+                  <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ d.dr }}</span>
+                </span>
+                <span style="display: flex; gap: 2px; padding-right: 4px">
+                  {% for m in d.mix %}
+                    <span style="height: 3px; border-radius: 999px; background: {{ m.dot }}; width: {{ m.pct }}%; min-width: 2px"></span>
+                  {% endfor %}
+                </span>
+              </div>
+            {% endfor %}
+            {% if anEmpty %}
+              <div style="padding: 56px 24px; text-align: center">
+                <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Not enough history yet</div>
+                <div style="font-size: 14px; color: #57534B; margin-top: 4px">Validate a list and the deliverability picture builds itself.</div>
+                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
+              </div>
+            {% endif %}
+            </div>
+          </div>
+        </div>
+{% endblock %}

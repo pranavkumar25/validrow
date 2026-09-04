@@ -98,30 +98,68 @@ EVE_ENABLE_SMTP=true EVE_ENABLE_DNS=false \
 
 Result: `alice@acme-demo.com`→valid, `ghost@acme-demo.com`→invalid,
 `info@acme-demo.com`→risky (role), `*@catchall-demo.com`→risky (catch-all).
-In the Streamlit UI, set the sidebar **API base URL** to `http://127.0.0.1:8010`.
+Browse the run at `http://localhost:8010`.
 
-### Web UI (Streamlit — pure Python)
+### Web UI (Validrow)
 
-A dashboard that talks to the API: drag-drop CSV → map columns → watch progress →
-color-coded results → download cleaned / valid / removed.
+The web app is served by the engine itself — one process, one port, no separate
+front-end to start or keep in sync:
 
 ```bash
-pip install -e ".[frontend]"
-uvicorn eve.api.main:app --port 8000        # API (terminal 1)
-streamlit run frontend/app.py               # UI  (terminal 2) -> http://localhost:8501
+uvicorn eve.api.main:app --port 8000     # API + UI -> http://localhost:8000
 ```
 
-`frontend/app.py` is ~230 lines of Python, no HTML/JS.
+Screens: **Dashboard** (volume, verdict mix, recent results), **Validate**
+(upload → preview → map columns → live progress → downloads), **Single check**
+(one address, full seven-layer trace), **Contacts** (every address across all
+jobs, de-duplicated, expandable to its trace), **Analytics**, **Exports**,
+**History**, **Settings** and **How it works**.
+
+Implementation lives in `src/eve/web/`:
+
+| File | Role |
+| --- | --- |
+| `views.py` | View-model — store rows → what each screen renders |
+| `format.py` | Palette, number formatting, SVG path geometry |
+| `series.py` | Time bucketing for the charts (daily/weekly/monthly) |
+| `templates/` | One Jinja template per screen |
+| `static/app.js` | Only what must not round-trip: chart hover, row expansion, selection, job polling |
+
+Filters, sorting, paging and the wizard step all live in the query string, so
+every view is linkable and the back button works.
+
+**Empty states are real.** A fresh install has no data, and the app says so
+rather than inventing numbers: the period-over-period deltas stay hidden until
+there is a previous period to compare against, and a chart with one reading says
+"not enough history" instead of drawing a spike.
+
+**The sidebar names the workspace, not a person.** There is no auth, so the
+footer reads *Local workspace* over the engine host by default. Set
+`EVE_WORKSPACE_NAME` / `EVE_WORKSPACE_EMAIL` to show an owner.
 
 ## Architecture notes
 
 - **Streaming + O(unique) memory.** The pipeline makes two streaming passes and
   dedupes emails *and* domains, so a 1M-row file (≈50–200k unique domains)
   resolves each domain's MX and catch-all **once**, cached.
-- **Pluggable backends.** Local filesystem storage / in-memory KV + job store are
-  the defaults (zero external services). Swap in S3/R2 (`storage.S3ObjectStore`),
-  Redis (`kv.RedisKV`), and Postgres (`jobs.store.SqlJobStore`) via the `s3` /
-  `redis` / `postgres` extras — same interfaces, no code change.
+- **Pluggable backends, selected by configuration.** Local disk storage,
+  in-process KV and a SQLite workspace database are the defaults (zero external
+  services). Set `EVE_S3_*`, `EVE_REDIS_URL` or `EVE_WORKSPACE_DB_URL` and the
+  process picks S3/R2, Redis and Postgres instead — same interfaces, no code
+  change. Every infra setting is *empty* by default, because a placeholder like
+  `redis://localhost:6379` cannot be told apart from a real one. The API logs
+  which backend each subsystem resolved to at startup, and warns when a
+  non-`local` environment is still running on a single-process default.
+- **One workspace per row.** `jobs` and `addresses` both carry a
+  `workspace_id`, and the address identity is `(workspace_id, email)` — so
+  de-duplication happens *within* a tenant rather than across all of them.
+  There is no auth yet, so the value comes from `EVE_WORKSPACE_ID`; when auth
+  lands, `tenancy.current_workspace_id` becomes a request-scoped lookup and
+  nothing else changes.
+- **Alembic owns the schema.** There is no `create_all`: a fresh SQLite file and
+  a year-old Postgres reach head by replaying the same revisions, which run on
+  startup. Databases predating Alembic are adopted by revisions 0001–0003,
+  which check what is present before acting.
 - **The SMTP moat** (`eve/smtp_infra/`): `prober` (aiosmtplib, never DATA),
   `providers` (per-provider heuristics), `rate_limiter` (per-MX token bucket),
   `ip_pool` (reputation / rotation / cooldown / warm-up), `blacklist` (DNSBL
@@ -131,12 +169,57 @@ streamlit run frontend/app.py               # UI  (terminal 2) -> http://localho
 ## Docker
 
 ```bash
-docker compose up --build     # api + postgres + redis + minio
+docker compose up --build   # api + worker + postgres + redis + minio
 ```
 
-Jobs run **in-process** in the API today. For horizontal scale-out, enqueue to
-arq and run `arq eve.jobs.worker.WorkerSettings` on port-25-capable hosts (needs
-the shared Postgres/S3/Redis backends).
+Compose runs the **production** backends, which is the point: `make run` uses
+SQLite and local disk, so this is where the shared-backend paths actually get
+exercised before a deploy does it for you.
+
+## Running jobs
+
+Bulk jobs go wherever `EVE_QUEUE_BACKEND` resolves:
+
+| | in-process (`inline`) | worker (`arq`) |
+|---|---|---|
+| When | no `EVE_REDIS_URL` | Redis configured + `worker` extra |
+| Survives an API restart | no — the run is orphaned | yes |
+| Per-MX rate limit | per process | shared across workers |
+| Probes originate from | whichever box served the upload | the worker hosts |
+
+```bash
+make worker      # arq eve.jobs.worker.WorkerSettings
+```
+
+Run the worker on the port-25-capable egress hosts. The shared per-MX limiter
+is not optional at that point: without Redis, every worker gets a *full* probe
+budget against the same provider, which is the fast way to get an IP blocked.
+
+## Migrations
+
+The app migrates to head on startup, so there is usually nothing to run.
+
+```bash
+make migrate                      # alembic upgrade head, as a separate deploy step
+make migration m="add credits"    # new revision
+```
+
+Revisions 0001–0003 tolerate a database that predates Alembic. Write anything
+from 0004 on strictly.
+
+## Webhooks
+
+Pass `webhook_url` when creating a job and a callback is POSTed when it
+finishes — on failure too, which is when the caller most needs it. Set
+`EVE_WEBHOOK_SECRET` and verify:
+
+```
+X-Eve-Signature: sha256=HMAC-SHA256(secret, "<X-Eve-Timestamp>.<raw body>")
+```
+
+Delivery retries with backoff on 5xx/429/network errors, and gives up
+immediately on other 4xx. With Redis it is a queued task and survives a
+restart; without it, it is a background task in the API process and does not.
 
 ## Layout
 
@@ -165,4 +248,22 @@ tests/         per-layer + pipeline e2e + SMTP integration (aiosmtpd) + SQL stor
 | `EVE_PER_MX_RATE` | `5.0` | probes/sec per destination MX |
 | `EVE_IP_WARMUP_DAILY_CAP` | `50` | per-IP daily probes while warming |
 
-See `.env.example` for the full list.
+Infra — **empty means "use the local default"**, so these are also the switches
+that turn each shared backend on:
+
+| Var | Default | Meaning |
+|-----|---------|---------|
+| `EVE_WORKSPACE_DB_URL` | `""` | Postgres URL; empty = SQLite file on local disk |
+| `EVE_WORKSPACE_ID` | `default` | which workspace this process reads and writes |
+| `EVE_S3_BUCKET` / `_ACCESS_KEY` / `_SECRET_KEY` | `""` | all three switch storage to S3/R2 |
+| `EVE_S3_ENDPOINT` | `""` | blank for AWS; set for R2/MinIO/Spaces |
+| `EVE_REDIS_URL` | `""` | job queue + shared per-MX rate limiter |
+| `EVE_QUEUE_BACKEND` | `auto` | `auto` \| `inline` \| `arq` |
+| `EVE_MAX_UPLOAD_BYTES` | `104857600` | rejected with 413 above this |
+| `EVE_RATE_LIMIT_PER_MINUTE` | `0` | per client IP; `0` disables |
+| `EVE_CORS_ORIGINS` | `""` | comma-separated; empty = same-origin only |
+| `EVE_WEBHOOK_SECRET` | `""` | HMAC signing key; empty = unsigned |
+| `EVE_SENTRY_DSN` | `""` | needs the `sentry` extra |
+
+See `.env.example` for the full list, including the SMTP probe identity you
+must set before enabling `EVE_ENABLE_SMTP`.

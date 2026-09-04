@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}History · Validrow{% endblock %}
+{% block content %}
+        <div>
+          <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">History</div>
+          <div style="font-size: 14px; color: #57534B; margin-top: 2px">Every job this workspace has run.</div>
+          <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 20px; overflow: hidden">
+            <div style="overflow-x: auto">
+            <div style="display: grid; grid-template-columns: minmax(240px, 1.6fr) 120px 110px 120px 1fr 160px; min-width: 1000px; padding: 0 20px; height: 38px; align-items: center; background: #FFFFFF; border-bottom: 1px solid #E7E4DE">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">File</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">State</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Addresses</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Deliverable</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Mix</span>
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; text-align: right">Run</span>
+            </div>
+            {% for j in hJobs %}
+              <a class="row hv-white" href="{{ j.href }}" style="display: grid; grid-template-columns: minmax(240px, 1.6fr) 120px 110px 120px 1fr 160px; min-width: 1000px; padding: 0 20px; height: 52px; align-items: center; border-bottom: 1px solid #E7E4DE; cursor: pointer">
+                <span style="padding-right: 16px; min-width: 0">
+                  <span style="display: block; font-family: Inter, system-ui, sans-serif; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ j.file }}</span>
+                  <span style="display: block; font-size: 11.5px; color: #79756C; font-variant-numeric: tabular-nums">{{ j.id }} · {{ j.rows }}</span>
+                </span>
+                <span><span style="font-size: 11.5px; font-weight: 500; padding: 3px 9px; border-radius: 999px; background: {{ j.tagBg }}; color: {{ j.tagFg }}">{{ j.state }}</span></span>
+                <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ j.addr }}</span>
+                <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #101014; font-variant-numeric: tabular-nums">{{ j.dr }}</span>
+                <span style="padding-right: 24px">
+                  {% if j.running %}
+                    <span style="display: block; height: 4px; border-radius: 999px; background: #E7E4DE; overflow: hidden">
+                      <span style="display: block; height: 4px; border-radius: 999px; background: #35ABFF; width: {{ j.prog }}; transition: width 200ms linear"></span>
+                    </span>
+                  {% endif %}
+                  <span style="display: flex; gap: 2px">
+                    {% for m in j.mix %}
+                      <span style="height: 3px; border-radius: 999px; background: {{ m.dot }}; width: {{ m.pct }}%; min-width: 2px"></span>
+                    {% endfor %}
+                  </span>
+                </span>
+                <span style="font-size: 12.5px; color: #79756C; text-align: right; font-variant-numeric: tabular-nums">{{ j.date }}</span>
+              </a>
+            {% endfor %}
+            {% if hEmpty %}
+              <div style="padding: 56px 24px; text-align: center">
+                <div style="width: 40px; height: 40px; border-radius: 999px; background: #F4F3EF; display: grid; place-items: center; margin: 0 auto 14px">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3.5 12a8.5 8.5 0 108.5-8.5A8.5 8.5 0 005.2 6.6M12 7.5V12l3.2 2M3.5 4v3h3" stroke="#79756C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </div>
+                <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">No runs yet</div>
+                <div style="font-size: 14px; color: #57534B; margin-top: 4px">Every list you validate shows up here with its full breakdown.</div>
+                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
+              </div>
+            {% endif %}
+            </div>
+          </div>
+        </div>
+{% endblock %}

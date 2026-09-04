@@ -1,0 +1,43 @@
+{# The expanded Contacts row: score ring, verdict, and the seven-layer trace.
+   Fetched on demand so opening a row costs one small request instead of
+   rebuilding every trace on the page. #}
+<div>
+  <div style="display: flex; align-items: center; gap: 16px">
+    <div style="position: relative; width: 88px; height: 88px; flex: 0 0 88px">
+      <svg width="88" height="88" viewBox="0 0 88 88" style="transform: rotate(-90deg)">
+        <circle cx="44" cy="44" r="37" fill="none" stroke="#F4F3EF" stroke-width="6"></circle>
+        <circle cx="44" cy="44" r="37" fill="none" stroke="{{ detail.ringColor }}" stroke-width="6" stroke-linecap="round" stroke-dasharray="{{ detail.ringDash }}"></circle>
+      </svg>
+      <div style="position: absolute; inset: 0; display: grid; place-items: center">
+        <div style="text-align: center">
+          <div style="font-family: Inter, system-ui, sans-serif; font-size: 20px; font-weight: 500; line-height: 20px; font-variant-numeric: tabular-nums">{{ detail.score }}</div>
+          <div style="font-family: Inter, system-ui, sans-serif; font-size: 10px; color: #79756C">/100</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; background: {{ row.wash }}; color: {{ row.ink }}">
+        <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ row.dot }}"></span>{{ row.vlabel }}
+      </span>
+      <div style="font-size: 12.5px; color: #57534B; margin-top: 8px; line-height: 18px">{{ detail.subtitle }}</div>
+    </div>
+  </div>
+  <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #E7E4DE; display: flex; flex-direction: column; gap: 7px">
+    <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-size: 12px; color: #79756C">Domain</span><span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px">{{ row.domain }}</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-size: 12px; color: #79756C">Source job</span><span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px">{{ row.job }}</span></div>
+    <div style="display: flex; justify-content: space-between; gap: 12px"><span style="font-size: 12px; color: #79756C">Checked</span><span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px">{{ row.date }}</span></div>
+  </div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; overflow: hidden">
+  {% for l in detail.trace %}
+    <div style="display: grid; grid-template-columns: 32px 124px 1fr 70px; align-items: start; padding: 9px 16px; background: {{ l.bg }}; border-bottom: 1px solid #F4F3EF">
+      <div style="display: flex; align-items: center; gap: 7px">
+        <span style="width: 8px; height: 8px; border-radius: 999px; background: {{ l.c }}"></span>
+        <span style="font-family: Inter, system-ui, sans-serif; font-size: 11px; color: #79756C">{{ l.n }}</span>
+      </div>
+      <span style="font-size: 12.5px; font-weight: 500">{{ l.name }}</span>
+      <span style="font-family: Inter, system-ui, sans-serif; font-size: 12px; color: #57534B; line-height: 18px; padding-right: 12px">{{ l.finding }}</span>
+      <span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{ l.c }}; text-align: right">{{ l.st }}</span>
+    </div>
+  {% endfor %}
+</div>

@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Validrow{% endblock %}
+{% block content %}
+        <div style="display: flex; flex-direction: column; gap: 24px">
+
+          <div style="display: flex; align-items: center; gap: 12px">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+              <h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: #101014">Dashboard</h1>
+              <span style="font-size: 14px; color: #79756C">Track deliverability and validation activity across all your lists.</span>
+            </div>
+            <button class="hv-white" style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; background: #FFFFFF; border: 1px solid #D8D4CC">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex: 0 0 18px"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" stroke="#79756C" stroke-width="1.6"></rect><path d="M3.5 10h17M8 3.5v3M16 3.5v3" stroke="#79756C" stroke-width="1.6" stroke-linecap="round"></path></svg>
+              <span style="font-size: 13.5px; font-weight: 500; color: #44413B; white-space: nowrap">{{ dateRange }}</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex: 0 0 18px"><path d="M7.5 10.5l4.5 4.5 4.5-4.5" stroke="#79756C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </button>
+          </div>
+
+          {% if showRunning %}
+            <div style="display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 12px; background: #EAF6FF; border: 1px solid #D8ECFF">
+              {% for j in running %}
+                <div style="display: flex; align-items: center; gap: 20px">
+                  <div style="flex: 1; min-width: 0">
+                    <div style="display: flex; align-items: center; gap: 12px">
+                      <span style="font-size: 14px; font-weight: 600; color: #101014">{{ j.file }}</span>
+                      <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #1C93EA">Running</span>
+                    </div>
+                    <div style="height: 6px; border-radius: 4px; background: #D8ECFF; margin: 12px 0 8px; overflow: hidden">
+                      <div style="height: 6px; border-radius: 4px; background: #35ABFF; width: {{ j.pct }}; transition: width 200ms linear"></div>
+                    </div>
+                    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px">
+                      <span style="font-size: 13px; color: #101014; font-variant-numeric: tabular-nums">{{ j.phase }}</span>
+                      <span style="font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ j.elapsed }}</span>
+                    </div>
+                  </div>
+                  <button class="hv-blue" onclick="location.href='{{ j.href }}'" style="height: 36px; padding: 0 16px; border: 0; border-radius: 8px; background: #35ABFF; color: #FFFFFF; font-size: 13.5px; font-weight: 500">Resume</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+            <div style="display: flex; align-items: stretch; height: 36px; overflow: hidden; border-radius: 8px; background: #FFFFFF; border: 1px solid #D8D4CC">
+              {% for t in tabs %}
+                <a class="nav hv-surface" href="{{ t.href }}" aria-pressed="{{ t.on2 }}" style="display: flex; align-items: center; padding: 0 15px; border: 0; background: {{ t.bg }}; font-size: 13.5px; font-weight: {{ t.w }}; color: {{ t.fg }}; box-shadow: {{ t.ring }}; transition: background 150ms ease-out">{{ t.label }}</a>
+              {% endfor %}
+            </div>
+          </div>
+
+          {% if bannerOpen %}
+            <div role="status" data-banner style="display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; background: {{ bannerBg }}; border: 1px solid {{ bannerBd }}">
+              <span style="width: 8px; height: 8px; flex: 0 0 8px; border-radius: 999px; background: {{ bannerDot }}"></span>
+              <span style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                <span style="font-size: 14px; font-weight: 600; color: #101014">{{ bannerTitle }}</span>
+                <span style="font-size: 13.5px; color: #57534B">{{ bannerBody }}</span>
+              </span>
+              <button class="hv-surface" data-dismiss-banner style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; font-size: 13.5px; font-weight: 500; color: #79756C">Dismiss</button>
+              <button class="hv-surface" onclick="location.href='/settings'" style="height: 32px; padding: 0 14px; border: 1px solid #D8D4CC; border-radius: 8px; background: #FFFFFF; font-size: 13.5px; font-weight: 500; color: #101014">{{ bannerCta }}</button>
+            </div>
+          {% endif %}
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 232px), 1fr)); gap: 16px">
+            {% for s in figStats %}
+              <div style="display: flex; flex-direction: column; gap: 16px; height: 176px; padding: 20px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7E4DE">
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span style="flex: 1; font-size: 14px; font-weight: 600; color: #101014">{{ s.label }}</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 10px">
+                  <span style="font-size: {{ s.num }}; font-weight: 600; letter-spacing: -0.02em; color: #101014; font-variant-numeric: tabular-nums">{{ s.value }}</span>
+                  {% if s.hasDelta %}
+                    <span style="display: flex; align-items: center; gap: 4px">
+                      {% if s.deltaUp %}
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex: 0 0 16px"><path d="M4 10.5l3.2-3.4 2 2 2.8-3.4M9.4 5.7h3v3" stroke="{{ s.deltaColor }}" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                      {% else %}
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex: 0 0 16px"><path d="M4 5.5l3.2 3.4 2-2 2.8 3.4M9.4 10.3h3v-3" stroke="{{ s.deltaColor }}" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                      {% endif %}
+                      <span style="font-size: 13px; font-weight: 500; color: {{ s.deltaColor }}; font-variant-numeric: tabular-nums">{{ s.deltaLabel }}</span>
+                    </span>
+                  {% endif %}
+                </div>
+                {% if s.hasMix %}
+                  <div style="flex: 1; display: flex; align-items: flex-end">
+                    <div style="display: flex; gap: 2px; width: 100%">
+                      {% for m in heroMix %}
+                        <div style="height: 8px; border-radius: 4px; background: {{ m.dot }}; width: {{ m.pct }}%; min-width: 2px"></div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+                {% if s.hasSpark %}
+                  <div style="flex: 1; display: flex; align-items: flex-end">
+                    <svg height="56" viewBox="0 0 309 56" preserveAspectRatio="none" style="width: 100%; display: block">
+                      <path d="{{ s.line }}" fill="none" stroke="#9FD7FF" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+                    </svg>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start">
+          <div style="display: flex; flex-direction: column; gap: 20px; padding: 20px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7E4DE">
+            <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap">
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <span style="font-size: 14px; font-weight: 600; color: #101014">Validation volume</span>
+                <span style="display: flex; align-items: baseline; gap: 10px">
+                  <span style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em; color: #101014; font-variant-numeric: tabular-nums">{{ volValue }}</span>
+                  {% if volDelta and not noHistory %}
+                    <span style="display: flex; align-items: center; gap: 3px">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 10.5l3.2-3.4 2 2 2.8-3.4M9.4 5.7h3v3" stroke="#027A48" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                      <span style="font-size: 13px; font-weight: 600; color: #027A48; font-variant-numeric: tabular-nums">{{ volDelta.pct }}</span>
+                    </span>
+                  {% endif %}
+                </span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; margin-left: 8px; padding-top: 2px">
+                <span style="display: flex; align-items: center; gap: 7px">
+                  <span style="width: 14px; height: 3px; border-radius: 2px; background: #35ABFF"></span>
+                  <span style="font-size: 12.5px; font-weight: 400; color: #79756C">This period</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 7px">
+                  <span style="width: 14px; height: 3px; border-radius: 2px; background: #D8D4CC"></span>
+                  <span style="font-size: 12.5px; font-weight: 400; color: #79756C">Previous</span>
+                </span>
+              </div>
+              <span style="flex: 1"></span>
+              <div style="display: flex; gap: 2px; padding: 2px; background: #F4F3EF; border-radius: 8px">
+                {% for g in volGrains %}
+                  <a class="nav" href="{{ g.href }}" style="display: grid; place-items: center; height: 24px; padding: 0 10px; border: 0; border-radius: 6px; font-size: 12px; background: {{ g.bg }}; color: {{ g.fg }}; box-shadow: {{ g.sh }}; transition: background 150ms ease-out">{{ g.label }}</a>
+                {% endfor %}
+              </div>
+            </div>
+            {% if volSparse %}
+            <div style="height: 248px; display: grid; place-items: center; text-align: center">
+              <div>
+                <div style="font-size: 14px; font-weight: 600; color: #101014">Not enough history yet</div>
+                <div style="font-size: 13px; color: #79756C; margin-top: 4px; max-width: 320px">One period of data can't show a trend. Validate another list and the shape appears.</div>
+              </div>
+            </div>
+            {% else %}
+            <div id="volchart" data-points='{{ chartPoints | tojson }}' style="position: relative">
+              <svg height="248" viewBox="0 0 1048 248" preserveAspectRatio="none" style="width: 100%; display: block">
+                <line x1="0" y1="8" x2="1048" y2="8" stroke="#F4F3EF" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="88" x2="1048" y2="88" stroke="#F4F3EF" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+                <line x1="0" y1="168" x2="1048" y2="168" stroke="#F4F3EF" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+                <path d="{{ chartArea }}" fill="#35ABFF" fill-opacity="0.07"></path>
+                <path d="{{ chartPrev }}" fill="none" stroke="#D8D4CC" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+                <path d="{{ chartThis }}" fill="none" stroke="#35ABFF" stroke-width="2.25" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+              </svg>
+              <div data-hover hidden>
+                <div data-rule style="position: absolute; top: 0; bottom: 0; width: 1px; background: #D8ECFF"></div>
+                <div data-dot style="position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 999px; background: #35ABFF"></div>
+                <div data-tip style="position: absolute; transform: translateX(-50%); min-width: 208px; padding: 12px; border-radius: 8px; background: #101014">
+                  <div style="display: flex; align-items: baseline; gap: 12px">
+                    <span data-tip-date style="flex: 1; font-size: 12px; color: #A8A29E; white-space: nowrap"></span>
+                    <span data-tip-total style="font-size: 13px; font-weight: 600; color: #FFFFFF; font-variant-numeric: tabular-nums"></span>
+                  </div>
+                  <div data-tip-rows style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px"></div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            <div style="display: flex; justify-content: space-between">
+              {% for m in months %}
+                <span style="font-size: 11px; font-weight: 400; color: #79756C">{{ m.l }}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 20px; padding: 20px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7E4DE">
+            <span style="font-size: 14px; font-weight: 600; color: #101014">Verdict mix</span>
+            <div style="position: relative; width: 168px; height: 168px; margin: 0 auto">
+              <svg width="168" height="168" viewBox="0 0 180 180" style="transform: rotate(-90deg)">
+                <circle cx="90" cy="90" r="80" fill="none" stroke="#F4F3EF" stroke-width="20"></circle>
+                {% for d in donutFig %}
+                  <circle cx="90" cy="90" r="80" fill="none" stroke="{{ d.dot }}" stroke-width="20" stroke-dasharray="{{ d.dash }}" stroke-dashoffset="{{ d.offset }}"></circle>
+                {% endfor %}
+              </svg>
+              <div style="position: absolute; inset: 0; display: grid; place-items: center; text-align: center">
+                <div>
+                  <div style="font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: #101014; font-variant-numeric: tabular-nums">{{ donutTotal }}</div>
+                  <div style="font-size: 12px; color: #57534B">addresses</div>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid #F4F3EF">
+              {% for d in donutFig %}
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ d.dot }}"></span>
+                  <span style="flex: 1; font-size: 13px; color: #57534B">{{ d.label }}</span>
+                  <span style="font-size: 12.5px; color: #79756C; font-variant-numeric: tabular-nums">{{ d.count }}</span>
+                  <span style="width: 38px; text-align: right; font-size: 12.5px; font-weight: 500; color: #101014; font-variant-numeric: tabular-nums">{{ d.pct }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; border-radius: 12px; background: #FFFFFF; border: 1px solid #E7E4DE; overflow: hidden">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 20px; flex-wrap: wrap">
+              <h2 style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; color: #101014">Recent results</h2>
+              <span style="padding: 2px 9px; border-radius: 20px; background: #EAF6FF; font-size: 12px; font-weight: 500; color: #1C93EA; font-variant-numeric: tabular-nums">{{ figRowCount }}</span>
+              <span style="flex: 1"></span>
+              <form action="/dashboard" method="get" style="display: flex; align-items: center; gap: 8px; width: 240px; height: 38px; padding: 0 13px; border-radius: 8px; background: #FFFFFF; border: 1px solid #D8D4CC">
+                <input type="hidden" name="tab" value="{{ tab }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex: 0 0 18px"><circle cx="10.5" cy="10.5" r="6.8" stroke="#A8A29E" stroke-width="1.8"></circle><path d="M15.6 15.6L21 21" stroke="#A8A29E" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                <input name="q" value="{{ aQ }}" aria-label="Search results" placeholder="Search" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 14px; color: #101014">
+              </form>
+            </div>
+            <div style="overflow-x: auto">
+              <div style="display: flex; align-items: center; min-width: 900px; height: 36px; padding: 0 20px; background: #FFFFFF; border-top: 1px solid #E7E4DE; border-bottom: 1px solid #E7E4DE">
+                <span style="flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0">
+                  <span style="width: 24px; height: 24px; flex: 0 0 24px; display: grid; place-items: center">
+                    <span data-select-all role="checkbox" aria-checked="false" aria-label="Select all rows" tabindex="0" style="width: 18px; height: 18px; border-radius: 5px; background: #FFFFFF; border: 1px solid #D8D4CC; cursor: pointer; display: grid; place-items: center">
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity: 0"><path d="M2.5 6.2l2.4 2.4L9.5 4" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    </span>
+                  </span>
+                  <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #79756C">EMAIL</span>
+                </span>
+                <span style="width: 120px; flex: 0 0 120px; padding-right: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #79756C">STATUS</span><span style="width: 210px; flex: 0 0 210px; padding-right: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #79756C">QUALITY SCORE</span><span style="width: 160px; flex: 0 0 160px; padding-right: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #79756C">SEGMENT</span><span style="width: 110px; flex: 0 0 110px; padding-right: 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #79756C">CHECKED</span>
+              </div>
+              {% for r in figRows %}
+                <div class="hv-surface" data-select="{{ r.full }}" tabindex="0" role="checkbox" aria-checked="false" aria-label="{{ r.aria }}" style="display: flex; align-items: center; min-width: 900px; height: 40px; padding: 0 20px; cursor: pointer; background: transparent; border-bottom: 1px solid #F4F3EF; transition: background 150ms ease-out">
+                  <span style="flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0">
+                    <span style="width: 24px; height: 24px; flex: 0 0 24px; display: grid; place-items: center">
+                      <span data-box style="width: 18px; height: 18px; border-radius: 5px; background: #FFFFFF; border: 1px solid #D8D4CC; display: grid; place-items: center">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity: 0"><path d="M2.5 6.2l2.4 2.4L9.5 4" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                      </span>
+                    </span>
+                    <span title="{{ r.full }}" style="font-size: 13px; font-weight: 400; color: #101014; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.email }}</span>
+                  </span>
+                  <span style="width: 120px; flex: 0 0 120px; padding-right: 12px">
+                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 20px; background: {{ r.wash }}">
+                      <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ r.dot }}"></span>
+                      <span style="font-size: 12.5px; font-weight: 500; color: {{ r.ink }}">{{ r.status }}</span>
+                    </span>
+                  </span>
+                  <span style="width: 210px; flex: 0 0 210px; padding-right: 12px; display: flex; align-items: center; gap: 10px">
+                    <span style="width: 120px; flex: 0 0 120px; height: 7px; border-radius: 4px; background: #F4F3EF; overflow: hidden">
+                      <span style="display: block; height: 7px; border-radius: 4px; background: #35ABFF; width: {{ r.scoreW }}"></span>
+                    </span>
+                    <span style="flex: 1; text-align: right; font-size: 13px; font-weight: 500; color: #44413B; font-variant-numeric: tabular-nums">{{ r.scorePct }}</span>
+                  </span>
+                  <span style="width: 160px; flex: 0 0 160px; padding-right: 12px">
+                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 20px; background: #FFFFFF">
+                      <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ r.segDot }}"></span>
+                      <span style="font-size: 12.5px; font-weight: 500; color: #44413B; white-space: nowrap">{{ r.segment }}</span>
+                    </span>
+                  </span>
+                  <span style="width: 110px; flex: 0 0 110px; padding-right: 12px; font-size: 13px; color: #79756C">{{ r.checked }}</span>
+                </div>
+              {% endfor %}
+              {% if not figRows %}
+                <div style="padding: 56px 24px; text-align: center">
+                  <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">{% if dashEmpty %}Nothing validated yet{% else %}No results match this view{% endif %}</div>
+                  <div style="font-size: 14px; color: #57534B; margin-top: 4px">{% if dashEmpty %}Upload a list and Validrow will clean it in a few minutes.{% else %}Try another list type, or clear the search.{% endif %}</div>
+                  <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
+                </div>
+              {% endif %}
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 20px; border-top: 1px solid #F4F3EF">
+              <span style="font-size: 12.5px; font-weight: 400; color: #79756C; font-variant-numeric: tabular-nums">{{ figShowing }}</span>
+              <span style="flex: 1"></span>
+              <button class="hv-white" {% if figPrevHref %}onclick="location.href='{{ figPrevHref }}'"{% else %}disabled style="opacity:.5"{% endif %} style="height: 30px; padding: 0 13px; border-radius: 8px; background: #FFFFFF; border: 1px solid #D8D4CC; font-size: 13px; font-weight: 500; color: #44413B">Previous</button>
+              <button class="hv-white" {% if figNextHref %}onclick="location.href='{{ figNextHref }}'"{% else %}disabled style="opacity:.5"{% endif %} style="height: 30px; padding: 0 13px; border-radius: 8px; background: #FFFFFF; border: 1px solid #D8D4CC; font-size: 13px; font-weight: 500; color: #44413B">Next</button>
+            </div>
+          </div>
+
+          {# The table's checkboxes need somewhere to go. Same bar as Contacts. #}
+          <div data-selbar hidden style="position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 8px 0 18px; background: #101014; border-radius: 12px; box-shadow: 0 16px 40px -12px rgba(15,13,8,0.32); animation: vr-up 220ms cubic-bezier(0.16,1,0.3,1)">
+            <span data-selcount style="font-size: 13px; color: #FFFFFF; font-variant-numeric: tabular-nums"></span>
+            <span style="width: 1px; height: 20px; background: rgba(255,255,255,0.16)"></span>
+            <button class="hv-onDark" data-export-selected style="height: 32px; padding: 0 12px; background: rgba(255,255,255,0.1); color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13px">Export selected</button>
+            <button class="hv-inkText" data-clear-sel style="height: 32px; padding: 0 12px; background: transparent; color: #A8A29E; border: 0; border-radius: 8px; font-size: 13px">Clear</button>
+          </div>
+        </div>
+{% endblock %}

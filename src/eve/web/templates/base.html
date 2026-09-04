@@ -1,0 +1,132 @@
+{#
+  The application shell: sidebar, main column, and the global style block.
+
+  Markup and inline styles are carried over verbatim from the design file. The
+  only additions are the six hover rules (the design expressed these as a
+  `style-hover` attribute, which has no CSS equivalent) and the self-hosted
+  Inter face, so the app renders identically with no network access.
+#}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Validrow{% endblock %}</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>✓</text></svg>">
+<style>
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/static/InterVariable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/static/InterVariable-Italic.woff2') format('woff2');
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #FFFFFF; -webkit-font-smoothing: antialiased; }
+a { color: #35ABFF; text-decoration: none; }
+a:hover { color: #1C93EA; }
+input, button, select { font: inherit; }
+button { cursor: pointer; }
+::placeholder { color: #79756C; }
+:focus-visible { outline: 2px solid rgba(53,171,255,0.4); outline-offset: 2px; }
+@keyframes vr-up { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes vr-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* The design's `style-hover` attribute, as CSS. Six rules cover every use. */
+.hv-surface:hover { background: #F4F3EF !important; }
+.hv-white:hover   { background: #FFFFFF; }
+.hv-blue:hover    { background: #1C93EA !important; }
+.hv-danger:hover  { background: #FEF3F2 !important; }
+.hv-onDark:hover  { background: rgba(255,255,255,0.18) !important; }
+.hv-inkText:hover { color: #FFFFFF !important; }
+
+/* Nav and table rows are links; they must not inherit the anchor colour. */
+a.row, a.nav { color: inherit; text-decoration: none; }
+a.row:hover, a.nav:hover { color: inherit; }
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+<div style="display: flex; min-height: 100vh; background: #FFFFFF; font-family: Inter, system-ui, sans-serif; color: #101014">
+
+  <nav aria-label="Main" style="width: 280px; flex: 0 0 280px; background: #FFFFFF; border-right: 1px solid #E7E4DE; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh">
+    <div style="display: flex; flex-direction: column; gap: 20px; padding: 22px 16px 8px">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 0 6px; height: 22px">
+        <span style="font-size: 19px; font-weight: 700; letter-spacing: -0.4px; color: #35ABFF; line-height: 22px">Validrow</span>
+        <span style="flex: 1"></span>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3.33 3.33h13.34v13.34H3.33z" stroke="#A8A29E" stroke-width="1.33" stroke-linejoin="round"></path><path d="M7.5 3.33v13.34" stroke="#A8A29E" stroke-width="1.33"></path></svg>
+      </div>
+      <form action="/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 13px; border-radius: 8px; background: #FFFFFF; border: 1px solid #D8D4CC">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex: 0 0 18px"><circle cx="10.5" cy="10.5" r="6.8" stroke="#A8A29E" stroke-width="1.8"></circle><path d="M15.6 15.6L21 21" stroke="#A8A29E" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <input id="sb-q" name="q" value="{{ sbQ }}" aria-label="Search addresses" placeholder="Search addresses" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13.5px; color: #101014">
+        <span style="font-size: 12px; font-weight: 500; color: #79756C">/</span>
+      </form>
+    </div>
+    <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 8px 16px">
+      {% for it in navWork %}
+        <a class="nav hv-surface" href="{{ it.href }}" style="display: flex; align-items: center; gap: 11px; height: 38px; padding: 0 11px; border: 0; border-radius: 8px; width: 100%; text-align: left; background: {{ it.bg }}; transition: background 150ms ease-out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex: 0 0 20px"><path d="{{ it.icon }}" stroke="{{ it.ic }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <span style="flex: 1; font-size: 13.5px; font-weight: {{ it.w }}; color: {{ it.fg }}">{{ it.label }}</span>
+          {% if it.count %}
+            <span style="min-width: 24px; height: 19px; padding: 0 8px; border-radius: 20px; background: #F4F3EF; color: #79756C; font-size: 12px; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums">{{ it.count }}</span>
+          {% endif %}
+        </a>
+      {% endfor %}
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; padding: 20px 11px 8px">Workspace</div>
+      {% for it in navSpace %}
+        <a class="nav hv-surface" href="{{ it.href }}" style="display: flex; align-items: center; gap: 11px; height: 38px; padding: 0 11px; border: 0; border-radius: 8px; width: 100%; text-align: left; background: {{ it.bg }}; transition: background 150ms ease-out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex: 0 0 20px"><path d="{{ it.icon }}" stroke="{{ it.ic }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <span style="flex: 1; font-size: 13.5px; font-weight: {{ it.w }}; color: {{ it.fg }}">{{ it.label }}</span>
+        </a>
+      {% endfor %}
+      <div style="flex: 1"></div>
+      {% for it in navSystem %}
+        <a class="nav hv-surface" href="{{ it.href }}" style="display: flex; align-items: center; gap: 11px; height: 38px; padding: 0 11px; border: 0; border-radius: 8px; width: 100%; text-align: left; background: {{ it.bg }}; transition: background 150ms ease-out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="flex: 0 0 20px"><path d="{{ it.icon }}" stroke="{{ it.ic }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <span style="flex: 1; font-size: 13.5px; font-weight: {{ it.w }}; color: {{ it.fg }}">{{ it.label }}</span>
+        </a>
+      {% endfor %}
+    </div>
+    <div style="border-top: 1px solid #E7E4DE; padding: 12px">
+      <a class="nav hv-surface" href="/settings" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; text-align: left">
+        <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ engineDot }}"></span>
+        <span style="flex: 1; font-size: 12px; color: #57534B">{{ engineVer }}</span>
+        <span style="font-size: 12px; color: #79756C; font-variant-numeric: tabular-nums">{{ engineFlags }}</span>
+      </a>
+    </div>
+    <div data-acct style="border-top: 1px solid #E7E4DE; padding: 16px 12px; position: relative">
+      <button data-acct-toggle aria-haspopup="menu" aria-expanded="false" class="hv-surface" style="display: flex; align-items: center; gap: 10px; height: 40px; width: 100%; padding: 0; border: 0; border-radius: 8px; background: transparent; text-align: left">
+        <span style="width: 40px; height: 40px; flex: 0 0 40px; border-radius: 20px; background: linear-gradient(135deg, #35ABFF 14%, #6FC5FF 86%); color: #FFFFFF; display: grid; place-items: center; font-size: 14px; font-weight: 600">{{ user.initials }}</span>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+          <span style="font-size: 13.5px; font-weight: 500; color: #101014; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ user.name }}</span>
+          <span style="font-size: 12px; color: #79756C; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ user.email }}</span>
+        </span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex: 0 0 18px"><path d="M8 10l4 4 4-4" stroke="#A8A29E" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <div data-acct-menu role="menu" hidden style="position: absolute; left: 12px; right: 12px; bottom: 62px; z-index: 30; background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 16px; box-shadow: 0 12px 32px -8px rgba(15,13,8,0.18); padding: 6px; animation: vr-in 220ms cubic-bezier(0.16,1,0.3,1)">
+        <a class="nav hv-surface" role="menuitem" href="/settings" style="display: flex; align-items: center; height: 32px; padding: 0 10px; border-radius: 8px; font-size: 13px; color: #101014">Engine settings</a>
+        <a class="nav hv-surface" role="menuitem" href="/docs" style="display: flex; align-items: center; height: 32px; padding: 0 10px; border-radius: 8px; font-size: 13px; color: #101014">API docs</a>
+        <button class="hv-surface" role="menuitem" data-copy data-copy-value="{{ engineUrl }}" style="display: flex; align-items: center; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; font-size: 13px; color: #101014">Copy engine URL</button>
+      </div>
+    </div>
+  </nav>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <div style="flex: 1; padding: 28px 32px 36px">
+      <div>
+{% block content %}{% endblock %}
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

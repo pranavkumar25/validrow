@@ -30,6 +30,7 @@ from eve.observability import (
     warn_about_configuration,
 )
 from eve.ratelimit import RateLimit
+from eve.web import mount_web
 
 VERSION = "0.1.0"
 
@@ -75,6 +76,9 @@ if _cors:
 app.include_router(files.router)
 app.include_router(jobs.router)
 app.include_router(workspace.router)
+
+# The Validrow web app. Mounted last so it takes "/" without shadowing the API.
+mount_web(app)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])

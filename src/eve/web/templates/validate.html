@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Validate a list · Validrow{% endblock %}
+{% block content %}
+        <div>
+          <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 22px">Validate a list</div>
+          <div style="max-width: 880px; margin: 0 auto 22px; display: flex; align-items: center; gap: 12px">
+            {% for s in vSteps %}
+              <div style="display: flex; align-items: center; gap: 12px; flex: 1">
+                <div style="display: flex; align-items: center; gap: 9px">
+                  <span style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid {{ s.bd }}; background: {{ s.bg }}; color: {{ s.fg }}; display: grid; place-items: center; font-size: 11.5px; font-weight: 600; box-shadow: {{ s.ring }}; transition: all 220ms cubic-bezier(0.16,1,0.3,1)">{{ s.n }}</span>
+                  <span style="font-size: 13px; color: {{ s.lfg }}; white-space: nowrap">{{ s.label }}</span>
+                </div>
+                <span style="flex: 1; height: 1px; background: #E7E4DE; min-width: 16px"></span>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div style="max-width: 880px; margin: 0 auto">
+            {% if vStep1 %}
+              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+                <div style="font-size: 14px; font-weight: 600">Upload a list</div>
+                <form id="upload-form" action="/validate/upload" method="post" enctype="multipart/form-data">
+                  <input id="file-input" type="file" name="file" accept=".csv,text/csv" hidden>
+                  <button type="button" id="drop-zone" style="width: 100%; height: 200px; margin-top: 14px; border: 1.5px dashed #D8D4CC; border-radius: 12px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; transition: background 150ms ease-out">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M8 7l4-4 4 4M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" stroke="#79756C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    <span id="drop-label" style="font-size: 14px; font-weight: 500; color: #101014">Drop a CSV, or browse</span>
+                    <span style="font-size: 12px; color: #79756C; max-width: 420px; text-align: center; line-height: 18px">Comma, semicolon, tab or pipe delimited · any encoding · extra columns pass through untouched</span>
+                  </button>
+                </form>
+              </div>
+            {% endif %}
+
+            {% if vStep2 %}
+              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; overflow: hidden">
+                <div style="padding: 20px 20px 16px">
+                  <div style="font-size: 14px; font-weight: 600">Preview</div>
+                  <div style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 12.5px; color: #57534B; margin-top: 8px; padding: 8px 10px; background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 8px">{{ detectedLine }}</div>
+                  {% if emptyCsv %}
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 12px 14px; border-radius: 8px; background: #FFFAEB; border: 1px solid #FEDF89">
+                      <span style="width: 6px; height: 6px; border-radius: 999px; background: #F79009"></span>
+                      <span style="font-size: 13px; color: #B54708">The header parsed but the file has no data rows. Upload a file with at least one address.</span>
+                    </div>
+                  {% endif %}
+                  <div style="font-size: 13px; color: #57534B; margin-top: 10px">Confirm this parsed correctly before you spend anything.</div>
+                </div>
+                <div style="display: grid; grid-template-columns: {{ previewGrid }}; padding: 0 20px; height: 34px; align-items: center; background: #FFFFFF; border-top: 1px solid #E7E4DE; border-bottom: 1px solid #E7E4DE">
+                  <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">#</span>
+                  {% for c in previewCols %}
+                    <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px">{{ c }}</span>
+                  {% endfor %}
+                </div>
+                {% for p in previewRows %}
+                  <div style="display: grid; grid-template-columns: {{ previewGrid }}; padding: 0 20px; height: 40px; align-items: center; border-bottom: 1px solid #E7E4DE; font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 12.5px; color: #57534B">
+                    <span style="color: #A8A29E">{{ p.n }}</span>
+                    {% for cell in p.cells %}
+                      <span style="{% if loop.first %}color: #101014; {% endif %}overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px">{{ cell }}</span>
+                    {% endfor %}
+                  </div>
+                {% endfor %}
+                <div style="display: flex; justify-content: space-between; gap: 12px; padding: 16px 20px">
+                  <button class="hv-white" onclick="location.href='/validate'" style="height: 36px; padding: 0 14px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #57534B">Back</button>
+                  <button class="hv-blue" onclick="location.href='/validate?file={{ fileId }}&name={{ filename | urlencode }}&step=3'" style="height: 36px; padding: 0 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500" {% if emptyCsv %}disabled style="opacity:.5"{% endif %}>Parsed correctly</button>
+                </div>
+              </div>
+            {% endif %}
+
+            {% if vStep3 %}
+              <form action="/validate/start" method="post" style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+                <input type="hidden" name="file_id" value="{{ fileId }}">
+                <input type="hidden" name="filename" value="{{ filename }}">
+                <div style="font-size: 14px; font-weight: 600">Map columns</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px">
+                  <label style="display: block">
+                    <span style="display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; margin-bottom: 6px">Email
+                      {% if guessedEmail %}<span style="font-size: 10px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #027A48; background: #ECFDF3; border-radius: 4px; padding: 1px 6px">auto-detected</span>{% endif %}
+                    </span>
+                    <select name="email" required style="display: flex; align-items: center; justify-content: space-between; width: 100%; height: 36px; padding: 0 11px; border: 1px solid #D8D4CC; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-size: 13px; background: #FFFFFF">
+                      {% for c in columns %}<option value="{{ c }}" {% if c == guessedEmail %}selected{% endif %}>{{ c }}</option>{% endfor %}
+                    </select>
+                  </label>
+                  <label style="display: block">
+                    <span style="display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; margin-bottom: 6px">First name <span style="text-transform: none; letter-spacing: 0; font-weight: 400; color: #A8A29E">optional</span></span>
+                    <select name="first_name" style="width: 100%; height: 36px; padding: 0 11px; border: 1px solid #E7E4DE; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-size: 13px; background: #FFFFFF">
+                      <option value="">—</option>
+                      {% for c in columns %}<option value="{{ c }}" {% if c == guessedFirst %}selected{% endif %}>{{ c }}</option>{% endfor %}
+                    </select>
+                  </label>
+                  <label style="display: block">
+                    <span style="display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; margin-bottom: 6px">Last name <span style="text-transform: none; letter-spacing: 0; font-weight: 400; color: #A8A29E">optional</span></span>
+                    <select name="last_name" style="width: 100%; height: 36px; padding: 0 11px; border: 1px solid #E7E4DE; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-size: 13px; background: #FFFFFF">
+                      <option value="">—</option>
+                      {% for c in columns %}<option value="{{ c }}" {% if c == guessedLast %}selected{% endif %}>{{ c }}</option>{% endfor %}
+                    </select>
+                  </label>
+                </div>
+                <label style="display: block; margin-top: 16px">
+                  <span style="display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; margin-bottom: 6px">List type</span>
+                  <select name="list_type" style="width: 100%; max-width: 280px; height: 36px; padding: 0 11px; border: 1px solid #E7E4DE; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-size: 13px; background: #FFFFFF">
+                    {% for t in listTypes %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+                  </select>
+                </label>
+                <div style="margin-top: 16px; padding: 12px 14px; background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 12.5px; color: #57534B">{{ chargeLine }}</div>
+                <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 18px">
+                  <button type="button" class="hv-white" onclick="location.href='/validate?file={{ fileId }}&name={{ filename | urlencode }}&step=2'" style="height: 36px; padding: 0 14px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #57534B">Back</button>
+                  <button type="submit" class="hv-blue" style="height: 36px; padding: 0 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Start validating</button>
+                </div>
+              </form>
+            {% endif %}
+
+            {% if vStep4 %}
+              <div data-poll="{{ jobId }}">
+                <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px">
+                    <div style="font-size: 14px; font-weight: 600">{{ vFile }}</div>
+                    <span style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 12.5px; color: #79756C"><span data-elapsed>{{ vElapsed }}</span> elapsed</span>
+                  </div>
+                  <div style="height: 6px; border-radius: 999px; background: #F4F3EF; margin: 14px 0 10px; overflow: hidden">
+                    <div data-bar style="height: 6px; border-radius: 999px; background: #35ABFF; width: {{ vPct }}; transition: width 400ms linear"></div>
+                  </div>
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px">
+                    <span data-phase style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 13px; color: #101014">{{ vPhase }}</span>
+                    <span data-pct style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 13px; color: #57534B">{{ vPct }}</span>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
+                  {% for c in vCards %}
+                    <div data-card="{{ c.key }}" style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 18px">
+                      <div style="display: flex; align-items: center; gap: 7px">
+                        <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ c.dot }}"></span>
+                        <span style="font-size: 12.5px; color: #57534B">{{ c.label }}</span>
+                      </div>
+                      <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px">
+                        <span data-count style="font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">{{ c.count }}</span>
+                        <span data-pctlabel style="font-size: 12.5px; color: #79756C; font-variant-numeric: tabular-nums">{{ c.pct }}</span>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px">
+                  <span style="font-size: 13px; color: #79756C">You can leave this page — the job keeps running.</span>
+                </div>
+              </div>
+            {% endif %}
+
+            {% if vFailed %}
+              <div>
+                <div style="background: #FEF3F2; border: 1px solid #FECDCA; border-radius: 12px; padding: 16px 20px">
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#F04438" stroke-width="1.9"></circle><path d="M9 9l6 6M15 9l-6 6" stroke="#F04438" stroke-width="1.9" stroke-linecap="round"></path></svg>
+                    <span style="font-size: 14px; font-weight: 600; color: #B42318">{{ vFailedAfter }}</span>
+                  </div>
+                  <div style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #B42318; margin-top: 10px; padding: 10px 12px; background: #FFFFFF; border: 1px solid #FECDCA; border-radius: 8px">{{ vError }}</div>
+                  <div style="display: flex; gap: 10px; margin-top: 14px">
+                    {% if hasPartial %}
+                      <button class="hv-white" onclick="location.href='/v1/jobs/{{ jobId }}/download?segment=cleaned'" style="height: 34px; padding: 0 13px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #101014">Download partial results</button>
+                    {% endif %}
+                    <button class="hv-white" onclick="location.href='/validate'" style="height: 34px; padding: 0 13px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #101014">Start over</button>
+                  </div>
+                </div>
+                <div style="background: #FFFAEB; border: 1px solid #FEDF89; border-radius: 12px; padding: 14px 20px; margin-top: 16px; display: flex; align-items: center; gap: 8px">
+                  <span style="width: 6px; height: 6px; border-radius: 999px; background: #F79009"></span>
+                  <span style="font-size: 13.5px; color: #B54708">Everything verified before the failure is already in your workspace. Upload the file again to finish the rest.</span>
+                </div>
+              </div>
+            {% endif %}
+
+            {% if vComplete %}
+              <div>
+                <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px">
+                    <div>
+                      <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">{{ doneTitle }}</div>
+                      <div style="font-size: 13px; color: #57534B; margin-top: 2px">{{ doneSub }}</div>
+                    </div>
+                    <button class="hv-white" onclick="location.href='/validate'" style="height: 32px; padding: 0 12px; background: #FFFFFF; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Validate another</button>
+                  </div>
+                  <div style="display: flex; gap: 2px; margin: 18px 0 12px">
+                    {% for m in doneMix %}
+                      <div style="height: 14px; border-radius: 999px; background: {{ m.dot }}; width: {{ m.pct }}%; min-width: 2px; display: grid; place-items: center; color: #FFFFFF; font-size: 10.5px; font-weight: 600">{{ m.pct_label }}</div>
+                    {% endfor %}
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 18px">
+                    {% for m in doneMix %}
+                      <div style="display: flex; align-items: center; gap: 7px">
+                        <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ m.dot }}"></span>
+                        <span style="font-size: 12.5px; color: #57534B">{{ m.label }}</span>
+                        <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; font-variant-numeric: tabular-nums">{{ m.count }}</span>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 16px">
+                  {% for d in downloads %}
+                    <button class="{% if loop.first %}hv-blue{% else %}hv-white{% endif %}" onclick="location.href='{{ d.href }}'" style="flex: 1; height: 56px; padding: 0 16px; {% if loop.first %}background: #35ABFF; color: #FFFFFF; border: 0;{% else %}background: #FFFFFF; border: 1px solid #D8D4CC;{% endif %} border-radius: 8px; text-align: left">
+                      <div style="font-size: 13.5px; font-weight: 500">{{ d.label }}</div>
+                      <div style="font-family: Inter, system-ui, sans-serif; font-size: 11.5px; {% if loop.first %}opacity: 0.8{% else %}color: #79756C{% endif %}">{{ d.note }}</div>
+                    </button>
+                  {% endfor %}
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
+                  {% for c in doneCards %}
+                    <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 18px">
+                      <div style="display: flex; align-items: center; gap: 7px">
+                        <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ c.dot }}"></span>
+                        <span style="font-size: 12.5px; color: #57534B">{{ c.label }}</span>
+                      </div>
+                      <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px">
+                        <span style="font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums">{{ c.count }}</span>
+                        <span style="font-size: 12.5px; color: #79756C; font-variant-numeric: tabular-nums">{{ c.pct }}</span>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+                <div style="margin-top: 16px; text-align: center">
+                  <a href="/addresses" style="font-size: 13.5px">Open the full results in Addresses</a>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+{% endblock %}

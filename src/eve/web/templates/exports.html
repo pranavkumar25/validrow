@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Exports · Validrow{% endblock %}
+{% block content %}
+        <div>
+          <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">Exports</div>
+          <div style="font-size: 14px; color: #57534B; margin-top: 2px">Slice the workspace and take the CSV.</div>
+          <form id="export-form" action="/exports/download" method="post">
+          <input type="hidden" name="preset" value="{{ exPreset }}">
+          <input type="hidden" name="columns" value="{{ exColumns }}">
+          {% for c in customVerdicts %}{% if c.on %}<input type="hidden" name="verdicts" value="{{ c.key }}">{% endif %}{% endfor %}
+          {% for t in customToggles %}{% if t.on %}<input type="hidden" name="{{ t.key }}" value="1">{% endif %}{% endfor %}
+          <div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 20px; align-items: start">
+            <div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px">
+                {% for p in presets %}
+                  <a class="nav" href="{{ presetHrefs[p.key] }}" style="display: block; text-align: left; padding: 16px; background: {{ p.bg }}; border: 1px solid {{ p.bd }}; border-radius: 12px; transition: all 150ms ease-out">
+                    <div style="font-size: 13.5px; font-weight: 600">{{ p.label }}</div>
+                    <div style="font-size: 12px; color: #57534B; margin-top: 3px; line-height: 17px">{{ p.desc }}</div>
+                    <div style="font-family: Inter, system-ui, sans-serif; font-size: 15px; margin-top: 12px; font-variant-numeric: tabular-nums">{{ p.n }}</div>
+                  </a>
+                {% endfor %}
+                <a class="nav" href="{{ customHref }}" style="display: block; text-align: left; padding: 16px; background: {{ customBg }}; border: 1px solid {{ customBd }}; border-radius: 12px">
+                  <div style="font-size: 13.5px; font-weight: 600">Custom</div>
+                  <div style="font-size: 12px; color: #57534B; margin-top: 3px; line-height: 17px">Pick verdicts and signals yourself</div>
+                  <div style="font-size: 15px; margin-top: 12px; color: #79756C">{{ customState }}</div>
+                </a>
+              </div>
+              {% if customOpen %}
+                <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
+                  <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Verdicts</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px">
+                    {% for c in customVerdicts %}
+                      <a class="nav" href="{{ verdictHrefs[c.key] }}" style="display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 8px; background: {{ c.bg }}; border: 1px solid {{ c.bd }}; font-size: 13px; color: {{ c.fg }}">
+                        <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ c.dot }}"></span>{{ c.label }}
+                      </a>
+                    {% endfor %}
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 20px">
+                    {% for t in customToggles %}
+                      <a class="nav" href="{{ toggleHrefs[t.key] }}" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border: 0; background: transparent; text-align: left; border-bottom: 1px solid #F4F3EF">
+                        <span style="flex: 1">
+                          <span style="display: block; font-size: 13.5px; color: #101014">{{ t.label }}</span>
+                          <span style="display: block; font-size: 12px; color: #79756C; margin-top: 2px">{{ t.note }}</span>
+                        </span>
+                        <span style="width: 36px; height: 20px; flex: 0 0 36px; border-radius: 999px; background: {{ t.trackBg }}; padding: 2px; transition: background 150ms ease-out">
+                          <span style="display: block; width: 16px; height: 16px; border-radius: 999px; background: #FFFFFF; transform: translateX({{ t.knob }}); transition: transform 150ms ease-out"></span>
+                        </span>
+                      </a>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+                  <div>
+                    <div style="font-size: 13.5px; font-weight: 600">Columns</div>
+                    <div style="font-size: 12.5px; color: #57534B; margin-top: 2px">Full detail adds verdict, sub-reason, score, MX and the settling layer.</div>
+                  </div>
+                  <div style="display: flex; gap: 2px; padding: 2px; background: #F4F3EF; border-radius: 8px; flex: 0 0 auto">
+                    {% for c in exCols %}
+                      <a class="nav" href="{{ columnHrefs[c.key] }}" style="display: grid; place-items: center; height: 26px; padding: 0 11px; border: 0; border-radius: 6px; font-size: 12px; background: {{ c.bg }}; color: {{ c.fg }}; box-shadow: {{ c.sh }}">{{ c.label }}</a>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 16px; overflow: hidden">
+                <div style="padding: 16px 20px; border-bottom: 1px solid #E7E4DE; font-size: 14px; font-weight: 600">Finished jobs, re-downloadable from cache</div>
+                {% for j in hJobs %}
+                  <div class="hv-white" style="display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 48px; border-bottom: 1px solid #E7E4DE">
+                    <span style="font-family: Inter, system-ui, sans-serif; font-size: 13px; flex: 1">{{ j.file }}</span>
+                    <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ j.addr }}</span>
+                    <span style="font-size: 12.5px; color: #79756C; width: 150px; text-align: right">{{ j.date }}</span>
+                    <a href="/v1/jobs/{{ j.job_id }}/download?segment=cleaned" style="font-size: 12.5px">Download</a>
+                  </div>
+                {% endfor %}
+                {% if not hJobs %}
+                  <div style="padding: 40px 20px; text-align: center; font-size: 13.5px; color: #79756C">No finished jobs yet.</div>
+                {% endif %}
+              </div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; position: sticky; top: 84px">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">Preview</div>
+              <div style="font-size: 13.5px; font-weight: 600; margin-top: 8px">{{ exPrev.label }}</div>
+              <div style="font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 4px">{{ exPrev.count }}</div>
+              <div style="font-size: 12px; color: #79756C">rows in this export</div>
+              <div style="display: flex; gap: 2px; margin: 16px 0 14px">
+                {% for m in exPrev.mix %}
+                  <div style="height: 8px; border-radius: 999px; background: {{ m.dot }}; width: {{ m.pct }}%; min-width: 2px"></div>
+                {% endfor %}
+              </div>
+              <div style="border-top: 1px solid #E7E4DE; padding-top: 12px; display: flex; flex-direction: column; gap: 7px">
+                {% for r in exPrev.rows %}
+                  <span style="font-family: Inter, system-ui, sans-serif; font-size: 12px; color: #57534B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.email }}</span>
+                {% endfor %}
+                {% if not exPrev.rows %}
+                  <span style="font-size: 12px; color: #79756C">Nothing in this slice yet.</span>
+                {% endif %}
+              </div>
+              <button type="submit" class="hv-blue" style="width: 100%; height: 38px; margin-top: 16px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Export CSV</button>
+            </div>
+          </div>
+          </form>
+        </div>
+{% endblock %}
