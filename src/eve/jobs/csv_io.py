@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import io
+import tempfile
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Optional
@@ -142,8 +143,21 @@ async def iter_rows(
         text.close()
 
 
+#: Bytes an output CSV may hold in memory before it spills to a temp file. The
+#: assembly pass writes three of these at once, so this is the per-writer share
+#: of a bounded budget, not a per-job one.
+SPILL_BYTES = 4 * 1024 * 1024
+
+
 class CsvWriter:
-    """Buffered CSV writer that streams to an ObjectStore key on close."""
+    """CSV writer that spills to disk, then streams to an ObjectStore key on close.
+
+    It used to hold the whole output in a StringIO. That made peak memory scale
+    with *rows* — a 1M-row run spent ~500 MB on three output buffers — which
+    quietly contradicted the pipeline's O(unique) claim, since the assembly pass
+    is otherwise a pure stream. Small jobs still never touch the disk: the spill
+    only happens once a writer passes ``SPILL_BYTES``.
+    """
 
     def __init__(
         self,
@@ -153,11 +167,14 @@ class CsvWriter:
         *,
         delimiter: str = ",",
         line_terminator: str = "\n",
+        spill_bytes: int = SPILL_BYTES,
     ):
         self.store = store
         self.key = key
         self.header = header
         self._buf = io.StringIO()
+        self._spill_bytes = spill_bytes
+        self._sink = None  # opened lazily, on the first spill
         # CSV formatting is not fixed — we only validate the email and echo the
         # rest back. Mirror the source file's delimiter and line ending (csv's
         # own default is CRLF) so the output keeps whatever format was uploaded.
@@ -174,8 +191,31 @@ class CsvWriter:
     def write(self, row: dict[str, object]) -> None:
         self._writer.writerow(row)
         self.rows += 1
+        if self._buf.tell() >= self._spill_bytes:
+            self._spill()
+
+    def _spill(self) -> None:
+        """Move what is buffered onto disk and reset the buffer."""
+        text = self._buf.getvalue()
+        if not text:
+            return
+        if self._sink is None:
+            self._sink = tempfile.TemporaryFile(suffix=".csv")
+        self._sink.write(text.encode("utf-8"))
+        self._buf.seek(0)
+        self._buf.truncate(0)
 
     async def close(self) -> None:
-        data = io.BytesIO(self._buf.getvalue().encode("utf-8"))
-        await self.store.put(self.key, data)
+        if self._sink is None:
+            # Never spilled: the whole file is small, so hand it over directly.
+            await self.store.put(self.key, io.BytesIO(self._buf.getvalue().encode("utf-8")))
+        else:
+            self._spill()
+            self._sink.flush()
+            self._sink.seek(0)
+            try:
+                await self.store.put(self.key, self._sink)
+            finally:
+                self._sink.close()
+                self._sink = None
         self._buf.close()

@@ -139,9 +139,12 @@ footer reads *Local workspace* over the engine host by default. Set
 
 ## Architecture notes
 
-- **Streaming + O(unique) memory.** The pipeline makes two streaming passes and
-  dedupes emails *and* domains, so a 1M-row file (≈50–200k unique domains)
-  resolves each domain's MX and catch-all **once**, cached.
+- **Streaming, and dedupe by email *and* domain.** The pipeline makes two
+  streaming passes, so a 1M-row file (≈50–200k unique domains) resolves each
+  domain's MX and catch-all **once**, cached. Cost is dominated by *unique*
+  addresses rather than rows — `scripts/soak.py` measures it, and the **Soak
+  test** section below reports what it found, including where the earlier
+  "O(unique) memory" claim did not hold.
 - **Pluggable backends, selected by configuration.** Local disk storage,
   in-process KV and a SQLite workspace database are the defaults (zero external
   services). Set `EVE_S3_*`, `EVE_REDIS_URL` or `EVE_WORKSPACE_DB_URL` and the
@@ -172,6 +175,48 @@ footer reads *Local workspace* over the engine host by default. Set
   invalidates every verdict it produces. With no `EVE_SMTP_EGRESS_IPS` the scan
   does not start, because probes then leave on the OS default route — an
   address rotation cannot avoid and this process has no business cooling down.
+
+## Soak test
+
+```bash
+python scripts/soak.py                        # 1,000,000 synthetic rows
+python scripts/soak.py --rows 200000 --unique-ratio 0.5
+```
+
+It generates a synthetic list, runs the real pipeline over it with DNS and SMTP
+off, and reports throughput and peak RSS. Leaving the network out is the point:
+with it on, the number measures someone else's resolver rather than this
+process.
+
+**On this laptop (Python 3.9, 1M rows / 798k unique / 150k domains):** ~318s,
+≈3,100 rows/sec, peak RSS ≈1.4 GB. Budget roughly **1.5 KB of peak memory per
+unique address**, and note that it is unique addresses that cost, not rows —
+the same 1M rows at 100k unique finishes in ~168s using ~360 MB.
+
+It found two things, both fixed:
+
+- **Typo suggestion was 91% of `validate()`.** It compared every address's
+  domain against every known domain with a pure-Python Damerau-Levenshtein, and
+  never cached the answer. Now cached per domain, with candidates ruled out by
+  length before any comparison and the distance abandoned once it exceeds what
+  could be accepted. **678 → 3,335 rows/sec** on a 50k-row file, with every
+  suggestion unchanged (verified against the previous implementation over 30,537
+  domains, including every single-edit mutation of every known domain).
+- **Output CSVs were held in memory.** `CsvWriter` accumulated each whole file
+  in a `StringIO`, three at once, so peak memory scaled with *rows* — which is
+  what the old "O(unique) memory" claim in this README denied. At a fixed 100k
+  unique addresses, going from 200k rows to 1M rows cost 400 MB → 630 MB. They
+  now spill to a temp file past 4 MB each, and that same 1M-row run sits at
+  ~360 MB. Small jobs still never touch the disk.
+
+**One caveat, stated because the measurement says so.** At 798k unique the two
+builds are indistinguishable on peak RSS — three runs each, 1,285/1,413/1,330 MB
+before the spill fix against 1,454/1,434/1,493 MB after. At that size the
+verdict and work-list structures dominate and the allocator's behaviour under
+pressure swamps the difference, so peak RSS stops being able to separate them.
+The row-scaling defect is real and is visible cleanly at 100k unique; the fix is
+kept on that evidence and on the plain fact that buffering a 250 MB output file
+in memory has no defence, not because the headline figure improved.
 
 ## Docker
 
@@ -265,6 +310,7 @@ src/eve/
   storage.py   ObjectStore (local + S3)   kv.py  KV (memory + redis)
   api/         FastAPI: /health /v1/verify /v1/files /v1/jobs
 tests/         per-layer + pipeline e2e + SMTP integration (aiosmtpd) + SQL store
+scripts/       mock_mailserver.py (SMTP demo) · soak.py (throughput + memory)
 ```
 
 ## Config (env, prefix `EVE_`)

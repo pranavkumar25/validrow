@@ -129,3 +129,43 @@ async def test_pipeline_smtp_demo_mode_dns_off():
 
     assert job.counts.valid == 1
     assert job.counts.invalid == 1
+
+
+async def test_csv_writer_spills_instead_of_holding_the_output(tmp_path):
+    """Output memory must not scale with rows — the assembly pass is a stream."""
+    from eve.jobs.csv_io import CsvWriter
+
+    store = get_object_store()
+    w = CsvWriter(store, "spilled.csv", ["a", "b"], spill_bytes=1024)
+    for i in range(5000):
+        w.write({"a": f"value-{i}", "b": "x" * 50})
+
+    assert w._sink is not None, "never spilled: the whole file was held in memory"
+    assert w._buf.tell() < 1024, "buffer kept growing past the spill threshold"
+
+    await w.close()
+    fh = await store.open_read("spilled.csv")
+    try:
+        rows = parse_csv(fh.read())
+    finally:
+        fh.close()
+
+    assert len(rows) == 5000
+    assert rows[0] == {"a": "value-0", "b": "x" * 50}
+    assert rows[-1] == {"a": "value-4999", "b": "x" * 50}
+
+
+async def test_a_small_csv_never_touches_the_disk():
+    from eve.jobs.csv_io import CsvWriter
+
+    store = get_object_store()
+    w = CsvWriter(store, "small.csv", ["a"])
+    w.write({"a": "1"})
+    assert w._sink is None
+    await w.close()
+
+    fh = await store.open_read("small.csv")
+    try:
+        assert parse_csv(fh.read()) == [{"a": "1"}]
+    finally:
+        fh.close()
