@@ -105,6 +105,15 @@ class Settings(BaseSettings):
     # certain the cookie never crosses plain HTTP.
     session_cookie_secure: bool = True
 
+    # --- Landing page offer ----------------------------------------------
+    # The only two numbers on the public page that are a promise rather than a
+    # measurement, so they live in configuration where they can be changed
+    # without a deploy of new copy. Nothing meters usage per account yet
+    # (see PRA-71), so the monthly figure is a stated intent, not something the
+    # engine currently enforces.
+    free_monthly_addresses: int = 10_000
+    founding_accounts: int = 100
+
     # --- API hardening ---------------------------------------------------
     max_upload_bytes: int = 100 * 1024 * 1024  # 100 MB
     cors_origins: str = ""  # comma-separated; empty = same-origin only

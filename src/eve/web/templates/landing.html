@@ -1,253 +1,399 @@
 {#
-  The landing page at "/". Standalone rather than extending base.html: the shell
-  is a sidebar reporting on a workspace, and a stranger has none.
+  The public front page at "/".
 
-  The copy is held to the same rule as the app — claim only what the engine can
-  prove. That is why the pitch is "we never report a mailbox as valid without
-  probing it" rather than an accuracy percentage nobody can audit.
+  Standalone rather than extending base.html: that shell is a sidebar reporting
+  on a workspace, and a stranger has none. It is also the only page in the app
+  with a stylesheet of its own rather than inline styles, because it is the only
+  page whose markup was written here rather than ported from the design file.
+
+  Every number and every claim comes from eve.web.landing, which reads them from
+  the engine. Nothing on this page is typed twice.
 #}<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Validrow — email verification that refuses to guess</title>
-<meta name="description" content="Upload a list, get a cleaned sheet back. Seven layers, from syntax to the SMTP mailbox probe — and an honest Unknown wherever the engine could not prove an answer.">
+<title>Validrow · Email verification that proves the mailbox</title>
+<meta name="description" content="Seven layers, from syntax to an SMTP mailbox probe run on our own infrastructure. Upload a CSV, get every column back with a verdict on every row. Free for the first {{ foundingAccounts }} accounts.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>✓</text></svg>">
 <style>
 @font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('/static/InterVariable.woff2') format('woff2'); }
+
+:root {
+{%- for name, value in palette.items() %}
+  --{{ name }}: {{ value }};
+{%- endfor %}
+}
+
 * { box-sizing: border-box; }
-body { margin: 0; background: #FFFFFF; color: #101014; font-family: Inter, system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.5; }
-a { color: #35ABFF; text-decoration: none; }
-a:hover { color: #1C93EA; }
-button { font: inherit; cursor: pointer; }
-:focus-visible { outline: 2px solid rgba(53,171,255,0.4); outline-offset: 2px; }
-h1, h2, h3 { margin: 0; letter-spacing: -0.02em; font-weight: 600; }
-p { margin: 0; }
-.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-.btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 20px; background: #35ABFF; color: #FFFFFF; border: 0; border-radius: 9px; font-size: 14.5px; font-weight: 500; }
-.btn-primary:hover { background: #1C93EA; color: #FFFFFF; }
-.btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 42px; padding: 0 18px; background: #FFFFFF; color: #101014; border: 1px solid #D8D4CC; border-radius: 9px; font-size: 14.5px; font-weight: 500; }
-.btn-ghost:hover { background: #F4F3EF; color: #101014; }
-.card { background: #FFFFFF; border: 1px solid #E7E4DE; border-radius: 14px; }
-.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; }
-.lede { font-size: 16px; line-height: 26px; color: #57534B; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.layer { display: flex; align-items: flex-start; gap: 14px; padding: 15px 0; border-bottom: 1px solid #F4F3EF; }
+body {
+  margin: 0;
+  background: var(--white);
+  color: var(--ink);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+a { color: var(--blue); text-decoration: none; transition: color 150ms ease-out; }
+a:hover { color: var(--blue-dark); }
+h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.03em; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+:focus-visible { outline: 2px solid rgba(53,171,255,0.4); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
+
+/* Every rhythm class below sits on the same element as .wrap, so each one
+   sets padding-block only. A padding shorthand there would reset the side
+   padding to zero and let the text run into the edge of the window. */
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+.band { background: var(--canvas); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.section { padding-block: 104px; }
+.narrow { max-width: 660px; }
+
+.display { font-size: clamp(40px, 5.4vw, 62px); line-height: 1.04; letter-spacing: -0.038em; }
+.title { font-size: clamp(28px, 3.4vw, 38px); line-height: 1.14; }
+.lede { font-size: 17px; line-height: 28px; color: var(--ink-3); }
+.body { font-size: 14px; line-height: 23px; color: var(--ink-3); }
+.small { font-size: 12.5px; line-height: 20px; color: var(--muted); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.code { margin: 0; padding: 20px 22px; font-size: 12.5px; line-height: 22px; color: var(--ink-2); white-space: pre; overflow-x: auto; }
+
+.eyebrow { display: flex; align-items: center; gap: 12px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.eyebrow .idx { color: var(--muted-2); }
+.eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--line); max-width: 120px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 46px; padding: 0 22px; border: 0; border-radius: 10px; font-size: 14.5px; font-weight: 500; transition: background 150ms ease-out, border-color 150ms ease-out; }
+.btn-primary { background: var(--blue); color: var(--white); }
+.btn-primary:hover { background: var(--blue-dark); color: var(--white); }
+.btn-ghost { background: var(--white); color: var(--ink); border: 1px solid var(--line-2); }
+.btn-ghost:hover { background: var(--surface); color: var(--ink); }
+.btn-sm { height: 36px; padding: 0 16px; font-size: 13.5px; border-radius: 9px; }
+
+.card { background: var(--white); border: 1px solid var(--line); border-radius: 14px; }
+.grid { display: grid; gap: 20px; }
+/* A grid item defaults to min-width:auto, so a child that cannot shrink (the
+   .code block below, which is white-space:pre) widens its column and pushes the
+   whole page past the viewport. On a phone that reads as clipped text rather
+   than as a scrollbar, so it is fixed at the item rather than masked with
+   overflow:hidden on the body. */
+.grid > *, .hero > * { min-width: 0; }
+.code { max-width: 100%; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+.pill { display: inline-flex; align-items: center; gap: 7px; height: 23px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.dot { width: 6px; height: 6px; border-radius: 999px; flex: 0 0 6px; }
+
+/* Header */
+.bar { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,0.82); backdrop-filter: saturate(140%) blur(10px); border-bottom: 1px solid var(--line); }
+.bar-inner { height: 68px; display: flex; align-items: center; gap: 28px; }
+.brand { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 16.5px; font-weight: 600; letter-spacing: -0.02em; }
+.brand:hover { color: var(--ink); }
+.mark { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, var(--blue) 14%, #6FC5FF 86%); color: var(--white); display: grid; place-items: center; font-size: 14px; font-weight: 600; }
+.bar-nav { display: flex; gap: 26px; }
+.bar-nav a { font-size: 14px; color: var(--ink-3); }
+.bar-nav a:hover { color: var(--ink); }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: 1.06fr 0.94fr; gap: 72px; align-items: center; padding-block: 96px 92px; }
+.tag { display: inline-flex; align-items: center; gap: 9px; height: 30px; padding: 0 13px; border-radius: 999px; background: var(--blue-wash); border: 1px solid var(--blue-line); color: var(--blue-dark); font-size: 12.5px; font-weight: 500; }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+.result { padding: 22px; border-radius: 18px; box-shadow: 0 28px 64px -36px rgba(15,13,8,0.42), 0 1px 2px rgba(15,13,8,0.04); }
+.meter { display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-top: 16px; gap: 2px; }
+.legend { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--surface); font-size: 13px; }
+.legend:last-child { border-bottom: 0; padding-bottom: 2px; }
+
+/* Layers */
+.layer { display: grid; grid-template-columns: 34px 1fr; gap: 18px; padding: 20px 0; border-bottom: 1px solid var(--line); align-items: start; }
 .layer:last-child { border-bottom: 0; }
-.num { flex: 0 0 26px; height: 26px; border-radius: 8px; background: #F4F3EF; color: #79756C; display: grid; place-items: center; font-size: 12.5px; font-weight: 600; }
-@media (max-width: 860px) {
-  .grid-3 { grid-template-columns: 1fr; }
-  .hero-grid { grid-template-columns: 1fr !important; }
-  .nav-links { display: none !important; }
+.layer .n { font-size: 12.5px; font-weight: 600; color: var(--muted-2); padding-top: 2px; }
+.layer .name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.layer .detail { max-width: 620px; margin-top: 4px; }
+
+/* Trace */
+.trace { padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.trace:last-child { border-bottom: 0; }
+.trace-top { display: flex; align-items: center; gap: 14px; }
+.trace-top .addr { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail { display: flex; gap: 3px; margin-top: 14px; }
+.rail span { height: 4px; flex: 1; border-radius: 999px; }
+
+/* Benefits */
+.benefit { padding: 26px 24px 28px; }
+.benefit .icon { width: 34px; height: 34px; border-radius: 10px; background: var(--surface); display: grid; place-items: center; }
+.benefit h3 { font-size: 15px; line-height: 22px; letter-spacing: -0.015em; margin-top: 18px; }
+.benefit p { margin-top: 8px; }
+
+/* Offer */
+.offer { text-align: center; padding-block: 108px 112px; }
+.counter { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; font-size: 12.5px; color: var(--muted); }
+.counter .dot { background: var(--blue); }
+
+/* Footer */
+.foot { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding-block: 32px; }
+.foot a { font-size: 13px; color: var(--ink-3); }
+.foot a:hover { color: var(--ink); }
+
+@media (max-width: 600px) {
+  /* The header is one flex row that does not wrap, and its content (brand,
+     Sign in, and the CTA) is the widest fixed thing on the page, so it is what
+     would set a minimum width on a narrow phone. Tightening it here is
+     precautionary rather than a fix for an observed break: headless Chrome
+     clamps its window to about 500px, so nothing below that could be rendered
+     to check. Verified correct at 500px and up; a real phone viewport still
+     wants a look. */
+  .bar-inner { gap: 10px; height: 60px; }
+  .bar-inner .btn-sm { padding: 0 12px; font-size: 13px; }
+  .wrap { padding: 0 18px; }
+}
+@media (max-width: 940px) {
+  .section { padding-block: 72px; }
+  .hero { grid-template-columns: 1fr; gap: 48px; padding-block: 64px; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .bar-nav { display: none; }
+  .wrap { padding: 0 22px; }
+  .offer { padding-block: 76px; }
+}
+@media (min-width: 941px) and (max-width: 1120px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 </head>
 <body>
 
-<header style="border-bottom: 1px solid #E7E4DE; position: sticky; top: 0; background: rgba(255,255,255,0.88); backdrop-filter: blur(8px); z-index: 10">
-  <div class="wrap" style="height: 64px; display: flex; align-items: center; gap: 16px">
-    <a href="/" style="display: flex; align-items: center; gap: 9px; color: #101014">
-      <span style="width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #35ABFF 14%, #6FC5FF 86%); color: #FFFFFF; display: grid; place-items: center; font-size: 15px; font-weight: 600">✓</span>
-      <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em">Validrow</span>
-    </a>
-    <nav class="nav-links" style="display: flex; gap: 22px; margin-left: 20px">
-      <a href="#how" style="font-size: 14px; color: #57534B">How it works</a>
-      <a href="#verdicts" style="font-size: 14px; color: #57534B">Verdicts</a>
-      <a href="#api" style="font-size: 14px; color: #57534B">API</a>
+<header class="bar">
+  <div class="wrap bar-inner">
+    <a class="brand" href="/"><span class="mark">✓</span>Validrow</a>
+    <nav class="bar-nav" aria-label="Sections">
+      <a href="#why">Why it is different</a>
+      <a href="#layers">The layers</a>
+      <a href="#verdicts">Verdicts</a>
+      <a href="#free">Free tier</a>
     </nav>
-    <div style="flex: 1"></div>
-    <a href="/login" style="font-size: 14px; font-weight: 500; color: #101014">Sign in</a>
-    <a class="btn-primary" href="/signup" style="height: 36px; padding: 0 15px; font-size: 14px">Get started</a>
+    <span style="flex: 1"></span>
+    <a href="/login" style="font-size: 14px; font-weight: 500; color: var(--ink)">Sign in</a>
+    <a class="btn btn-primary btn-sm" href="{{ offer.ctaHref }}">{{ offer.ctaLabel }}</a>
   </div>
 </header>
 
 <main>
-  <!-- Hero -->
-  <section class="wrap" style="padding: 76px 24px 64px">
-    <div class="hero-grid" style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: center">
-      <div>
-        <div style="display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 11px; background: #EAF6FF; border: 1px solid #D8ECFF; border-radius: 999px; font-size: 12.5px; color: #1C93EA; font-weight: 500">
-          <span style="width: 6px; height: 6px; border-radius: 999px; background: #35ABFF"></span>
-          Free while in beta
-        </div>
-        <h1 style="margin-top: 18px; font-size: 46px; line-height: 54px">Clean your list without<br>guessing at the answer.</h1>
-        <p class="lede" style="margin-top: 18px; max-width: 520px">
-          Upload a CSV. Validrow runs every address through seven layers — syntax, normalisation,
-          typo correction, MX, classification, and an in-house SMTP mailbox probe — and hands back
-          a cleaned sheet with every original column intact.
-        </p>
-        <p class="lede" style="margin-top: 14px; max-width: 520px">
-          Where it cannot prove an answer, it says <strong style="color: #101014; font-weight: 600">Unknown</strong>.
-          That is the whole point.
-        </p>
-        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px">
-          <a class="btn-primary" href="/signup">Create a free account</a>
-          <a class="btn-ghost" href="#how">See the seven layers</a>
-        </div>
-        <p style="margin-top: 14px; font-size: 12.5px; color: #79756C">No card. Your list never leaves your workspace.</p>
-      </div>
 
-      <!-- A verdict card, using the app's own palette so the promise matches the product -->
-      <div class="card" style="padding: 18px; box-shadow: 0 18px 48px -22px rgba(15,13,8,0.25)">
-        <div style="display: flex; align-items: center; justify-content: space-between">
-          <span class="eyebrow">Result</span>
-          <span class="mono" style="font-size: 12px; color: #79756C">4,812 rows</span>
-        </div>
-        <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-top: 14px">
-          <span style="width: 61%; background: #12B76A"></span>
-          <span style="width: 13%; background: #F79009"></span>
-          <span style="width: 15%; background: #A8A29E"></span>
-          <span style="width: 11%; background: #F04438"></span>
-        </div>
-        <div style="margin-top: 16px; display: flex; flex-direction: column">
-          {% for row in sample %}
-            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; {% if not loop.last %}border-bottom: 1px solid #F4F3EF;{% endif %}">
-              <span style="width: 7px; height: 7px; flex: 0 0 7px; border-radius: 999px; background: {{ row.dot }}"></span>
-              <span class="mono" style="flex: 1; min-width: 0; font-size: 12.5px; color: #101014; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ row.email }}</span>
-              <span style="flex: 0 0 auto; padding: 2px 9px; border-radius: 999px; background: {{ row.wash }}; color: {{ row.ink }}; font-size: 11.5px; font-weight: 500">{{ row.label }}</span>
-            </div>
-          {% endfor %}
-        </div>
-        <div style="margin-top: 12px; padding: 11px 12px; background: #F4F3EF; border-radius: 9px; font-size: 12px; line-height: 18px; color: #57534B">
-          Every verdict carries the layer that settled it, so you can see <em>why</em> — not just what.
-        </div>
+  <section class="wrap hero">
+    <div>
+      <span class="tag"><span class="dot" style="background: var(--blue)"></span>{{ offer.badge }}</span>
+      <h1 class="display" style="margin-top: 22px">{{ layerWord }} layers between your list and a bounce.</h1>
+      <p class="lede" style="margin-top: 22px; max-width: 540px">
+        Validrow checks the spelling, the domain, the reputation of the provider and
+        the mailbox itself, then hands your file back with every column where you
+        left it and a verdict on every row.
+      </p>
+      <p class="lede" style="margin-top: 16px; max-width: 540px">
+        Where the mailbox cannot be proven, the report says
+        <strong style="color: var(--ink); font-weight: 600">Unknown</strong> and names
+        the layer that stopped. Nothing is rounded up.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="{{ offer.ctaHref }}">{{ offer.ctaLabel }}</a>
+        <a class="btn btn-ghost" href="#layers">See how it verifies</a>
       </div>
-    </div>
-  </section>
-
-  <!-- The honesty section: the actual differentiator -->
-  <section style="border-top: 1px solid #E7E4DE; border-bottom: 1px solid #E7E4DE; background: #FAF9F7">
-    <div class="wrap" style="padding: 56px 24px">
-      <div style="max-width: 720px">
-        <div class="eyebrow">Why Unknown is a feature</div>
-        <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Most verifiers round Unknown up to Valid.</h2>
-        <p class="lede" style="margin-top: 16px">
-          It flatters the report and it costs you the sender reputation. Gmail, Outlook and Yahoo
-          accept almost any recipient at the door and bounce it later, so a naive probe reads
-          "accepted" and calls it deliverable. Validrow knows which providers do this and refuses
-          to report a confident Valid for them.
-        </p>
-        <p class="lede" style="margin-top: 14px">
-          The same rule runs everywhere. A catch-all domain accepts every address, so its 250 proves
-          nothing and the address comes back <strong style="color: #101014; font-weight: 600">Risky</strong>,
-          not Valid. A greylisted address is deferred, not answered, so it is retried on a schedule
-          rather than written off. A DNS timeout is credited to DNS, never to a probe that never ran.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Seven layers -->
-  <section id="how" class="wrap" style="padding: 64px 24px">
-    <div style="max-width: 640px">
-      <div class="eyebrow">How it works</div>
-      <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Seven layers, cheapest first.</h2>
-      <p class="lede" style="margin-top: 14px">
-        Each layer can settle an address on its own. Most never reach the expensive ones, which is
-        why a million-row list finishes without a million SMTP connections.
+      <p class="small" style="margin-top: 16px">
+        {{ monthlyFree }} addresses a month, free for the first {{ foundingAccounts }} accounts.
+        Your list stays in your workspace.
       </p>
     </div>
-    <div class="card" style="margin-top: 28px; padding: 6px 20px">
-      {% for layer in layers %}
-        <div class="layer">
-          <span class="num">{{ loop.index }}</span>
-          <div style="flex: 1; min-width: 0">
-            <div style="font-size: 14px; font-weight: 500">{{ layer.name }}</div>
-            <div style="font-size: 13px; line-height: 20px; color: #57534B; margin-top: 2px">{{ layer.detail }}</div>
+
+    <div class="card result">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <span class="eyebrow" style="gap: 0">Example result</span>
+        <span class="small">{{ mix.total }} rows</span>
+      </div>
+      <div class="meter">
+        {% for row in mix.rows %}<span style="width: {{ row.width }}%; background: {{ row.dot }}"></span>{% endfor %}
+      </div>
+      <div style="margin-top: 12px">
+        {% for row in mix.rows %}
+          <div class="legend">
+            <span class="dot" style="background: {{ row.dot }}"></span>
+            <span style="flex: 1">{{ row.label }}</span>
+            <span>{{ row.count }}</span>
+            <span style="width: 52px; text-align: right; color: var(--muted)">{{ row.share }}</span>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
+      <p class="small" style="margin-top: 16px; padding: 12px 13px; background: var(--surface); border-radius: 10px; color: var(--ink-3)">
+        Unknown is its own column, not a rounding error hidden inside the valid count.
+      </p>
     </div>
   </section>
 
-  <!-- Verdicts -->
-  <section id="verdicts" style="border-top: 1px solid #E7E4DE; background: #FAF9F7">
-    <div class="wrap" style="padding: 64px 24px">
-      <div style="max-width: 640px">
-        <div class="eyebrow">Verdicts</div>
-        <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Four answers, and each one means something.</h2>
+  <section id="why" class="band">
+    <div class="wrap section">
+      <div class="narrow">
+        <div class="eyebrow"><span class="idx">01</span>Why the depth matters</div>
+        <h2 class="title" style="margin-top: 18px">Most verifiers round Unknown up to Valid.</h2>
+        <p class="lede" style="margin-top: 18px">
+          It flatters the report and you pay for it in sender reputation. Validrow
+          takes the slower path on every address and tells you exactly where it got to.
+        </p>
       </div>
-      <div class="grid-3" style="margin-top: 28px; grid-template-columns: repeat(4, 1fr)">
-        {% for v in verdicts %}
-          <div class="card" style="padding: 18px">
-            <span style="display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px; border-radius: 999px; background: {{ v.wash }}; color: {{ v.ink }}; font-size: 12.5px; font-weight: 500">
-              <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ v.dot }}"></span>{{ v.label }}
+      <div class="grid grid-3" style="margin-top: 44px">
+        {% for b in benefits %}
+          <div class="card benefit">
+            <span class="icon">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="{{ b.icon }}" stroke="{{ palette['ink-3'] }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
             </span>
-            <p style="margin-top: 12px; font-size: 13px; line-height: 20px; color: #57534B">{{ v.detail }}</p>
+            <h3>{{ b.title }}</h3>
+            <p class="body">{{ b.detail }}</p>
           </div>
         {% endfor %}
       </div>
     </div>
   </section>
 
-  <!-- What you get back -->
-  <section class="wrap" style="padding: 64px 24px">
-    <div style="max-width: 640px">
-      <div class="eyebrow">What you get back</div>
-      <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Three sheets, and your columns untouched.</h2>
+  <section id="layers" class="wrap section">
+    <div class="narrow">
+      <div class="eyebrow"><span class="idx">02</span>How it works</div>
+      <h2 class="title" style="margin-top: 18px">{{ layerWord }} layers, cheapest first.</h2>
+      <p class="lede" style="margin-top: 18px">
+        Each layer can settle an address on its own, and an address that is settled
+        early never reaches the expensive ones. That is why a million rows finish
+        without a million SMTP connections.
+      </p>
     </div>
-    <div class="grid-3" style="margin-top: 28px">
-      {% for out in outputs %}
-        <div class="card" style="padding: 20px">
-          <div class="mono" style="font-size: 13px; font-weight: 600">{{ out.name }}</div>
-          <p style="margin-top: 8px; font-size: 13px; line-height: 20px; color: #57534B">{{ out.detail }}</p>
+    <div class="card" style="margin-top: 40px; padding: 4px 28px">
+      {% for layer in layers %}
+        <div class="layer">
+          <span class="n">{{ layer.n }}</span>
+          <div>
+            <div class="name">{{ layer.name }}</div>
+            <p class="body detail">{{ layer.detail }}</p>
+          </div>
         </div>
       {% endfor %}
     </div>
-    <p style="margin-top: 18px; font-size: 13px; line-height: 21px; color: #79756C; max-width: 720px">
-      The cleaned sheet keeps every column you uploaded and appends the verdict, the sub-reason, a
-      0–100 score, the normalised address, any suggested correction, and the duplicate it collapsed
-      into. Your delimiter and line endings come back exactly as they went in.
-    </p>
   </section>
 
-  <!-- API -->
-  <section id="api" style="border-top: 1px solid #E7E4DE; background: #FAF9F7">
-    <div class="wrap" style="padding: 64px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center" class="hero-grid">
-      <div>
-        <div class="eyebrow">API</div>
-        <h2 style="margin-top: 12px; font-size: 30px; line-height: 38px">Same engine, one header.</h2>
-        <p class="lede" style="margin-top: 14px">
-          Everything the app does is available over HTTP: verify one address in real time, or push a
-          file through the bulk pipeline and poll it. Create a key in Settings; it is shown once.
+  <section class="band">
+    <div class="wrap section">
+      <div class="narrow">
+        <div class="eyebrow"><span class="idx">03</span>The trace</div>
+        <h2 class="title" style="margin-top: 18px">Every verdict names the layer that settled it.</h2>
+        <p class="lede" style="margin-top: 18px">
+          Open any address and you see how far down the pipeline it travelled and what
+          stopped it there. A verdict you can question is a verdict you can trust.
         </p>
-        <a class="btn-ghost" href="/docs" style="margin-top: 20px">Read the API docs</a>
       </div>
-      <div class="card mono" style="padding: 16px 18px; font-size: 12.5px; line-height: 21px; color: #44413B; overflow-x: auto">
-<span style="color: #79756C">$</span> curl -s {{ engineUrl }}/v1/verify \
-  <span style="color: #79756C">-H</span> <span style="color: #027A48">"X-API-Key: eve_…"</span> \
-  <span style="color: #79756C">-d</span> <span style="color: #027A48">'{"email":"john@gmial.com"}'</span>
+      <div class="card" style="margin-top: 40px">
+        {% for row in sample %}
+          <div class="trace">
+            <div class="trace-top">
+              <span class="mono addr">{{ row.email }}</span>
+              <span class="pill" style="background: {{ row.wash }}; color: {{ row.ink }}">
+                <span class="dot" style="background: {{ row.dot }}"></span>{{ row.label }}
+              </span>
+            </div>
+            <div class="rail" role="presentation">
+              {% for colour in row.rail %}<span style="background: {{ colour }}"></span>{% endfor %}
+            </div>
+            <p class="small" style="margin-top: 10px">{{ row.settledLabel }}. {{ row.note }}</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section id="verdicts" class="wrap section">
+    <div class="narrow">
+      <div class="eyebrow"><span class="idx">04</span>Verdicts</div>
+      <h2 class="title" style="margin-top: 18px">Four answers, and each one earns its name.</h2>
+    </div>
+    <div class="grid grid-4" style="margin-top: 40px">
+      {% for v in verdicts %}
+        <div class="card" style="padding: 22px">
+          <span class="pill" style="background: {{ v.wash }}; color: {{ v.ink }}">
+            <span class="dot" style="background: {{ v.dot }}"></span>{{ v.label }}
+          </span>
+          <p class="body" style="margin-top: 14px">{{ v.detail }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap section">
+      <div class="narrow">
+        <div class="eyebrow"><span class="idx">05</span>What comes back</div>
+        <h2 class="title" style="margin-top: 18px">Three sheets, and your columns untouched.</h2>
+      </div>
+      <div class="grid grid-3" style="margin-top: 40px">
+        {% for out in outputs %}
+          <div class="card" style="padding: 22px">
+            <div class="mono" style="font-size: 13px; font-weight: 600">{{ out.name }}</div>
+            <p class="body" style="margin-top: 10px">{{ out.detail }}</p>
+          </div>
+        {% endfor %}
+      </div>
+      <p class="small" style="margin-top: 22px; max-width: 700px">
+        Validrow only needs to know which column holds the email. Everything else in
+        the file is carried through untouched, down to the delimiter and the line
+        endings you uploaded with.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <div class="grid grid-2" style="gap: 56px; align-items: center">
+      <div>
+        <div class="eyebrow"><span class="idx">06</span>API</div>
+        <h2 class="title" style="margin-top: 18px">The same engine, behind one header.</h2>
+        <p class="lede" style="margin-top: 18px">
+          Verify a single address while a form is still open, or push a file through
+          the bulk pipeline and poll it. Create a key in Settings; it is shown once.
+        </p>
+        <a class="btn btn-ghost" href="/docs" style="margin-top: 26px">Read the API docs</a>
+      </div>
+      <pre class="card mono code">
+<span style="color: var(--muted)">$</span> curl -s {{ engineUrl }}/v1/verify \
+  <span style="color: var(--muted)">-H</span> <span style="color: #027A48">"X-API-Key: eve_..."</span> \
+  <span style="color: var(--muted)">-d</span> <span style="color: #027A48">'{"email":"john@gmial.com"}'</span>
 
 {
-  <span style="color: #1C93EA">"status"</span>: <span style="color: #027A48">"unknown"</span>,
-  <span style="color: #1C93EA">"suggested_correction"</span>: <span style="color: #027A48">"john@gmail.com"</span>,
-  <span style="color: #1C93EA">"score"</span>: <span style="color: #B54708">60</span>
-}
-      </div>
+  <span style="color: var(--blue-dark)">"status"</span>: <span style="color: #027A48">"undeliverable"</span>,
+  <span style="color: var(--blue-dark)">"sub_status"</span>: <span style="color: #027A48">"no_mx"</span>,
+  <span style="color: var(--blue-dark)">"suggested_correction"</span>: <span style="color: #027A48">"john@gmail.com"</span>,
+  <span style="color: var(--blue-dark)">"settled_at_layer"</span>: <span style="color: #B54708">4</span>
+}</pre>
     </div>
   </section>
 
-  <!-- CTA -->
-  <section class="wrap" style="padding: 76px 24px; text-align: center">
-    <h2 style="font-size: 32px; line-height: 40px">Start with a list you already have.</h2>
-    <p class="lede" style="margin: 14px auto 0; max-width: 480px">
-      Free while in beta. Upload a CSV and see the seven-layer trace for every address in it.
-    </p>
-    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 26px">
-      <a class="btn-primary" href="/signup">Create a free account</a>
-      <a class="btn-ghost" href="/login">Sign in</a>
+  <section id="free" class="band">
+    <div class="wrap offer">
+      <div class="eyebrow" style="justify-content: center"><span class="idx">07</span>Pricing</div>
+      <h2 class="title" style="margin-top: 18px">{{ offer.headline }}</h2>
+      <p class="lede" style="margin: 18px auto 0; max-width: 520px">{{ offer.body }}</p>
+      {% if offer.counter %}
+        <div class="counter"><span class="dot"></span>{{ offer.counter }}</div>
+      {% endif %}
+      <div class="cta-row" style="justify-content: center">
+        <a class="btn btn-primary" href="{{ offer.ctaHref }}">{{ offer.ctaLabel }}</a>
+        <a class="btn btn-ghost" href="/login">Sign in</a>
+      </div>
+      {% if offer.note %}<p class="small" style="margin-top: 16px">{{ offer.note }}</p>{% endif %}
     </div>
   </section>
+
 </main>
 
-<footer style="border-top: 1px solid #E7E4DE">
-  <div class="wrap" style="padding: 26px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
-    <span style="font-size: 13px; color: #79756C">Validrow — in-house email verification.</span>
-    <div style="flex: 1"></div>
-    <a href="/login" style="font-size: 13px; color: #57534B">Sign in</a>
-    <a href="/signup" style="font-size: 13px; color: #57534B">Create account</a>
-    <a href="/docs" style="font-size: 13px; color: #57534B">API</a>
+<footer>
+  <div class="wrap foot">
+    <a class="brand" href="/" style="font-size: 15px"><span class="mark" style="width: 22px; height: 22px; font-size: 12px; border-radius: 7px">✓</span>Validrow</a>
+    <span class="small">Email verification, run on our own infrastructure.</span>
+    <span style="flex: 1"></span>
+    <a href="/login">Sign in</a>
+    <a href="{{ offer.ctaHref }}">{{ offer.ctaLabel }}</a>
+    <a href="/docs">API</a>
   </div>
 </footer>
 

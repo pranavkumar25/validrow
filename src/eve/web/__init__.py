@@ -385,72 +385,21 @@ async def delete_job_action(job_id: str, confirm: str = Form("")) -> RedirectRes
 
 
 # --- Landing --------------------------------------------------------------- #
-#: The seven layers, in the order the engine runs them. Kept beside the copy it
-#: feeds rather than in the template, so the marketing claim and the pipeline
-#: cannot drift apart silently.
-_LAYERS = [
-    ("Syntax", "RFC 5322. Malformed addresses never reach a network call."),
-    ("Normalise + dedupe", "Gmail dots and +tags collapse to one key, so a list is charged and "
-                           "reported once per person rather than once per spelling."),
-    ("Typo correction", "gmial.com becomes a suggestion, not a deletion. The row keeps its lead."),
-    ("DNS / MX", "Resolved once per domain and cached, so a million rows are not a million lookups."),
-    ("Classification", "Disposable domains, role accounts and free providers, from lists you can audit."),
-    ("SMTP mailbox probe", "EHLO, MAIL FROM, RCPT, QUIT — never DATA. We never send mail to your list."),
-    ("Catch-all detection", "One probe per domain. If it accepts everything, its acceptance proves "
-                            "nothing and the address is Risky, not Valid."),
-]
-
-_VERDICT_COPY = {
-    "deliverable": "The mailbox was probed and it exists. Send with confidence.",
-    "risky": "Real, but not a clean send: a role account, or a catch-all domain "
-             "whose acceptance proves nothing.",
-    "unknown": "The engine could not prove an answer — greylisting, a timeout, or a "
-               "provider that lies to probes. Never rounded up.",
-    "undeliverable": "Invalid syntax, no MX, a disposable domain, or a mailbox that does not exist.",
-}
-
-_OUTPUTS = [
-    ("cleaned.csv", "Every row you uploaded, every column preserved, with the verdict columns appended."),
-    ("valid.csv", "The rows worth sending to."),
-    ("removed.csv", "What was taken out, and why — so a removal is auditable rather than a disappearance."),
-]
-
-_SAMPLE = [
-    ("jane.doe@acme.io", "deliverable"),
-    ("sales@acme.io", "risky"),
-    ("john@gmial.com", "undeliverable"),
-    ("hello@bigco.com", "unknown"),
-]
-
-
 @public.get("/", response_class=HTMLResponse)
-async def landing(request: Request) -> Response:
+async def landing_page(request: Request) -> Response:
     """The public front page.
 
-    Signed-in visitors are sent straight to the app: showing the pitch to
-    someone who already bought it wastes their click.
+    Signed-in visitors go straight to the app: showing the pitch to someone who
+    already bought it wastes their click.
     """
     from eve.api.security import current_user
-    from eve.web import format as F
+    from eve.web.landing import context
 
     if current_user(request) is not None:
         return RedirectResponse(APP_PREFIX + "/", status_code=303)
 
-    return templates.TemplateResponse(
-        request,
-        "landing.html",
-        {
-            "layers": [{"name": n, "detail": d} for n, d in _LAYERS],
-            "verdicts": [
-                {**F.VERDICT_STYLE[k], "detail": _VERDICT_COPY[k]} for k in F.ORDER
-            ],
-            "outputs": [{"name": n, "detail": d} for n, d in _OUTPUTS],
-            "sample": [
-                {"email": e, **F.VERDICT_STYLE[v]} for e, v in _SAMPLE
-            ],
-            "engineUrl": str(request.base_url).rstrip("/"),
-        },
-    )
+    ctx = await context(str(request.base_url).rstrip("/"))
+    return templates.TemplateResponse(request, "landing.html", ctx)
 
 
 # --- Sign in / sign up ----------------------------------------------------- #

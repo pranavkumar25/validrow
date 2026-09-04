@@ -230,14 +230,48 @@ def test_static_assets_are_self_hosted(client):
 # --- Landing page and the /app split --------------------------------------- #
 
 
+def _create_account(client, email: str) -> None:
+    """One real account, created the way a visitor creates one.
+
+    Through the app rather than through the store: the store the app resolved at
+    startup is bound to that boot's settings and to the TestClient's event loop,
+    so a second one opened here would write to a different file and the page
+    would go on reporting zero accounts.
+
+    The cookie is dropped afterwards, because the visitor these tests are about
+    is a stranger, and a signed-in one is redirected to the app.
+    """
+    r = client.post(
+        "/signup",
+        data={"email": email, "password": "a-long-enough-password", "name": "Seed"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303, f"signup returned {r.status_code}"
+    client.cookies.clear()
+
+
 def test_the_root_serves_a_landing_page_not_the_app(client):
     """A stranger arrives at "/". The app lives under /app."""
     r = client.get("/")
     assert r.status_code == 200
-    assert "Clean your list without" in r.text
+    assert "Seven layers between your list and a bounce." in r.text
     # It is the pitch, not the shell: no sidebar, no workspace.
     assert "Local workspace" not in r.text
     assert 'href="/signup"' in r.text and 'href="/login"' in r.text
+
+
+def test_the_landing_page_leaves_no_placeholder_unresolved(client):
+    """Its context is large; a missing key renders as blank, not as an error."""
+    html = client.get("/").text
+    assert not LEFTOVERS.search(html)
+    for marker in ("--blue:", "4,812 rows", "Free for the first 100 accounts."):
+        assert marker in html, f"landing page lost {marker!r}"
+    # Percentages that do not sum to 100 are the first sign of a careless tool,
+    # and this page is selling care with numbers.
+    import re
+
+    shares = [int(x) for x in re.findall(r">(\d+)%<", html)]
+    assert shares and sum(shares) == 100, f"verdict mix sums to {sum(shares)}"
 
 
 def test_the_landing_page_matches_the_products_own_palette(client):
@@ -249,13 +283,79 @@ def test_the_landing_page_matches_the_products_own_palette(client):
         style = F.VERDICT_STYLE[key]
         assert style["label"] in html
         assert style["dot"] in html, f"{key} dot colour missing"
+    # The palette is emitted from format.py, not retyped in the stylesheet.
+    assert f"--blue: {F.BLUE}" in html
+    assert f"--ink: {F.INK}" in html
 
 
 def test_the_landing_page_names_the_seven_layers_in_order(client):
+    from eve.web.landing import LAYERS
+
     html = client.get("/").text
-    for n in range(1, 8):
-        assert f">{n}</span>" in html, f"layer {n} missing"
+    for i, (name, _detail) in enumerate(LAYERS, start=1):
+        assert f'<span class="n">{i}</span>' in html, f"layer {i} missing"
+        assert name in html, f"layer {name!r} missing"
     assert "never DATA" in html  # the probe promise, stated to strangers too
+    # The count is spelled out in two headlines. Both read it from the list.
+    assert "Seven layers, cheapest first." in html
+
+
+def test_the_landing_page_quotes_the_disposable_list_it_ships(client):
+    """The count in the copy is the file's, not a number typed once and left."""
+    from eve.layers.classify import list_sizes
+
+    assert f"{list_sizes()['disposable']:,} disposable domains" in client.get("/").text
+
+
+def test_the_landing_page_states_the_configured_offer(client):
+    """The two numbers of the free tier come from settings, not from the copy."""
+    from eve.config import get_settings
+
+    s = get_settings()
+    html = client.get("/").text
+    assert f"{s.free_monthly_addresses:,} addresses a month" in html
+    assert f"first {s.founding_accounts:,} accounts" in html
+
+
+def test_the_landing_page_counts_the_founding_places_that_are_left(client):
+    """The counter is accounts, which the auth store knows exactly.
+
+    A number on a pitch page that nothing derives is the kind of claim this
+    product exists to argue against, so it is asserted against a real count.
+    """
+    from eve.config import Settings, set_settings
+
+    set_settings(Settings(open_signup=True))
+    # Nobody has signed up: there is nothing to count down, so it states the offer.
+    assert "Free for the first 100 accounts" in client.get("/").text
+
+    _create_account(client, "jane@acme.io")
+    html = client.get("/").text
+    assert "99 of 100 free accounts left" in html
+    assert "99 of 100 places open" in html
+
+
+def test_a_closed_engine_makes_no_offer_it_cannot_honour(client):
+    """Self-hosted, registration closed, one account already created.
+
+    Counting down free places to a visitor who cannot register would be a lie
+    the signup route would then have to refuse.
+    """
+    from eve.config import Settings, set_settings
+
+    # Created while the engine still allows a first account, which is the
+    # bootstrap every self-hosted install goes through.
+    _create_account(client, "owner@acme.io")
+    set_settings(Settings(open_signup=False))
+    html = client.get("/").text
+    assert "This engine is not open for registration." in html
+    assert "free accounts left" not in html
+
+
+def test_the_landing_copy_carries_no_em_dashes(client):
+    """A house rule for the public page, and one a later edit could forget."""
+    html = client.get("/").text
+    assert "\u2014" not in html and "\u2013" not in html
 
 
 def test_every_app_screen_lives_under_the_prefix(client):

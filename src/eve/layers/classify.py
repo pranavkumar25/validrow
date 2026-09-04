@@ -24,6 +24,16 @@ def _load_set(filename: str) -> set[str]:
     }
 
 
+def list_sizes() -> dict[str, int]:
+    """How many entries each classification list carries.
+
+    The landing page quotes the disposable count. Reading it from the file this
+    layer loads is what stops the number on the page and the list in the engine
+    from drifting apart after a `make disposable`.
+    """
+    return {name: len(_load_set(f"{name}.txt")) for name in ("disposable", "roles", "free")}
+
+
 @dataclass
 class ClassifyResult:
     is_disposable: bool
