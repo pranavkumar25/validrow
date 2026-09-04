@@ -477,3 +477,53 @@ def test_the_docs_page_needs_no_network(client):
     html = client.get("/docs").text
     external = re.findall(r'(?:src|href)="(https?://[^"]+)"', html)
     assert not external, f"/docs reaches out to {external}"
+
+
+def test_every_endpoint_carries_prose(client):
+    """A reference where half the endpoints say nothing is half a reference.
+
+    Asserted on the OpenAPI document, so the fix is a docstring on the handler
+    rather than a paragraph typed into the page.
+    """
+    from eve.api.main import app
+
+    spec = app.openapi()
+    bare = [
+        f"{m.upper()} {path}"
+        for path, item in spec["paths"].items()
+        for m, op in item.items()
+        if m in ("get", "post", "put", "patch", "delete")
+        and not (op.get("description") or "").strip()
+    ]
+    assert not bare, f"no description on: {bare}"
+
+
+def test_each_endpoint_shows_three_languages(client):
+    """cURL, Python and JavaScript, all generated from the one body."""
+    html = client.get("/docs").text
+    for label in ("cURL", "Python", "JavaScript"):
+        assert html.count(f">{label}</label>") >= 12, f"{label} missing from some blocks"
+    # Shaped like code somebody could run, not like a schema dump. The samples
+    # are syntax-highlighted, so they are read as text rather than as markup:
+    # `import` arrives wrapped in the span that colours it.
+    import re
+
+    code = re.sub(r"<[^>]+>", "", html)
+    assert "import requests" in code and "r.raise_for_status()" in code
+    assert "await fetch(" in code and "JSON.stringify(" in code
+    assert "new FormData()" in code  # the upload endpoint, which takes no JSON
+
+
+def test_the_docs_page_has_no_duplicate_element_ids(client):
+    """The quickstart renders the same operation the reference does.
+
+    Sharing ids there is not cosmetic: two radio groups with one name are one
+    group, so the first tab block loses its checked input and shows no code at
+    all, and a label points at the other block's radio.
+    """
+    import re
+    from collections import Counter
+
+    ids = re.findall(r'\sid="([^"]+)"', client.get("/docs").text)
+    dupes = [i for i, n in Counter(ids).items() if n > 1]
+    assert not dupes, f"duplicate ids on /docs: {dupes}"

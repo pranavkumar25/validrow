@@ -17,6 +17,15 @@ router = APIRouter(prefix="/v1/jobs", tags=["jobs"])
 
 @router.post("", response_model=JobResponse, dependencies=[Depends(RateLimit())])
 async def create_job(req: CreateJobRequest) -> JobResponse:
+    """Start a run against an uploaded file.
+
+    Answers immediately with a queued job rather than holding the connection
+    open for the length of the run: a million rows is not a request. Poll the
+    job, or give it a webhook and be told once.
+
+    Returns 404 if the file_id is not in this workspace, and 422 if list_type is
+    not one this engine knows.
+    """
     store = get_object_store()
     job_store = get_job_store()
 
@@ -58,6 +67,12 @@ async def list_jobs() -> list[JobResponse]:
 
 @router.get("/{job_id}", response_model=JobResponse)
 async def get_job(job_id: str) -> JobResponse:
+    """One run, with its live progress.
+
+    Cheap enough to poll: `processed`, `total` and `phase` come from the job
+    record rather than from the rows, so a progress bar drawn from them is
+    truthful without costing a scan.
+    """
     job = await get_job_store().get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="job not found")
@@ -97,6 +112,15 @@ async def download_job(
     job_id: str,
     segment: str = Query("cleaned", pattern="^(cleaned|valid|removed)$"),
 ) -> StreamingResponse:
+    """Stream one of the three segments a finished run produces, as CSV.
+
+    `cleaned` is your file back: every row, every column, with the verdict
+    appended. `valid` is the rows worth sending to. `removed` is what came out,
+    with the layer and the reason each row came out.
+
+    Returns 409 while the run is still working, because a segment that is not
+    written yet is not an empty one.
+    """
     job = await get_job_store().get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="job not found")

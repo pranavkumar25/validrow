@@ -793,3 +793,74 @@ new tests cover the page, and they assert against the OpenAPI document rather
 than a list typed in the test: every route in the spec appears, every public
 field carries a description, no type placeholder leaks into a sample, the upload
 cap is the configured one, and the page loads nothing over the network.
+
+---
+
+## Phase 8 — the reference, brought up to the landing page
+
+Phase 7 replaced Swagger with a page of the right shape. This pass closes the
+distance between that page and the two beside it.
+
+### The gap was content before it was design
+
+Five of the twelve endpoints had no handler docstring, so five endpoint blocks
+on the reference were a route, a title and two tables with no sentence between
+them. That is not a layout problem and no amount of layout fixes it. `create_job`,
+`get_job`, `download_job`, `list_addresses` and `health` are documented at the
+handler, which is where the page reads from and where `/openapi.json` reads from
+too. A test now fails if an endpoint reaches the page with nothing to say.
+
+### Three languages, no script
+
+Every block carries cURL, Python (`requests`) and JavaScript (`fetch`), all
+generated from the same body the schema produced, so the three cannot come to
+disagree about what an endpoint takes. Python needed its own literal printer:
+`json.dumps` prints `true`, and a Python sample containing `true` is a sample
+that does not run.
+
+The tabs are **CSS only**, and a real radio group rather than a div pretending
+to be one, so they are reachable and arrow-key navigable with no script at all.
+The selectors are positional (`input:nth-of-type(n):checked ~ .panes >
+.pane:nth-child(n)`), so one rule serves every block instead of a rule per
+generated id.
+
+**The bug that pattern hides.** The quickstart renders the same verify operation
+the reference renders further down, and both blocks were emitting the same radio
+`name` and the same ids. Two radio groups sharing a name are *one* group, so only
+one input across the whole document could be checked: the first block was left
+with none, showed no pane, and its labels resolved to the other block's inputs.
+The macro takes a scope now, and a test asserts the page has no duplicate element
+id, because this class of bug is invisible in markup and obvious only on screen.
+
+### The intro had no artifact
+
+The landing page opens on the returned file; the reference opened on a headline
+and a definition list. It now opens on **the first call**: three steps beside the
+request and the answer that perform them, in a raised panel. It is the same
+operation object the reference renders below, so the quickstart cannot show a
+call the reference contradicts. The response is capped at 268px and scrolls: the
+whole `VerifyResponse` is taller than three steps, and a quickstart that runs to
+a screen and a half is not quick.
+
+The essentials became a hairline-divided panel and the four verdicts became the
+landing page's own split panel, with the landing page's own blurbs, so a verdict
+is described the same way to someone buying the product and to someone
+integrating it. Section eyebrows are numbered (`01 / VERIFY`) as they are there.
+
+### Two behaviours, added as enhancement rather than requirement
+
+The contents rail marks where you are, and each code block gains a copy button.
+Both come from one inline script with no dependency and no fetch. The copy button
+is *created* by that script rather than shipped in the markup, so it can never
+sit there looking pressable in a browser that will not honour it; without the
+script the rail simply stays unmarked and every sample is still selectable by
+hand. The landing page stays at zero script; this page earns the exception by
+being a page people work from rather than read once.
+
+### Verification
+
+Rendered at 500, 1000 and 1500px. The tab CSS was proved rather than assumed: the
+template was temporarily switched to check the second radio, rendered, confirmed
+to show the Python pane with the correct label active, and switched back. Three
+new tests: every endpoint carries prose, every block carries three runnable-shaped
+samples, and no element id appears twice.

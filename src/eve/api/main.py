@@ -114,6 +114,12 @@ mount_web(app)
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])
 async def health() -> HealthResponse:
+    """Whether this engine is serving, and which layers it has switched on.
+
+    Reachable without credentials, because a load balancer cannot log in. The
+    two flags matter to a caller: with DNS off nothing past layer 3 can run, and
+    with the probe off a deliverable-looking address still comes back Unknown.
+    """
     s = get_settings()
     return HealthResponse(
         status="ok",

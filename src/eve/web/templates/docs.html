@@ -137,6 +137,8 @@ table { font-variant-numeric: tabular-nums; }
 .toc-group > .cap { color: var(--muted); }
 .toc a { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: baseline; gap: 9px; padding: 5px 8px; margin: 1px -8px 0; border-radius: var(--r-sm); font-size: var(--t-small); color: var(--ink-3); transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
 .toc a:hover { color: var(--ink); background: var(--wash); }
+.toc a[data-here] { color: var(--ink); background: var(--blue-wash); }
+.toc a[data-here] .p { font-weight: 600; }
 .toc .verb { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; }
 .toc .p { font-size: 12.5px; line-height: 1.45; word-break: break-word; }
 
@@ -158,14 +160,52 @@ table { font-variant-numeric: tabular-nums; }
 .group-head { max-width: 820px; }
 
 /* Key/value rows: the four things you need before the first call. */
-.defs { margin-top: 34px; border-top: 1px solid var(--hair); }
-.defs > div { display: grid; gap: 4px 32px; padding: 18px 0; border-bottom: 1px solid var(--hair-soft); }
-@media (min-width: 720px) { .defs > div { grid-template-columns: 168px minmax(0, 1fr); } }
-.defs dt, .defs .term { font-size: var(--t-small); font-weight: 600; letter-spacing: -0.01em; }
+.defs > div { display: grid; gap: 4px 32px; padding: 18px 22px; border-bottom: 1px solid var(--hair-soft); }
+.defs > div:last-child { border-bottom: 0; }
+@media (min-width: 720px) { .defs > div { grid-template-columns: 164px minmax(0, 1fr); } }
+.defs .term { font-size: var(--t-small); font-weight: 600; letter-spacing: -0.01em; }
+
+/* The first call: three steps beside the call that performs them. The page
+   opens on something that runs, which is what a reference is for. */
+.start { display: grid; margin-top: 40px; border: 1px solid var(--hair); border-radius: var(--r-lg); overflow: hidden; background: var(--paper); box-shadow: 0 1px 2px rgba(10,10,10,0.04), 0 26px 52px -34px rgba(10,10,10,0.26); }
+@media (min-width: 1000px) { .start { grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr); } }
+.start-copy { padding: 26px 24px 28px; }
+.step { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 3px 14px; padding: 14px 0; border-top: 1px solid var(--hair-soft); }
+.step:first-of-type { border-top: 0; padding-top: 16px; }
+.step .n { grid-row: span 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--blue-wash); color: var(--blue-dark); font-size: var(--t-caption); font-weight: 700; font-variant-numeric: tabular-nums; }
+.step b { font-size: 14px; font-weight: 600; letter-spacing: -0.015em; }
+.start-code { background: var(--night); border-top: 1px solid var(--hair); display: grid; }
+@media (min-width: 1000px) { .start-code { border-top: 0; border-left: 1px solid var(--hair); } }
+.start-code .night { border-radius: 0; }
+.start-code .night + .night { border-top: 1px solid var(--night-line); }
+/* The full VerifyResponse is taller than three steps, and a quickstart that
+   runs to a screen and a half is no longer quick. It scrolls here; the whole
+   thing is laid out field by field in the reference below. */
+.start-code .night + .night pre { max-height: 268px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #3A3A42 transparent; }
+.start-code .night + .night pre::-webkit-scrollbar { width: 9px; }
+.start-code .night + .night pre::-webkit-scrollbar-thumb { background: #3A3A42; border-radius: 999px; border: 2px solid var(--night); }
 
 .panel { border: 1px solid var(--hair); border-radius: var(--r-lg); background: var(--paper); overflow: hidden; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .chip { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px 0 9px; border-radius: 999px; font-size: var(--t-caption); font-weight: 600; }
+.split { display: grid; }
+.split > * { min-width: 0; }
+.split > * + * { border-top: 1px solid var(--hair); }
+@media (min-width: 700px) {
+  .split-4 { grid-template-columns: repeat(2, 1fr); }
+  .split-4 > * + * { border-top: 0; }
+  .split-4 > *:nth-child(n+3) { border-top: 1px solid var(--hair); }
+  .split-4 > *:nth-child(2n) { border-left: 1px solid var(--hair); }
+}
+@media (min-width: 1240px) {
+  .split-4 { grid-template-columns: repeat(4, 1fr); }
+  .split-4 > *:nth-child(n+3) { border-top: 0; }
+  .split-4 > * + * { border-left: 1px solid var(--hair); }
+}
+.cell { padding: 22px 20px 24px; }
+
+/* The section index, as the landing page sets it. */
+.cap .idx { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.cap .idx::after { content: " / "; color: var(--muted-2); }
 .dot { width: 6px; height: 6px; border-radius: 999px; flex: 0 0 6px; }
 
 table.grid { width: 100%; border-collapse: collapse; text-align: left; }
@@ -195,10 +235,36 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
 .enum { display: inline-flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .enum span { padding: 1px 6px; border-radius: 4px; background: var(--wash); font-size: 11.5px; color: var(--ink-3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
+/* --- Language tabs ------------------------------------------------------ */
+/* CSS only, and a real radio group rather than a div pretending to be one, so
+   the tabs are reachable and arrow-key navigable without a line of script. The
+   selectors are positional, so one rule serves every block on the page instead
+   of a rule per generated id. */
+.tabs { position: relative; }
+.tabs > input { position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; }
+.tab-bar { display: flex; align-items: center; gap: 2px; padding: 7px 8px; border-bottom: 1px solid var(--night-line); }
+.tab-bar label { padding: 5px 10px; border-radius: var(--r-sm); font-size: var(--t-caption); font-weight: 600; color: var(--night-muted); cursor: pointer; transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
+.tab-bar label:hover { color: var(--night-ink); background: rgba(255,255,255,0.06); }
+.panes > .pane { display: none; }
+.tabs > input:nth-of-type(1):checked ~ .panes > .pane:nth-child(1),
+.tabs > input:nth-of-type(2):checked ~ .panes > .pane:nth-child(2),
+.tabs > input:nth-of-type(3):checked ~ .panes > .pane:nth-child(3) { display: block; }
+.tabs > input:nth-of-type(1):checked ~ .tab-bar label:nth-of-type(1),
+.tabs > input:nth-of-type(2):checked ~ .tab-bar label:nth-of-type(2),
+.tabs > input:nth-of-type(3):checked ~ .tab-bar label:nth-of-type(3) { color: var(--night-ink); background: rgba(255,255,255,0.09); }
+.tabs > input:focus-visible ~ .tab-bar label { outline: 2px solid rgba(110,110,255,0.75); outline-offset: 2px; }
+.tab-bar .lang { margin-left: auto; padding-right: 4px; font-size: var(--t-micro); color: #5E5B57; }
+
+/* Progressive: the button is added by script, so it never appears unusable. */
+.copy { position: absolute; top: 8px; right: 8px; z-index: 2; display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: rgba(255,255,255,0.09); color: var(--night-muted); font: inherit; font-size: var(--t-micro); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; opacity: 0; transition: opacity var(--fast) var(--ease), color var(--fast) var(--ease), background var(--fast) var(--ease); }
+.night:hover .copy, .copy:focus-visible { opacity: 1; }
+.copy:hover { background: rgba(255,255,255,0.16); color: var(--night-ink); }
+.copy[data-done] { color: #7EE0AC; opacity: 1; }
+
 /* --- The dark column: the call, and the answer -------------------------- */
 .code-col { position: sticky; top: calc(var(--bar-h) + 20px); display: grid; gap: 12px; }
 @media (max-width: 1179px) { .code-col { position: static; } }
-.night { background: var(--night); border-radius: var(--r-lg); overflow: hidden; }
+.night { position: relative; background: var(--night); border-radius: var(--r-lg); overflow: hidden; }
 .night-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--night-line); }
 .night-head .cap { color: var(--night-muted); }
 .night-head .status { margin-left: auto; font-size: var(--t-micro); font-weight: 600; letter-spacing: 0.06em; color: #7EE0AC; font-variant-numeric: tabular-nums; }
@@ -229,6 +295,38 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
 #}
 {% macro route(path) -%}
 {% for part in path.split('/') if part %}<span style="color: var(--muted-2)">/</span>{% if part.startswith('{') %}<span class="var">{{ part }}</span>{% else %}{{ part }}{% endif %}{% endfor %}
+{%- endmacro %}
+
+{#
+  One tabbed block, used by the quickstart and by every endpoint. The radios
+  carry the op's id so two blocks on the page never share a group.
+#}
+{% macro samples(op, scope='ref') -%}
+{% set group = scope ~ '-' ~ op.id %}
+<div class="night tabs">
+  {% for s in op.samples %}<input type="radio" name="lang-{{ group }}" id="{{ group }}-{{ s.lang }}"{% if loop.first %} checked{% endif %} aria-label="{{ s.label }}">{% endfor %}
+  <div class="tab-bar">
+    {% for s in op.samples %}<label for="{{ group }}-{{ s.lang }}">{{ s.label }}</label>{% endfor %}
+    <span class="cap lang">Request</span>
+  </div>
+  <div class="panes">
+    {% for s in op.samples %}<pre class="pane mono{% if s.lang == 'sh' %} wrapped{% endif %}">{{ s.code }}</pre>{% endfor %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro answer(op) -%}
+{% if op.responseExample %}
+  <div class="night">
+    <div class="night-head"><span class="cap">Response</span><span class="status">{{ op.okCode }}</span></div>
+    <pre class="mono">{{ op.responseExample }}</pre>
+  </div>
+{% else %}
+  <div class="night">
+    <div class="night-head"><span class="cap">Response</span><span class="status">{{ op.okCode }}</span></div>
+    <p class="note">A streamed body, not JSON. The request above writes it to a file.</p>
+  </div>
+{% endif %}
 {%- endmacro %}
 
 {% macro fieldrows(rows) -%}
@@ -309,7 +407,27 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
           <a href="/openapi.json" class="strong" style="text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--blue-line)">read as JSON</a>.
         </p>
 
-        <div class="defs">
+        {% if quickstart %}
+          <div class="start">
+            <div class="start-copy">
+              <p class="cap" style="color: var(--muted)">Your first call</p>
+              {% for step in firstCall %}
+                <div class="step">
+                  <span class="n">{{ loop.index }}</span>
+                  <b>{{ step[0] }}</b>
+                  <p class="small" style="grid-column: 2">{{ step[1] }}</p>
+                </div>
+              {% endfor %}
+              <a href="#{{ quickstart.id }}" class="small" style="display: inline-block; margin-top: 16px; color: var(--blue-dark); font-weight: 600">Full reference for this endpoint</a>
+            </div>
+            <div class="start-code">
+              {{ samples(quickstart, 'start') }}
+              {{ answer(quickstart) }}
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="panel defs" style="margin-top: 40px">
           {% for item in essentials %}
             <div>
               <span class="term">{{ item.term }}</span>
@@ -318,15 +436,18 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
           {% endfor %}
         </div>
 
-        <p class="cap" style="margin-top: 40px; color: var(--muted)">The four verdicts</p>
+        <p class="cap" style="margin-top: 44px; color: var(--muted)">The four verdicts</p>
         <p class="body" style="margin-top: 12px; max-width: 66ch">
           Every answer this API gives rolls up to one of these. Unknown is a real
           answer and is never rounded up to Deliverable, so a client that treats
           it as a third state rather than a failure gets the most out of the engine.
         </p>
-        <div class="chips">
+        <div class="panel split split-4" style="margin-top: 20px">
           {% for v in verdicts %}
-            <span class="chip mono" style="background: {{ v.wash }}; color: {{ v.ink }}"><span class="dot" style="background: {{ v.dot }}"></span>{{ v.key }}</span>
+            <div class="cell">
+              <span class="chip mono" style="background: {{ v.wash }}; color: {{ v.ink }}"><span class="dot" style="background: {{ v.dot }}"></span>{{ v.key }}</span>
+              <p class="body" style="margin-top: 12px; font-size: 13.5px">{{ v.detail }}</p>
+            </div>
           {% endfor %}
         </div>
       </section>
@@ -334,7 +455,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
       {% for g in groups %}
         <section id="{{ g.id }}" class="sec">
           <div class="group-head">
-            <p class="cap" style="color: var(--muted)">{{ g.tag }}</p>
+            <p class="cap"><span class="idx">{{ g.index }}</span>{{ g.tag }}</p>
             <h2 class="h2" style="margin-top: 14px; max-width: 20ch">{{ g.title }}</h2>
             {% if g.blurb %}<p class="lede" style="margin-top: 18px">{{ g.blurb }}</p>{% endif %}
           </div>
@@ -395,27 +516,8 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
                 </div>
 
                 <div class="code-col">
-                  <div class="night">
-                    <div class="night-head">
-                      <span class="cap">Request</span>
-                      <span class="mono" style="font-size: var(--t-micro); color: var(--night-muted)">shell</span>
-                    </div>
-                    <pre class="mono wrapped">{{ op.curl }}</pre>
-                  </div>
-                  {% if op.responseExample %}
-                    <div class="night">
-                      <div class="night-head">
-                        <span class="cap">Response</span>
-                        <span class="status">{{ op.okCode }}</span>
-                      </div>
-                      <pre class="mono">{{ op.responseExample }}</pre>
-                    </div>
-                  {% else %}
-                    <div class="night">
-                      <div class="night-head"><span class="cap">Response</span><span class="status">{{ op.okCode }}</span></div>
-                      <p class="note">A streamed body, not JSON. The example above writes it to a file.</p>
-                    </div>
-                  {% endif %}
+                  {{ samples(op) }}
+                  {{ answer(op) }}
                 </div>
 
               </div>
@@ -425,7 +527,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
       {% endfor %}
 
       <section id="errors" class="sec">
-        <p class="cap" style="color: var(--muted)">Errors</p>
+        <p class="cap"><span class="idx">{{ errorIndex }}</span>Errors</p>
         <h2 class="h2" style="margin-top: 14px; max-width: 20ch">Every failure names itself.</h2>
         <p class="lede" style="margin-top: 18px">
           A failed call returns the status below and a JSON body with a
@@ -459,6 +561,75 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
     </main>
   </div>
 </div>
+
+
+{#
+  Two behaviours a reference wants and static HTML cannot give it: the contents
+  rail marking where you are, and a way to take a sample without selecting it by
+  hand. Both are progressive. The copy button is created by this script rather
+  than shipped in the markup, so it can never sit there looking pressable in a
+  browser that will not honour it, and the rail simply stays unmarked. Nothing
+  here is fetched; the file loads with no network exactly as the page does.
+#}
+<script>
+(function () {
+  var rail = document.querySelector(".toc");
+  if (rail && "IntersectionObserver" in window) {
+    var links = {};
+    rail.querySelectorAll("a[href^='#']").forEach(function (a) {
+      links[a.getAttribute("href").slice(1)] = a;
+    });
+    var seen = new Set();
+    var mark = function () {
+      var current = null;
+      /* The topmost thing still on screen is the one you are reading. */
+      Object.keys(links).forEach(function (id) {
+        if (seen.has(id) && !current) current = id;
+      });
+      Object.keys(links).forEach(function (id) {
+        links[id].toggleAttribute("data-here", id === current);
+      });
+    };
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) seen.add(e.target.id); else seen.delete(e.target.id);
+      });
+      mark();
+    }, { rootMargin: "-72px 0px -60% 0px" });
+    Object.keys(links).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+  }
+
+  if (!navigator.clipboard) return;
+  document.querySelectorAll(".night").forEach(function (block) {
+    var pre = block.querySelector("pre");
+    if (!pre) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy";
+    btn.textContent = "Copy";
+    btn.addEventListener("click", function () {
+      /* Whichever language tab is showing is the one that gets copied. */
+      var shown = block.querySelector(".panes > .pane:not([hidden])");
+      var visible = Array.prototype.find.call(
+        block.querySelectorAll("pre"),
+        function (el) { return el.offsetParent !== null; }
+      );
+      navigator.clipboard.writeText((visible || shown || pre).innerText).then(function () {
+        btn.textContent = "Copied";
+        btn.setAttribute("data-done", "");
+        setTimeout(function () {
+          btn.textContent = "Copy";
+          btn.removeAttribute("data-done");
+        }, 1600);
+      });
+    });
+    block.appendChild(btn);
+  });
+})();
+</script>
 
 </body>
 </html>

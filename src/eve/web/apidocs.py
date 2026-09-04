@@ -113,6 +113,31 @@ def _highlight_json(text: str) -> Markup:
     return Markup(_JSON_TOKEN.sub(paint, escaped))
 
 
+# The Python and JavaScript samples are generated as plain text and coloured
+# here. One pass with an ordered alternation, so a keyword inside a string is
+# painted as the string it is in: the first branch to match a position wins, and
+# strings are tried before keywords.
+_CODE_TOKEN = re.compile(
+    r"(?P<comment>\#[^\n]*|//[^\n]*)"
+    r"|(?P<str>\"[^\"\n]*\"|'[^'\n]*')"
+    r"|(?P<kw>\b(?:import|from|const|let|await|async|return|def|with|as|new|open|print|None|True|False|null|true|false)\b)"
+    r"|(?P<num>\b\d+(?:\.\d+)?\b)"
+)
+
+_CODE_TONE = {"comment": "c-dim", "str": "c-str", "kw": "c-bool", "num": "c-num"}
+
+
+def _highlight_code(text: str) -> Markup:
+    """Colour a generated Python or JavaScript sample."""
+    escaped = html.escape(text, quote=False)
+
+    def paint(m: re.Match[str]) -> str:
+        kind = m.lastgroup or ""
+        return f'<span class="{_CODE_TONE[kind]}">{m.group(kind)}</span>'
+
+    return Markup(_CODE_TOKEN.sub(paint, escaped))
+
+
 # --- Reading the OpenAPI document ------------------------------------------ #
 def _deref(spec: dict, node: Any) -> Any:
     """Follow a ``$ref`` into ``components``, once.
@@ -365,6 +390,77 @@ def _curl(base: str, method: str, path: str, body: Any, media: str) -> Markup:
     return Markup(" \\\n".join(lines))
 
 
+def _python(base: str, method: str, path: str, body: Any, media: str) -> Markup:
+    """The same call in Python, with `requests`.
+
+    Generated from the same body the curl sample uses, so the two cannot come to
+    disagree about what the endpoint takes.
+    """
+    lines = ["import os", "import requests", "", 'KEY = os.environ["VALIDROW_KEY"]', ""]
+    args = [f'    "{base}{path}",', '    headers={"X-API-Key": KEY},']
+    if media == "multipart/form-data":
+        args.append('    files={"file": open("list.csv", "rb")},')
+    elif body:
+        args.append(f"    json={_py_literal(body)},")
+    lines.append(f"r = requests.{method}(")
+    lines.extend(args)
+    lines.append(")")
+    lines.append("r.raise_for_status()")
+    lines.append("print(r.json())" if method != "delete" else "print(r.status_code)")
+    return _highlight_code("\n".join(lines))
+
+
+def _py_literal(value: Any, indent: int = 4) -> str:
+    """A dict as Python source. json.dumps would print `true`, not `True`."""
+    pad, inner = " " * indent, " " * (indent + 4)
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        body = "".join(f"{inner}{json.dumps(k)}: {_py_literal(v, indent + 4)},\n" for k, v in value.items())
+        return "{\n" + body + pad + "}"
+    if isinstance(value, list):
+        return "[" + ", ".join(_py_literal(v, indent) for v in value) + "]"
+    if value is True:
+        return "True"
+    if value is False:
+        return "False"
+    if value is None:
+        return "None"
+    return json.dumps(value)
+
+
+def _javascript(base: str, method: str, path: str, body: Any, media: str) -> Markup:
+    """The same call from a browser or a worker, with fetch."""
+    headers = ['    "X-API-Key": key,']
+    lines = ['const key = process.env.VALIDROW_KEY', "", f'const res = await fetch("{base}{path}", {{']
+    lines.append(f'  method: "{method.upper()}",')
+    if media == "multipart/form-data":
+        lines = [
+            'const key = process.env.VALIDROW_KEY',
+            "",
+            "const form = new FormData()",
+            'form.append("file", file, "list.csv")',
+            "",
+            f'const res = await fetch("{base}{path}", {{',
+            f'  method: "{method.upper()}",',
+            '  headers: { "X-API-Key": key },',
+            "  body: form,",
+        ]
+    else:
+        if body:
+            headers.append('    "Content-Type": "application/json",')
+        lines.append("  headers: {\n" + "\n".join(headers) + "\n  },")
+        if body:
+            rendered = json.dumps(body, indent=2).replace("\n", "\n  ")
+            lines.append(f"  body: JSON.stringify({rendered}),")
+    lines.append("})")
+    lines.append("")
+    lines.append(
+        "const data = await res.json()" if method != "delete" else "console.log(res.status)"
+    )
+    return _highlight_code("\n".join(lines))
+
+
 # --- The view-model -------------------------------------------------------- #
 def _operations(spec: dict, base: str) -> list[dict[str, Any]]:
     ops = []
@@ -423,7 +519,14 @@ def _operations(spec: dict, base: str) -> list[dict[str, Any]]:
                         and _deref(spec, ok_schema).get("type") == "array"
                     ),
                     "okIsStream": ok_schema is None,
-                    "curl": _curl(base, method, path, body_example, media),
+                    "samples": [
+                        {"lang": "sh", "label": "cURL",
+                         "code": _curl(base, method, path, body_example, media)},
+                        {"lang": "py", "label": "Python",
+                         "code": _python(base, method, path, body_example, media)},
+                        {"lang": "js", "label": "JavaScript",
+                         "code": _javascript(base, method, path, body_example, media)},
+                    ],
                     "responseExample": (
                         _highlight_json(json.dumps(ok_example, indent=2))
                         if ok_example is not None
@@ -438,11 +541,12 @@ def _groups(ops: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen = list(dict.fromkeys(o["tag"] for o in ops))
     order = [t for t in TAG_ORDER if t in seen] + [t for t in seen if t not in TAG_ORDER]
     groups = []
-    for tag in order:
+    for n, tag in enumerate(order, start=1):
         title, blurb = TAG_COPY.get(tag, (tag.title(), ""))
         groups.append(
             {
                 "tag": tag,
+                "index": f"{n:02d}",
                 "id": f"tag-{tag}",
                 "title": title,
                 "blurb": blurb,
@@ -506,12 +610,30 @@ def _errors() -> list[dict[str, str]]:
     ]
 
 
+#: The three steps of a first call. The page shows the request and the answer
+#: for real underneath, so these say what to do rather than repeat the code.
+FIRST_CALL = [
+    ("Create a key", "In Settings. It is shown once and stored hashed, so keep it "
+                     "where your other secrets live."),
+    ("Send one address", "A POST with a JSON body of one field. Nothing else is "
+                         "required, and every option defaults to what this engine "
+                         "is configured to do."),
+    ("Read status, then sub_status", "The verdict, and the reason under it. "
+                                     "settled_at_layer tells you which of the seven "
+                                     "layers produced the answer."),
+]
+
+
 def context(spec: dict, base: str) -> dict[str, Any]:
     """Everything ``docs.html`` renders."""
-    from eve.web.landing import PALETTE
+    from eve.web.landing import PALETTE, VERDICT_COPY
 
     ops = _operations(spec, base)
     info = spec.get("info") or {}
+    # The flagship call, lifted out to open the page with something that works.
+    # It is the same operation object the reference renders below, so the
+    # quickstart cannot show a call the reference contradicts.
+    first = next((o for o in ops if o["path"].endswith("/verify")), ops[0] if ops else None)
     return {
         "palette": PALETTE,
         "version": info.get("version", ""),
@@ -520,7 +642,12 @@ def context(spec: dict, base: str) -> dict[str, Any]:
         "opCount": len(ops),
         "essentials": _essentials(base),
         "errors": [{"code": c, "detail": d} for c, d in _errors()],
+        "errorIndex": f"{len(_groups(ops)) + 1:02d}",
+        "firstCall": FIRST_CALL,
+        "quickstart": first,
+        # The blurbs are the landing page's, so a verdict is described the same
+        # way to someone buying the product and to someone integrating it.
         "verdicts": [
-            {**F.VERDICT_STYLE[k], "key": k} for k in F.ORDER
+            {**F.VERDICT_STYLE[k], "key": k, "detail": VERDICT_COPY[k]} for k in F.ORDER
         ],
     }

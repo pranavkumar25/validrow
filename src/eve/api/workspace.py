@@ -70,6 +70,12 @@ async def list_addresses(
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=500),
 ) -> AddressPage:
+    """Addresses across every run in this workspace, de-duplicated.
+
+    One row per mailbox rather than one per appearance, so an address that
+    arrived in three lists is counted once and carries the most recent verdict
+    it was given.
+    """
     rows, total = await get_address_store().query(
         verdicts=verdict or None,
         search=q,
