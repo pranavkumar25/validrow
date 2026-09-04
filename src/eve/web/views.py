@@ -917,7 +917,11 @@ def _steps(current: int) -> list[dict[str, Any]]:
                 "bd": F.GREEN if done else (F.BLUE if cur else F.LINE),
                 "fg": F.WHITE if done else (F.BLUE if cur else F.MUTED_2),
                 "lfg": F.INK if cur else (F.INK_3 if done else F.MUTED),
-                "ring": "0 0 0 3px rgba(53,171,255,0.16)" if cur else "none",
+                "ring": "0 0 0 3px rgba(0,0,255,0.14)" if cur else "none",
+                # A phone has no room for four labels beside four circles, so
+                # only the step you are on names itself. The template hides the
+                # rest below 720px rather than letting the row push the page.
+                "cur": cur,
             }
         )
     return out

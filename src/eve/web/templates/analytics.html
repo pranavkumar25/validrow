@@ -4,7 +4,7 @@
         <div>
           <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">Analytics</div>
           <div style="font-size: 14px; color: #57534B; margin-top: 2px">Deliverability across every job in this workspace.</div>
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
+          <div class="vr-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
             {% for s in anKpis %}
               <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 20px">
                 <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">{{ s.eyebrow }}</div>
@@ -72,7 +72,7 @@
           <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 24px; overflow: hidden">
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E7E4DE">
               <div style="font-size: 14px; font-weight: 600">Top domains</div>
-              <button class="hv-white" onclick="location.href='/exports'" style="height: 30px; padding: 0 12px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #57534B">Export a slice</button>
+              <button class="hv-white" onclick="location.href='{{ APP }}/exports'" style="height: 30px; padding: 0 12px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 12.5px; color: #57534B">Export a slice</button>
             </div>
             <div style="overflow-x: auto">
             <div style="display: grid; grid-template-columns: minmax(220px, 1.4fr) 120px 190px 1fr; min-width: 860px; padding: 0 20px; height: 36px; align-items: center; background: #FCFCFC; border-bottom: 1px solid #E7E4DE">
@@ -102,7 +102,7 @@
               <div style="padding: 56px 24px; text-align: center">
                 <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Not enough history yet</div>
                 <div style="font-size: 14px; color: #57534B; margin-top: 4px">Validate a list and the deliverability picture builds itself.</div>
-                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
+                <button class="hv-blue" onclick="location.href='{{ APP }}/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
               </div>
             {% endif %}
             </div>

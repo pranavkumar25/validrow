@@ -5,7 +5,7 @@
           <div style="font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em">Addresses</div>
           <div style="font-size: 14px; color: #57534B; margin-top: 2px">Every address across all completed jobs, de-duplicated.</div>
 
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
+          <div class="vr-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px">
             {% for s in aStats %}
               <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 20px">
                 <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C">{{ s.eyebrow }}</div>
@@ -14,8 +14,8 @@
             {% endfor %}
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap">
-            <form action="{{ APP }}/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; width: 260px">
+          <div class="vr-bar" style="display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap">
+            <form action="{{ APP }}/addresses" method="get" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; width: 260px" class="vr-grow">
               {% for c in chipsAll %}{% if c.on %}<input type="hidden" name="verdict" value="{{ c.key }}">{% endif %}{% endfor %}
               <input type="hidden" name="sort" value="{{ aSort }}">
               <input type="hidden" name="size" value="{{ aSize }}">
@@ -81,7 +81,7 @@
                 </div>
                 <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">Nothing validated yet</div>
                 <div style="font-size: 14px; color: #57534B; margin-top: 4px">Upload a list and Validrow will clean it in a few minutes.</div>
-                <button class="hv-blue" onclick="location.href='/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
+                <button class="hv-blue" onclick="location.href='{{ APP }}/validate'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Validate a list</button>
               </div>
             {% endif %}
             {% if aEmptyFilters %}
@@ -91,14 +91,14 @@
                 </div>
                 <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">No addresses match these filters</div>
                 <div style="font-size: 14px; color: #57534B; margin-top: 4px">Try widening the verdict filter or clearing the search.</div>
-                <button onclick="location.href='/addresses'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #0A0A0A">Clear filters</button>
+                <button onclick="location.href='{{ APP }}/addresses'" style="margin-top: 18px; height: 36px; padding: 0 16px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #0A0A0A">Clear filters</button>
               </div>
             {% endif %}
 
             {% if aHasRows %}
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px">
+              <div class="vr-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px">
                 <span style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 12.5px; color: #79756C">{{ aShowing }}</span>
-                <div style="display: flex; align-items: center; gap: 8px">
+                <div class="vr-bar" style="display: flex; align-items: center; gap: 8px">
                   <span style="font-size: 12.5px; color: #79756C">Rows per page</span>
                   <div style="display: flex; gap: 2px; padding: 2px; background: #F4F3EF; border-radius: 8px">
                     {% for p in pageSizes %}

@@ -186,6 +186,8 @@ table { font-variant-numeric: tabular-nums; }
 .start-code .night + .night pre::-webkit-scrollbar-thumb { background: #3A3A42; border-radius: 999px; border: 2px solid var(--night); }
 
 .panel { border: 1px solid var(--hair); border-radius: var(--r-lg); background: var(--paper); overflow: hidden; }
+.panel > .scroll-x { overflow-x: auto; max-width: 100%; }
+table.grid { min-width: 440px; }
 .chip { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px 0 9px; border-radius: 999px; font-size: var(--t-caption); font-weight: 600; }
 .split { display: grid; }
 .split > * { min-width: 0; }
@@ -330,6 +332,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
 {%- endmacro %}
 
 {% macro fieldrows(rows) -%}
+<div class="scroll-x">
 <table class="grid">
   <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
   <tbody>
@@ -346,6 +349,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
     {% endfor %}
   </tbody>
 </table>
+</div>
 {%- endmacro %}
 
 <header class="bar">
@@ -473,6 +477,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
                     <div class="sub">
                       <p class="cap">Parameters</p>
                       <div class="panel">
+                        <div class="scroll-x">
                         <table class="grid">
                           <thead><tr><th>Name</th><th>In</th><th>Description</th></tr></thead>
                           <tbody>
@@ -489,6 +494,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
                             {% endfor %}
                           </tbody>
                         </table>
+                        </div>
                       </div>
                     </div>
                   {% endif %}
@@ -536,6 +542,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
           rather than retry it.
         </p>
         <div class="panel" style="margin-top: 32px">
+          <div class="scroll-x">
           <table class="grid">
             <thead><tr><th style="width: 92px">Status</th><th>What it means here</th></tr></thead>
             <tbody>
@@ -547,6 +554,7 @@ table.grid td.code { color: var(--ink); font-weight: 500; white-space: nowrap; }
               {% endfor %}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 

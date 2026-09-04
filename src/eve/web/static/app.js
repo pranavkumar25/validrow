@@ -1,3 +1,10 @@
+/* The app prefix, taken from the tag that loaded this file. Two fetches below
+   were written when the app lived at the root and 404d after it moved under
+   /app: the row expander on Contacts never opened a trace, and a finished job
+   redirected to a dead URL. The link test reads href and action attributes in
+   the markup, so it could not see either of them. */
+var APP = (document.currentScript && document.currentScript.dataset.appPrefix) || '/app';
+
 /*
  * Client behaviour for the parts of the design that must feel instant.
  *
@@ -121,7 +128,7 @@
       if (detail.dataset.loaded) { detail.hidden = false; return; }
       detail.innerHTML = '<div style="grid-column: 1 / -1; padding: 8px 0; font-size: 12.5px; color: #79756C">Loading trace…</div>';
       detail.hidden = false;
-      fetch('/addresses/detail?email=' + encodeURIComponent(detail.dataset.email))
+      fetch(APP + '/addresses/detail?email=' + encodeURIComponent(detail.dataset.email))
         .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
         .then(function (html) { detail.innerHTML = html; detail.dataset.loaded = '1'; })
         .catch(function () {
@@ -386,7 +393,7 @@
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
         .then(function (job) {
           if (job.status === 'completed' || job.status === 'failed') {
-            location.href = '/validate?job=' + jobId;
+            location.href = APP + '/validate?job=' + jobId;
             return;
           }
           paintJob(job);

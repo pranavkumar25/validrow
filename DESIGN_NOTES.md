@@ -864,3 +864,89 @@ template was temporarily switched to check the second radio, rendered, confirmed
 to show the Python pane with the correct label active, and switched back. Three
 new tests: every endpoint carries prose, every block carries three runnable-shaped
 samples, and no element id appears twice.
+
+---
+
+## Phase 9 — the app on a phone, and four bugs found on the way
+
+The two public pages were built responsive. The ten app screens were ported from
+a desktop design file and had **no media query at all**, so this pass is mostly
+about them.
+
+### Audited rather than eyeballed
+
+Fourteen screens at seven widths is ninety-eight combinations, and reading that
+many screenshots is how a broken one gets missed. A throwaway harness was served
+from `/static` (same origin, so it can reach into an iframe), loaded every screen
+at every width, compared `scrollWidth` to `clientWidth`, and named the elements
+that crossed the edge. It was deleted at the end of the pass; the numbers below
+are its output.
+
+**Before:** every `/app/*` screen overflowed a phone, by 30px to 682px. Exports
+overflowed a 1024px *desktop*. Contacts, Analytics and Validate overflowed a
+768px tablet. **After:** zero overflow across eighteen paths (the detail screens
+were added once there was a real run to link to) and seven widths, with data in
+the workspace rather than an empty one.
+
+### The shell was the whole first half
+
+A 280px sidebar that never collapses takes 78% of a 360px phone, and the screens
+it squeezed are the ones with the data in them. Below 1080px it leaves the flow
+and becomes a drawer over the content, with a sticky top bar carrying the
+wordmark and a hamburger. Fixing that alone cleared six of the ten screens and
+every tablet and desktop failure.
+
+The drawer is a checkbox and two labels: no script, and the input is visually
+hidden rather than `display:none` so it keeps its place in the tab order.
+
+### The screens opt in, they are not rewritten
+
+The screens carry their layout in inline styles, which a stylesheet cannot
+politely override, so every rule in the responsive block is `!important` and
+every selector is a class a template sets on purpose. None of them matches on a
+style string. `.vr-cards`, `.vr-kpis`, `.vr-split`, `.vr-bar`, `.vr-tabs`,
+`.vr-head`, `.vr-note`, `.vr-scroll`, `.vr-grow`, `.vr-step-label`: each says
+what a block *is*, and the media query says what that means when it is narrow.
+
+Decisions worth recording:
+
+- **Cards stay two-up down to 380px.** A figure and a short label fit in half of
+  360px, and stacking four of them puts 700px of scrolling in front of the
+  screen's actual content.
+- **Tab rows scroll, they do not wrap.** Wrapping leaves one orphan on its own
+  line and re-flows the page as the labels change.
+- **A banner keeps its sentence and drops its buttons.** The sentence is what
+  the banner is for; it had been squeezed to a column four words wide.
+- **The wizard stepper shows only the current label.** Four labels beside four
+  circles is more than a phone has; the numbered circles still say where you are.
+
+### Four bugs, none of them cosmetic
+
+1. **`hidden` did not hide.** Three elements are written as
+   `hidden style="...display: flex"`, and an inline `display` outranks the UA
+   sheet's `[hidden] { display: none }`. The selection bar on Dashboard and
+   Contacts stood open with nothing selected, and a Contacts row's detail panel
+   was expanded before anyone clicked it. One rule in `base.html` settles it.
+2. **Fourteen buttons 404d.** Every `onclick="location.href='/settings'"` kept a
+   root path through the move to `/app`: the banner's call to action, every
+   "Validate a list" empty state, the back link on a run, and the whole of the
+   upload wizard's navigation.
+3. **`app.js` had two more.** The Contacts row expander fetched
+   `/addresses/detail` and a finished job sent the browser to `/validate`. The
+   prefix now reaches the script from the tag that loads it, so there is one
+   definition of it rather than a string to keep in sync.
+4. **A pre-rebrand blue survived in Python.** The focus ring on the wizard's
+   current step was still `rgba(53,171,255,…)`; Phase 7 swept the templates and
+   this one lives in `views.py`.
+
+**Why the existing test missed 2 and 3.** `test_in_app_links_are_all_prefixed`
+reads `href` and `action` attributes. A path inside an `onclick` or a `fetch` is
+a link it cannot see. Two new tests read those, one per screen, and a third
+asserts the `[hidden]` rule is still there. All three were confirmed to fail with
+their fix reverted, because a test that cannot fail is not a test.
+
+### Still not fixed
+
+The screens' layout stays in inline styles. Tokenising them so the responsive
+rules need no `!important` is the right change and a much larger one than this
+pass; the classes above are the seam to do it along when that happens.

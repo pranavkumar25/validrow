@@ -527,3 +527,51 @@ def test_the_docs_page_has_no_duplicate_element_ids(client):
     ids = re.findall(r'\sid="([^"]+)"', client.get("/docs").text)
     dupes = [i for i, n in Counter(ids).items() if n > 1]
     assert not dupes, f"duplicate ids on /docs: {dupes}"
+
+
+@pytest.mark.parametrize("path,_fragments", SCREENS)
+def test_script_navigation_is_prefixed_too(client, path, _fragments):
+    """`onclick="location.href='...'"` is a link the href test cannot see.
+
+    Fourteen buttons across eight screens kept a root path through the move to
+    /app and answered 404: Dismiss's neighbour on the Dashboard banner, every
+    "Validate a list" empty-state button, the back link on a run, and the whole
+    of the upload wizard's navigation. The original test read href and action
+    attributes only, so none of them was covered.
+    """
+    import re
+
+    html = client.get(path).text
+    targets = re.findall(r"location\.href\s*=\s*'(/[^']*)'", html)
+    allowed_root = {"/login", "/signup", "/logout", "/docs", "/"}
+    for t in targets:
+        if t in allowed_root or t.startswith(("/static/", "/v1/")):
+            continue
+        assert t.startswith("/app/"), f"{path} navigates to {t}, which is not under /app"
+
+
+def test_the_scripts_own_paths_are_prefixed(client):
+    """app.js fetches and navigates too, and it is not markup the tests read.
+
+    The Contacts row expander asked /addresses/detail and a finished job sent
+    the browser to /validate; both 404 since the move. The prefix now reaches
+    the script from the tag that loads it, so there is one definition of it.
+    """
+    js = client.get("/static/app.js").text
+    literals = re.findall(r"""(?:fetch|location\.href\s*=)\s*\(?\s*'(/[^']*)'""", js)
+    for lit in literals:
+        assert lit.startswith(("/v1/", "/static/")), (
+            f"app.js uses the bare path {lit}; build it from the APP prefix instead"
+        )
+    assert "data-app-prefix" in client.get("/app/dashboard").text
+
+
+def test_hidden_actually_hides(client):
+    """`hidden` is display:none from the UA sheet, and an inline display beats it.
+
+    Three elements are written as `hidden style="...display: flex"`, so the
+    selection bar stood open with nothing selected and a Contacts row's detail
+    panel was expanded before it was clicked. One rule in base.html settles it,
+    and it has to stay.
+    """
+    assert "[hidden] { display: none !important; }" in client.get("/app/dashboard").text

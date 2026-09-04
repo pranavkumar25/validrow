@@ -9,9 +9,9 @@
           <input type="hidden" name="columns" value="{{ exColumns }}">
           {% for c in customVerdicts %}{% if c.on %}<input type="hidden" name="verdicts" value="{{ c.key }}">{% endif %}{% endfor %}
           {% for t in customToggles %}{% if t.on %}<input type="hidden" name="{{ t.key }}" value="1">{% endif %}{% endfor %}
-          <div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 20px; align-items: start">
+          <div class="vr-split" style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 20px; align-items: start">
             <div>
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px">
+              <div class="vr-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px">
                 {% for p in presets %}
                   <a class="nav" href="{{ presetHrefs[p.key] }}" style="display: block; text-align: left; padding: 16px; background: {{ p.bg }}; border: 1px solid {{ p.bd }}; border-radius: 12px; transition: all 150ms ease-out">
                     <div style="font-size: 13.5px; font-weight: 600">{{ p.label }}</div>
@@ -51,7 +51,7 @@
                 </div>
               {% endif %}
               <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 20px; margin-top: 16px">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+                <div class="vr-bar" style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
                   <div>
                     <div style="font-size: 13.5px; font-weight: 600">Columns</div>
                     <div style="font-size: 12.5px; color: #57534B; margin-top: 2px">Full detail adds verdict, sub-reason, score, MX and the settling layer.</div>
@@ -66,7 +66,7 @@
               <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; margin-top: 16px; overflow: hidden">
                 <div style="padding: 16px 20px; border-bottom: 1px solid #E7E4DE; font-size: 14px; font-weight: 600">Finished jobs, re-downloadable from cache</div>
                 {% for j in hJobs %}
-                  <div class="hv-white" style="display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 48px; border-bottom: 1px solid #E7E4DE">
+                  <div class="hv-white vr-bar" style="display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 48px; border-bottom: 1px solid #E7E4DE">
                     <span style="font-family: Inter, system-ui, sans-serif; font-size: 13px; flex: 1">{{ j.file }}</span>
                     <span style="font-family: Inter, system-ui, sans-serif; font-size: 12.5px; color: #57534B; font-variant-numeric: tabular-nums">{{ j.addr }}</span>
                     <span style="font-size: 12.5px; color: #79756C; width: 150px; text-align: right">{{ j.date }}</span>

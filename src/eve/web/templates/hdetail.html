@@ -7,7 +7,7 @@
               <div style="font-family: Inter, system-ui, sans-serif; font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em">{{ hd.file }}</div>
               <div style="font-size: 13.5px; color: #57534B; margin-top: 4px; font-variant-numeric: tabular-nums">{{ hd.id }} · run {{ hd.date }} · took {{ hd.dur }} · {{ hd.rows }} source rows → {{ hd.addr }} unique</div>
             </div>
-            <button class="hv-white" onclick="location.href='/history'" style="height: 34px; padding: 0 13px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Back to history</button>
+            <button class="hv-white" onclick="location.href='{{ APP }}/history'" style="height: 34px; padding: 0 13px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Back to history</button>
           </div>
           {% if hd.failed %}
             <div style="background: #FEF3F2; border: 1px solid #FECDCA; border-radius: 12px; padding: 16px 20px; margin-top: 20px">
@@ -34,7 +34,7 @@
               {% endfor %}
             </div>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
+          <div class="vr-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
             {% for c in hd.cards %}
               <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 18px">
                 <div style="display: flex; align-items: center; gap: 7px">

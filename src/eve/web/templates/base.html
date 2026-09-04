@@ -29,6 +29,13 @@
   src: url('/static/InterVariable-Italic.woff2') format('woff2');
 }
 * { box-sizing: border-box; }
+/* The `hidden` attribute is display:none from the UA stylesheet, which an inline
+   `display` beats. Three elements are written as `hidden style="...display:
+   flex"` and were therefore never hidden at all: the selection bar on Dashboard
+   and Contacts stood open with nothing selected, and a Contacts row's detail
+   panel was expanded before anyone clicked it. Scripts here toggle `hidden`, so
+   this makes the attribute mean what it says everywhere at once. */
+[hidden] { display: none !important; }
 body { margin: 0; background: #FCFCFC; -webkit-font-smoothing: antialiased; }
 a { color: #0000FF; text-decoration: none; }
 a:hover { color: #0000C7; }
@@ -51,13 +58,149 @@ button { cursor: pointer; }
 /* Nav and table rows are links; they must not inherit the anchor colour. */
 a.row, a.nav { color: inherit; text-decoration: none; }
 a.row:hover, a.nav:hover { color: inherit; }
+
+/* ---------------------------------------------------------------------------
+   Responsive shell.
+
+   The screens were ported from a desktop design file and carry their layout in
+   inline styles, which a stylesheet cannot politely override. Rather than
+   rewrite every screen, the rules below claim the few decisions that have to
+   change with the viewport, and each one is marked !important because that is
+   the only way to outrank an inline style. Every selector is a class this
+   template or a screen sets on purpose; none of them matches on a style string.
+
+   Three sizes: a phone (<=720px) gets one column and a drawer, a tablet
+   (721-1080px) keeps two columns of cards and still gets the drawer, and a
+   desktop gets the design as drawn.
+   --------------------------------------------------------------------------- */
+
+.vr-shell { display: flex; min-height: 100vh; }
+.vr-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.vr-pad { flex: 1; padding: 28px 32px 36px; }
+
+/* The drawer toggle. Visually hidden rather than display:none, so it keeps its
+   place in the tab order and the hamburger can be reached from the keyboard. */
+.vr-menu { position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; pointer-events: none; }
+.vr-topbar { display: none; }
+.vr-scrim { display: none; }
+
+@media (max-width: 1080px) {
+  /* The sidebar leaves the flow and becomes a drawer over the content. At 280px
+     wide it was taking most of a phone and a third of a tablet, and the screens
+     it squeezed are the ones with the data in them. */
+  .vr-topbar {
+    display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 40;
+    height: 56px; padding: 0 14px; background: rgba(252,252,252,0.92);
+    backdrop-filter: saturate(140%) blur(10px); -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid #E7E4DE;
+  }
+  .vr-burger { display: grid; place-items: center; width: 38px; height: 38px; margin-left: -6px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; }
+  .vr-burger:hover { background: #F4F3EF; }
+  .vr-sidebar {
+    position: fixed !important; top: 0; left: 0; z-index: 60;
+    height: 100dvh !important; width: 284px !important; flex-basis: 284px !important;
+    transform: translateX(-100%); transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
+    box-shadow: 0 24px 60px -20px rgba(10,10,10,0.28);
+  }
+  .vr-menu:checked ~ .vr-shell .vr-sidebar { transform: none; }
+  .vr-scrim { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(10,10,10,0.34); opacity: 0; pointer-events: none; transition: opacity 220ms cubic-bezier(0.2, 0, 0, 1); }
+  .vr-menu:checked ~ .vr-shell .vr-scrim { opacity: 1; pointer-events: auto; }
+  .vr-menu:focus-visible ~ .vr-shell .vr-burger { outline: 2px solid rgba(0,0,255,0.45); outline-offset: 2px; }
+  .vr-pad { padding: 20px 20px 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vr-sidebar, .vr-scrim { transition: none !important; }
+}
+@media (max-width: 720px) { .vr-pad { padding: 16px 14px 28px; } }
+
+/* --- Rules the screens opt into -------------------------------------------
+   A screen adds one of these classes beside the inline style it already has.
+   The class says what the block is; the media query says what that means on a
+   narrower viewport. */
+
+/* A row of KPI cards, or any equal-width card row. Two-up is kept right down
+   to a small phone: a figure and a short label fit in half of 360px, and
+   stacking four of them puts 700px of scrolling in front of the content the
+   screen is actually about. One-up only where two would truly crowd. */
+@media (max-width: 1080px) { .vr-cards { grid-template-columns: repeat(2, 1fr) !important; } }
+@media (max-width: 380px)  { .vr-cards { grid-template-columns: 1fr !important; } }
+
+/* The Dashboard's stat row is an auto-fit grid with a 232px floor, so a phone
+   gets one column of 176px-tall cards. On a phone the cards give up their fixed
+   height and pair up instead. */
+@media (max-width: 720px) {
+  .vr-kpis { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+  .vr-kpis > * { height: auto !important; min-height: 92px; padding: 14px !important; gap: 8px !important; }
+}
+@media (max-width: 380px) { .vr-kpis { grid-template-columns: 1fr !important; } }
+/* On a tablet the auto-fit floor gives three columns and leaves the fourth
+   card alone on a second row. Two by two is the same information without
+   the orphan. */
+@media (min-width: 721px) and (max-width: 1080px) { .vr-kpis { grid-template-columns: repeat(2, 1fr) !important; } }
+
+/* Two panels side by side that become one column before they get cramped. */
+@media (max-width: 980px) { .vr-split { grid-template-columns: 1fr !important; } }
+
+/* A toolbar: filters, tabs, a search box and a button on one line. It wraps
+   rather than pushing the page sideways, and its controls stop being fixed. */
+@media (max-width: 860px) {
+  .vr-bar { flex-wrap: wrap !important; height: auto !important; row-gap: 10px !important; }
+  .vr-bar > * { min-width: 0; }
+  .vr-grow { flex: 1 1 100% !important; width: auto !important; min-width: 0 !important; }
+}
+
+/* Content that is legitimately wider than a phone: a chart, a wide data grid.
+   It scrolls inside its own box instead of widening the document. */
+.vr-scroll { overflow-x: auto; max-width: 100%; }
+
+/* A single control that was drawn at a fixed width. */
+@media (max-width: 720px) { .vr-fluid { width: 100% !important; min-width: 0 !important; } }
+
+/* A page header: a title and its blurb, with a control on the right. The
+   control drops under the title rather than squeezing it into a column two
+   words wide. */
+@media (max-width: 720px) {
+  .vr-head { flex-wrap: wrap !important; row-gap: 14px !important; }
+  .vr-head > :first-child { flex: 1 1 100% !important; }
+}
+
+/* A banner: an icon, a sentence, and one or two actions. The sentence is what
+   the banner is for, so it keeps the width and the actions go underneath. */
+@media (max-width: 760px) {
+  .vr-note { flex-wrap: wrap !important; row-gap: 12px !important; align-items: flex-start !important; }
+  .vr-note > .vr-note-text { flex: 1 1 100% !important; }
+  .vr-note > .vr-note-acts { margin-left: 0 !important; }
+}
+
+/* A row of tabs or filter pills. Wrapping them puts one orphan on its own
+   line and re-flows the page as the labels change, so the row scrolls
+   instead and every tab keeps its shape. */
+@media (max-width: 860px) {
+  .vr-tabs { overflow-x: auto !important; flex-wrap: nowrap !important; scrollbar-width: none; -ms-overflow-style: none; }
+  .vr-tabs::-webkit-scrollbar { display: none; }
+  .vr-tabs > * { flex: 0 0 auto !important; white-space: nowrap; }
+}
+
+/* A wizard stepper. Four labels beside four circles is more than a phone
+   has room for, so only the step you are on names itself; the numbered
+   circles and the rule between them still say where you are. */
+@media (max-width: 720px) {
+  .vr-step-label { display: none; }
+  .vr-step-label[data-cur] { display: inline; }
+}
 </style>
 {% block head %}{% endblock %}
 </head>
 <body>
-<div style="display: flex; min-height: 100vh; background: #FCFCFC; font-family: Inter, system-ui, sans-serif; color: #0A0A0A">
+<input type="checkbox" id="vr-menu" class="vr-menu" aria-label="Show navigation">
+<div class="vr-shell" style="background: #FCFCFC; font-family: Inter, system-ui, sans-serif; color: #0A0A0A">
 
-  <nav aria-label="Main" style="width: 280px; flex: 0 0 280px; background: #FCFCFC; border-right: 1px solid #E7E4DE; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh">
+  {# Closes the drawer by clicking away from it. A label rather than a button so
+     it works with no script, and hidden from screen readers because the drawer
+     also closes from the hamburger, which is a real control. #}
+  <label class="vr-scrim" for="vr-menu" aria-hidden="true"></label>
+
+  <nav aria-label="Main" class="vr-sidebar" style="width: 280px; flex: 0 0 280px; background: #FCFCFC; border-right: 1px solid #E7E4DE; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh">
     <div style="display: flex; flex-direction: column; gap: 20px; padding: 22px 16px 8px">
       <div style="display: flex; align-items: center; gap: 10px; padding: 0 6px; height: 22px">
         {% with h = 19 %}{% include "_wordmark.html" %}{% endwith %}
@@ -126,15 +269,23 @@ a.row:hover, a.nav:hover { color: inherit; }
     </div>
   </nav>
 
-  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
-    <div style="flex: 1; padding: 28px 32px 36px">
+  <main class="vr-main">
+    {# Only rendered under 1080px, where the sidebar has become a drawer. #}
+    <div class="vr-topbar">
+      <label class="vr-burger" for="vr-menu" title="Navigation">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="#0A0A0A" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Navigation</span>
+      </label>
+      <a href="{{ APP }}/" style="display: inline-flex; align-items: center; color: #0A0A0A" aria-label="Validrow home">{% with h = 18 %}{% include "_wordmark.html" %}{% endwith %}</a>
+    </div>
+    <div class="vr-pad">
       <div>
 {% block content %}{% endblock %}
       </div>
     </div>
   </main>
 </div>
-<script src="/static/app.js"></script>
+<script src="/static/app.js" data-app-prefix="{{ APP }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

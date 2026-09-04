@@ -8,7 +8,7 @@
               <div style="display: flex; align-items: center; gap: 12px; flex: 1">
                 <div style="display: flex; align-items: center; gap: 9px">
                   <span style="width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid {{ s.bd }}; background: {{ s.bg }}; color: {{ s.fg }}; display: grid; place-items: center; font-size: 11.5px; font-weight: 600; box-shadow: {{ s.ring }}; transition: all 220ms cubic-bezier(0.16,1,0.3,1)">{{ s.n }}</span>
-                  <span style="font-size: 13px; color: {{ s.lfg }}; white-space: nowrap">{{ s.label }}</span>
+                  <span class="vr-step-label"{% if s.cur %} data-cur{% endif %} style="font-size: 13px; color: {{ s.lfg }}; white-space: nowrap">{{ s.label }}</span>
                 </div>
                 <span style="flex: 1; height: 1px; background: #E7E4DE; min-width: 16px"></span>
               </div>
@@ -58,8 +58,8 @@
                   </div>
                 {% endfor %}
                 <div style="display: flex; justify-content: space-between; gap: 12px; padding: 16px 20px">
-                  <button class="hv-white" onclick="location.href='/validate'" style="height: 36px; padding: 0 14px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #57534B">Back</button>
-                  <button class="hv-blue" onclick="location.href='/validate?file={{ fileId }}&name={{ filename | urlencode }}&step=3'" style="height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500" {% if emptyCsv %}disabled style="opacity:.5"{% endif %}>Parsed correctly</button>
+                  <button class="hv-white" onclick="location.href='{{ APP }}/validate'" style="height: 36px; padding: 0 14px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #57534B">Back</button>
+                  <button class="hv-blue" onclick="location.href='{{ APP }}/validate?file={{ fileId }}&name={{ filename | urlencode }}&step=3'" style="height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500" {% if emptyCsv %}disabled style="opacity:.5"{% endif %}>Parsed correctly</button>
                 </div>
               </div>
             {% endif %}
@@ -69,7 +69,7 @@
                 <input type="hidden" name="file_id" value="{{ fileId }}">
                 <input type="hidden" name="filename" value="{{ filename }}">
                 <div style="font-size: 14px; font-weight: 600">Map columns</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px">
+                <div class="vr-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px">
                   <label style="display: block">
                     <span style="display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #79756C; margin-bottom: 6px">Email
                       {% if guessedEmail %}<span style="font-size: 10px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #027A48; background: #ECFDF3; border-radius: 4px; padding: 1px 6px">auto-detected</span>{% endif %}
@@ -101,7 +101,7 @@
                 </label>
                 <div style="margin-top: 16px; padding: 12px 14px; background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 8px; font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 12.5px; color: #57534B">{{ chargeLine }}</div>
                 <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 18px">
-                  <button type="button" class="hv-white" onclick="location.href='/validate?file={{ fileId }}&name={{ filename | urlencode }}&step=2'" style="height: 36px; padding: 0 14px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #57534B">Back</button>
+                  <button type="button" class="hv-white" onclick="location.href='{{ APP }}/validate?file={{ fileId }}&name={{ filename | urlencode }}&step=2'" style="height: 36px; padding: 0 14px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13.5px; color: #57534B">Back</button>
                   <button type="submit" class="hv-blue" style="height: 36px; padding: 0 16px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Start validating</button>
                 </div>
               </form>
@@ -122,7 +122,7 @@
                     <span data-pct style="font-family: Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; font-size: 13px; color: #57534B">{{ vPct }}</span>
                   </div>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
+                <div class="vr-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
                   {% for c in vCards %}
                     <div data-card="{{ c.key }}" style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 18px">
                       <div style="display: flex; align-items: center; gap: 7px">
@@ -154,7 +154,7 @@
                     {% if hasPartial %}
                       <button class="hv-white" onclick="location.href='/v1/jobs/{{ jobId }}/download?segment=cleaned'" style="height: 34px; padding: 0 13px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #0A0A0A">Download partial results</button>
                     {% endif %}
-                    <button class="hv-white" onclick="location.href='/validate'" style="height: 34px; padding: 0 13px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #0A0A0A">Start over</button>
+                    <button class="hv-white" onclick="location.href='{{ APP }}/validate'" style="height: 34px; padding: 0 13px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #0A0A0A">Start over</button>
                   </div>
                 </div>
                 <div style="background: #FFFAEB; border: 1px solid #FEDF89; border-radius: 12px; padding: 14px 20px; margin-top: 16px; display: flex; align-items: center; gap: 8px">
@@ -172,7 +172,7 @@
                       <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">{{ doneTitle }}</div>
                       <div style="font-size: 13px; color: #57534B; margin-top: 2px">{{ doneSub }}</div>
                     </div>
-                    <button class="hv-white" onclick="location.href='/validate'" style="height: 32px; padding: 0 12px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Validate another</button>
+                    <button class="hv-white" onclick="location.href='{{ APP }}/validate'" style="height: 32px; padding: 0 12px; background: #FCFCFC; border: 1px solid #D8D4CC; border-radius: 8px; font-size: 13px; color: #57534B">Validate another</button>
                   </div>
                   <div style="display: flex; gap: 2px; margin: 18px 0 12px">
                     {% for m in doneMix %}
@@ -197,7 +197,7 @@
                     </button>
                   {% endfor %}
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
+                <div class="vr-cards" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px">
                   {% for c in doneCards %}
                     <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; padding: 16px 18px">
                       <div style="display: flex; align-items: center; gap: 7px">

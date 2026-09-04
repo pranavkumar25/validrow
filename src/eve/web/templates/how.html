@@ -18,7 +18,7 @@
           <div style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 36px 0 12px">What each verdict means</div>
           <div style="background: #FCFCFC; border: 1px solid #E7E4DE; border-radius: 12px; overflow: hidden">
             {% for v in verdictRef %}
-              <div style="display: grid; grid-template-columns: 150px 1fr; gap: 20px; padding: 18px 20px; border-bottom: 1px solid #E7E4DE">
+              <div class="vr-split" style="display: grid; grid-template-columns: 150px 1fr; gap: 20px; padding: 18px 20px; border-bottom: 1px solid #E7E4DE">
                 <span style="padding-top: 1px">
                   <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; background: {{ v.wash }}; color: {{ v.ink }}">
                     <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ v.dot }}"></span>{{ v.label }}
@@ -32,7 +32,7 @@
             {% endfor %}
           </div>
           <div style="text-align: center; margin-top: 28px">
-            <button class="hv-blue" onclick="location.href='/single'" style="height: 38px; padding: 0 18px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Check a single address</button>
+            <button class="hv-blue" onclick="location.href='{{ APP }}/single'" style="height: 38px; padding: 0 18px; background: #0000FF; color: #FCFCFC; border: 0; border-radius: 8px; font-size: 13.5px; font-weight: 500">Check a single address</button>
           </div>
         </div>
 {% endblock %}
