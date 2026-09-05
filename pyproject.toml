@@ -33,7 +33,12 @@ dependencies = [
 # Production backends — imported lazily so they are not required for local dev.
 s3 = ["aioboto3>=12.0"]
 redis = ["redis>=5.0"]
-postgres = ["asyncpg>=0.29"]
+# asyncpg drives the app; psycopg2 drives Alembic. migrations/env.py swaps
+# "+asyncpg" for "+psycopg2" when Alembic opens its own connection, which is
+# what `alembic upgrade head` does as a deploy step. Startup migrations reuse
+# the app's connection and never take that path, so the gap only showed up
+# where it was least convenient: on the command line, against a real database.
+postgres = ["asyncpg>=0.29", "psycopg2-binary>=2.9"]
 worker = ["arq>=0.26"]
 sentry = ["sentry-sdk[fastapi]>=2.0"]
 # The web app ships with the engine (jinja2 is a core dependency); there is no

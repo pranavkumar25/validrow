@@ -1,0 +1,36 @@
+# The build only needs pyproject.toml, README.md, src/ and alembic.ini. Without
+# this file the daemon receives the whole working tree, which is ~140 MB of
+# virtualenv, git history and local job output on this checkout alone.
+.venv/
+venv/
+.git/
+.github/
+.eve_storage/
+frontend/
+examples/
+scripts/
+tests/
+docs/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+.DS_Store
+
+# Never bake secrets or a local database into an image layer.
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.db
+*.sqlite3
+
+# Documentation and compose files are not used by the build.
+DESIGN_NOTES.md
+docker-compose*.yml
+Caddyfile
+Makefile

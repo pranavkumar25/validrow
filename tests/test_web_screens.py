@@ -625,9 +625,8 @@ def test_the_responsive_rules_need_no_important():
     with and the `[hidden]` fix, both of which override an inline *value* rather
     than a layout decision. The responsive block adds none.
     """
-    from pathlib import Path
-
     import re
+    from pathlib import Path
 
     css = Path("src/eve/web/templates/base.html").read_text()
     # Start at the comment that opens the block, not inside it, or the comment
