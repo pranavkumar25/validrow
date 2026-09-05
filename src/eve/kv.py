@@ -191,8 +191,9 @@ def get_kv() -> KV:
                 import redis  # noqa: F401
             except ImportError as exc:
                 raise RuntimeError(
-                    "EVE_REDIS_URL is set but the 'redis' extra is not installed. "
-                    "Run: pip install -e '.[redis]'"
+                    "EVE_REDIS_URL is set but redis could not be imported. "
+                    "It is a base dependency, so this is a broken environment "
+                    "rather than a missing extra: reinstall with pip install -e '.'"
                 ) from exc
             logger.info("kv: redis")
             _kv = RedisKV(s.redis_url)

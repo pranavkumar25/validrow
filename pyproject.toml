@@ -27,18 +27,31 @@ dependencies = [
     "httpx>=0.27",
     # Server-rendered web app (served by the same process as the API).
     "jinja2>=3.1",
+    # The three shared backends. These were extras, imported lazily so a local
+    # checkout would not pull them, and that was the right shape until a
+    # platform resolved dependencies from this list and ignored both the extras
+    # and requirements.txt. A deploy then built cleanly and died in the
+    # lifespan on `No module named 'asyncpg'`, which is a packaging decision
+    # presenting as a crash. They cost about 20 MB and are now always present,
+    # so an engine pointed at Postgres, S3 or Redis can reach them wherever it
+    # runs. Which one is used is still decided by configuration at runtime.
+    "asyncpg>=0.29",
+    "aioboto3>=12.0",
+    "redis>=5.0",
 ]
 
 [project.optional-dependencies]
 # Production backends — imported lazily so they are not required for local dev.
-s3 = ["aioboto3>=12.0"]
-redis = ["redis>=5.0"]
-# asyncpg drives the app; psycopg2 drives Alembic. migrations/env.py swaps
-# "+asyncpg" for "+psycopg2" when Alembic opens its own connection, which is
-# what `alembic upgrade head` does as a deploy step. Startup migrations reuse
-# the app's connection and never take that path, so the gap only showed up
-# where it was least convenient: on the command line, against a real database.
-postgres = ["asyncpg>=0.29", "psycopg2-binary>=2.9"]
+# Kept as names so `.[s3]` and `.[redis]` still resolve; the packages moved to
+# the base list above.
+s3 = []
+redis = []
+# asyncpg drives the app and is a base dependency. psycopg2 drives Alembic:
+# migrations/env.py swaps "+asyncpg" for "+psycopg2" when Alembic opens its own
+# connection, which is what `alembic upgrade head` does as a deploy step.
+# Startup migrations reuse the app's connection and never take that path, so
+# this is only needed on the command line, against a real database.
+postgres = ["psycopg2-binary>=2.9"]
 worker = ["arq>=0.26"]
 sentry = ["sentry-sdk[fastapi]>=2.0"]
 # The web app ships with the engine (jinja2 is a core dependency); there is no

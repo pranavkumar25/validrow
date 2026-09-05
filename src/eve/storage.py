@@ -179,8 +179,9 @@ def get_object_store() -> ObjectStore:
             import aioboto3  # noqa: F401
         except ImportError as exc:
             raise RuntimeError(
-                "EVE_S3_BUCKET is set but the 's3' extra is not installed. "
-                "Run: pip install -e '.[s3]'"
+                "EVE_S3_BUCKET is set but aioboto3 could not be imported. "
+                "It is a base dependency, so this is a broken environment "
+                "rather than a missing extra: reinstall with pip install -e '.'"
             ) from exc
         logger.info("object store: s3 bucket=%s endpoint=%s", s.s3_bucket, s.s3_endpoint or "aws")
         _store = S3ObjectStore(

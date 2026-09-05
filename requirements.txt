@@ -1,8 +1,5 @@
-# For runners that install from requirements.txt and would otherwise take only
-# [project.dependencies] from pyproject.toml, leaving the production backends
-# behind. Vercel is one: it built cleanly and then crashed in the lifespan with
-# ModuleNotFoundError: No module named 'asyncpg'.
-#
-# The extras are named rather than the packages, so this file cannot drift from
-# pyproject.toml. tests/test_deploy.py checks every extra here exists there.
-.[postgres,s3,redis]
+# Kept for runners that read it. The shared backends (asyncpg, aioboto3, redis)
+# are base dependencies in pyproject.toml, because Vercel resolved from that
+# list and ignored this file, so anything named only here never got installed.
+# `postgres` adds psycopg2, which only the Alembic CLI needs.
+.[postgres]

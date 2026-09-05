@@ -11,7 +11,7 @@ Postgres (``EVE_WORKSPACE_DB_URL``), S3/R2 (``EVE_S3_*``) and Redis
 (``EVE_REDIS_URL``) — the last one also makes the per-MX rate limiter shared,
 without which each worker gets a full probe budget against the same provider.
 
-    pip install -e '.[worker,postgres,s3,redis]'
+    pip install -e '.[worker]'
     arq eve.jobs.worker.WorkerSettings
 """
 from __future__ import annotations

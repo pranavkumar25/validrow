@@ -6,12 +6,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install deps first for better layer caching. The production backends are
-# extras, and the image ships all of them: which one is used is decided by
-# environment at runtime, so the image must be able to reach any of them.
+# Install deps first for better layer caching. asyncpg, aioboto3 and redis are
+# base dependencies, so the image can reach any backend by configuration alone.
+# The two extras add what only this image needs: arq for the worker process and
+# psycopg2 for the Alembic CLI.
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install --upgrade pip && pip install ".[postgres,s3,redis,worker]"
+RUN pip install --upgrade pip && pip install ".[worker,postgres]"
 
 # Only the Alembic CLI needs this: the app migrates on startup through the
 # connection it already holds. It is here so `alembic upgrade head` works as a
