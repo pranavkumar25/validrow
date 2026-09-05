@@ -131,6 +131,39 @@ def _day(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
 
 
+def async_engine(url: Optional[str] = None, **kwargs: Any):
+    """``create_async_engine`` with the URL a managed provider actually gives you.
+
+    Neon, Supabase, Render, Railway and Heroku all hand out libpq URLs carrying
+    ``?sslmode=require``, and Neon adds ``channel_binding=require``. Those are
+    psycopg2 parameters. asyncpg has never accepted them, and SQLAlchemy passes
+    unknown query parameters straight through to the driver, so the URL that
+    works everywhere else fails here with:
+
+        TypeError: connect() got an unexpected keyword argument 'sslmode'
+
+    which surfaces on the first connection, inside the startup migration, as a
+    crash with nothing in it about TLS. The parameters are translated to what
+    asyncpg understands instead of being left to fail: requiring TLS is the
+    common case and the one every hosted provider defaults to.
+    """
+    from sqlalchemy.engine import make_url
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    resolved = make_url(url or default_db_url())
+    if resolved.drivername.endswith("+asyncpg"):
+        query = dict(resolved.query)
+        sslmode = query.pop("sslmode", None)
+        # asyncpg negotiates channel binding itself; the parameter is libpq's.
+        query.pop("channel_binding", None)
+        resolved = resolved.set(query=query)
+        if sslmode is not None and sslmode not in ("disable", "allow"):
+            kwargs.setdefault("connect_args", {}).setdefault("ssl", True)
+        elif sslmode in ("disable", "allow"):
+            kwargs.setdefault("connect_args", {}).setdefault("ssl", False)
+    return create_async_engine(resolved, future=True, **kwargs)
+
+
 def default_db_url() -> str:
     s = get_settings()
     if s.workspace_db_url:
@@ -166,9 +199,8 @@ class AddressStore:
             String,
             Table,
         )
-        from sqlalchemy.ext.asyncio import create_async_engine
-
-        self._engine = create_async_engine(url or default_db_url(), future=True)
+        
+        self._engine = async_engine(url)
         self._metadata = MetaData()
         self.t = Table(
             "addresses",

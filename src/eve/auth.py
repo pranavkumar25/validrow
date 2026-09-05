@@ -39,7 +39,6 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from eve.addresses import default_db_url
 from eve.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -209,9 +208,10 @@ class AuthStore:
 
     def __init__(self, url: Optional[str] = None):
         from sqlalchemy import Boolean, Column, Float, MetaData, String, Table
-        from sqlalchemy.ext.asyncio import create_async_engine
 
-        self._engine = create_async_engine(url or default_db_url(), future=True)
+        from eve.addresses import async_engine
+
+        self._engine = async_engine(url)
         self._metadata = MetaData()
 
         self.users = Table(

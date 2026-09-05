@@ -145,9 +145,10 @@ def _row_to_job(row: dict) -> Job:
 class SqlJobStore(JobStore):  # pragma: no cover - covered via aiosqlite in tests
     def __init__(self, url: str):
         from sqlalchemy import JSON, Column, Float, Integer, MetaData, String, Table, Text
-        from sqlalchemy.ext.asyncio import create_async_engine
 
-        self._engine = create_async_engine(url, future=True)
+        from eve.addresses import async_engine
+
+        self._engine = async_engine(url)
         self._metadata = MetaData()
         self._table = Table(
             "jobs",

@@ -28,7 +28,7 @@ import logging
 import time
 from typing import Optional
 
-from eve.addresses import AddressRecord, default_db_url, get_address_store
+from eve.addresses import AddressRecord, get_address_store
 from eve.config import get_settings
 from eve.smtp_infra.greylist import RetryPolicy
 from eve.tenancy import current_workspace_id
@@ -61,9 +61,10 @@ class ReprobeStore:
 
     def __init__(self, url: Optional[str] = None):
         from sqlalchemy import Column, Float, Integer, MetaData, String, Table
-        from sqlalchemy.ext.asyncio import create_async_engine
 
-        self._engine = create_async_engine(url or default_db_url(), future=True)
+        from eve.addresses import async_engine
+
+        self._engine = async_engine(url)
         self._metadata = MetaData()
         self.t = Table(
             "reprobes",
