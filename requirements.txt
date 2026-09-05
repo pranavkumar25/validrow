@@ -1,0 +1,8 @@
+# For runners that install from requirements.txt and would otherwise take only
+# [project.dependencies] from pyproject.toml, leaving the production backends
+# behind. Vercel is one: it built cleanly and then crashed in the lifespan with
+# ModuleNotFoundError: No module named 'asyncpg'.
+#
+# The extras are named rather than the packages, so this file cannot drift from
+# pyproject.toml. tests/test_deploy.py checks every extra here exists there.
+.[postgres,s3,redis]

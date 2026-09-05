@@ -121,3 +121,21 @@ def test_the_root_entrypoint_works_without_the_package_installed() -> None:
     shim = (ROOT / "main.py").read_text()
     assert 'parent / "src"' in shim, "the src fallback is gone"
     assert "sys.path.insert" in shim
+
+
+def test_requirements_txt_names_only_real_extras() -> None:
+    """It defers to pyproject's extras so the two cannot drift apart."""
+    req = (ROOT / "requirements.txt").read_text()
+    named = re.search(r"^\s*\.\[([^\]]+)\]", req, re.M)
+    assert named, "requirements.txt does not install the project with extras"
+    pyproject = (ROOT / "pyproject.toml").read_text()
+    declared = set(re.findall(r"^(\w+) = \[", pyproject, re.M))
+    for extra in (e.strip() for e in named.group(1).split(",")):
+        assert extra in declared, f"requirements.txt asks for extra {extra!r}, which pyproject has no"
+
+
+def test_the_production_backends_are_all_installable_from_requirements() -> None:
+    """The three a shared deployment needs, none of which are base dependencies."""
+    req = (ROOT / "requirements.txt").read_text()
+    for extra in ("postgres", "s3", "redis"):
+        assert extra in req, f"{extra} is missing; a deploy would crash on its import"

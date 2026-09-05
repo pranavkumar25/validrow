@@ -46,7 +46,17 @@ class ObjectStore(ABC):
 class LocalObjectStore(ObjectStore):
     def __init__(self, base_dir: str | Path):
         self.base = Path(base_dir)
-        self.base.mkdir(parents=True, exist_ok=True)
+        try:
+            self.base.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            # Same reasoning as default_db_url: name the setting that fixes it
+            # rather than raising a bare PermissionError from inside a mkdir.
+            raise RuntimeError(
+                f"Cannot create the local storage directory {self.base}: {exc}. "
+                "Uploads and result CSVs go to disk unless S3 is configured. On "
+                "a read-only or ephemeral filesystem set EVE_S3_BUCKET, "
+                "EVE_S3_ACCESS_KEY and EVE_S3_SECRET_KEY instead."
+            ) from exc
 
     def _path(self, key: str) -> Path:
         p = (self.base / key).resolve()

@@ -136,7 +136,21 @@ def default_db_url() -> str:
     if s.workspace_db_url:
         return s.workspace_db_url
     root = os.path.abspath(s.local_storage_dir)
-    os.makedirs(root, exist_ok=True)
+    try:
+        os.makedirs(root, exist_ok=True)
+    except OSError as exc:
+        # A read-only or ephemeral filesystem is a deployment fact, not a bug,
+        # and the bare PermissionError this used to raise says nothing about
+        # which setting fixes it. Falling back to a writable temp directory
+        # would be worse: the database would vanish between invocations and the
+        # app would look like it was losing data rather than misconfigured.
+        raise RuntimeError(
+            f"Cannot create the local workspace directory {root!r}: {exc}. "
+            "With EVE_WORKSPACE_DB_URL unset the engine keeps its workspace in "
+            "a SQLite file, which needs a writable disk. On a read-only or "
+            "ephemeral filesystem set EVE_WORKSPACE_DB_URL to a Postgres URL "
+            "(postgresql+asyncpg://...) instead."
+        ) from exc
     return f"sqlite+aiosqlite:///{os.path.join(root, 'workspace.db')}"
 
 

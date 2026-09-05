@@ -72,3 +72,34 @@ def test_the_web_app_files_are_declared() -> None:
     for path in ("web/templates/base.html", "web/templates/landing.html",
                  "web/static/app.js", "web/static/InterVariable.woff2"):
         assert any(fnmatch.fnmatch(path, g) for g in globs), f"{path} is undeclared"
+
+
+def test_a_read_only_disk_names_the_setting_that_fixes_it(tmp_path) -> None:
+    """The crash a serverless deploy actually hits, and what it should say.
+
+    With no database configured the engine keeps its workspace in a SQLite file,
+    so a read-only filesystem fails inside `os.makedirs` with a bare
+    PermissionError that names no setting. Falling back to a temp directory
+    would be worse: the database would vanish between invocations and the app
+    would look like it was losing data rather than misconfigured.
+    """
+    import os
+
+    import pytest
+
+    from eve.addresses import default_db_url
+    from eve.config import Settings, set_settings
+    from eve.storage import LocalObjectStore
+
+    locked = tmp_path / "locked"
+    locked.mkdir()
+    os.chmod(locked, 0o500)
+    try:
+        set_settings(Settings(local_storage_dir=str(locked / "workspace")))
+        with pytest.raises(RuntimeError, match="EVE_WORKSPACE_DB_URL"):
+            default_db_url()
+        with pytest.raises(RuntimeError, match="EVE_S3_BUCKET"):
+            LocalObjectStore(locked / "objects")
+    finally:
+        os.chmod(locked, 0o700)
+        set_settings(None)
