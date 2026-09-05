@@ -52,13 +52,12 @@ dev = [
     "mypy>=1.9",
 ]
 
-# Vercel's FastAPI detection cannot find the app on its own and guesses
-# "src.eve.api.main:app" from the file path. That import fails: `where = ["src"]`
-# below means the installed package is `eve`, and every module in it imports
-# itself absolutely (`from eve.config import ...`). Loaded as `src.eve.*` those
-# imports have no `eve` on the path and the first one raises.
+# Vercel resolves this against files in the repo rather than against installed
+# modules, so it cannot use "eve.api.main" (there is no `eve/` at the root) and
+# its own suggestion, "src.eve.api.main", loads the module under a name its
+# absolute imports do not match. main.py at the root exists for this.
 [tool.vercel]
-entrypoint = "eve.api.main:app"
+entrypoint = "main:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -81,3 +81,43 @@ def test_alembic_can_run_inside_the_image() -> None:
     assert extra and "psycopg2" in extra.group(1), "postgres extra has no sync driver"
     env_py = (ROOT / "src" / "eve" / "migrations" / "env.py").read_text()
     assert '"+psycopg2"' in env_py, "env.py no longer swaps to psycopg2; update the extra"
+
+
+def test_the_declared_entrypoint_resolves_to_a_real_file() -> None:
+    """`[tool.vercel] entrypoint` is resolved against files, not modules.
+
+    "eve.api.main:app" is a valid import and an invalid entrypoint: the package
+    is under src/, so there is no eve/api/main.py at the root for a path-based
+    resolver to find. This asserts the declared module is a file that exists.
+    """
+    pyproject = (ROOT / "pyproject.toml").read_text()
+    declared = re.search(r'^\[tool\.vercel\][^\[]*?entrypoint\s*=\s*"([^"]+)"',
+                         pyproject, re.M | re.S)
+    assert declared, "no [tool.vercel] entrypoint declared"
+    module, _, obj = declared.group(1).partition(":")
+    assert obj, f"entrypoint {declared.group(1)!r} is not in module:object form"
+    path = ROOT.joinpath(*module.split(".")).with_suffix(".py")
+    assert path.is_file(), f"entrypoint names {module}, but {path} does not exist"
+    assert re.search(rf"^\s*(from .* import .*\b{obj}\b|{obj}\s*=)", path.read_text(), re.M), (
+        f"{path.name} does not define or import {obj!r}"
+    )
+
+
+def test_the_root_entrypoint_serves_the_same_app() -> None:
+    """The shim must re-export the app, not build a second one."""
+    import main
+
+    from eve.api.main import app as packaged
+
+    assert main.app is packaged
+
+
+def test_the_root_entrypoint_works_without_the_package_installed() -> None:
+    """Its whole reason to exist: a runner that installs deps but not the project.
+
+    The src fallback is what makes that case work, and it is a no-op when the
+    package is installed, so nothing here proves itself at runtime.
+    """
+    shim = (ROOT / "main.py").read_text()
+    assert 'parent / "src"' in shim, "the src fallback is gone"
+    assert "sys.path.insert" in shim
