@@ -58,8 +58,19 @@ entrypoint = "eve.api.main:app"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Everything the package needs at runtime that is not a .py file. An editable
+# install reads the source tree, so a gap here is invisible locally and only
+# appears once a wheel is built: the web templates and static assets were
+# missing, and `mount_web` raised at import time on the first real deploy.
+# tests/test_packaging.py fails if a data file is added without a glob here.
 [tool.setuptools.package-data]
-eve = ["data/*.txt", "migrations/*.mako", "migrations/versions/*.py"]
+eve = [
+    "data/*.txt",
+    "migrations/*.mako",
+    "migrations/versions/*.py",
+    "web/templates/*.html",
+    "web/static/*",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
