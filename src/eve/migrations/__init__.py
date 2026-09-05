@@ -36,7 +36,20 @@ def run_migrations(connection) -> None:
     """Bring the database behind ``connection`` (a *sync* Connection) to head.
 
     Called via ``await conn.run_sync(run_migrations)`` from the async stores.
+
+    Honours ``EVE_RUN_MIGRATIONS_ON_STARTUP``. Only this path is gated: the
+    Alembic CLI reaches ``env.py`` directly, so `alembic upgrade head` still
+    migrates whatever the setting says, which is what makes turning it off safe.
     """
+    from eve.config import get_settings
+
+    if not get_settings().run_migrations_on_startup:
+        logger.info(
+            "startup migrations skipped: EVE_RUN_MIGRATIONS_ON_STARTUP is false. "
+            "The schema must already be at head, or every query will fail."
+        )
+        return
+
     from alembic import command
 
     command.upgrade(_config(connection), "head")

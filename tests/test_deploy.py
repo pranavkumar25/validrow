@@ -161,3 +161,47 @@ def test_the_root_entrypoint_works_without_the_package_installed() -> None:
     shim = (ROOT / "main.py").read_text()
     assert 'parent / "src"' in shim, "the src fallback is gone"
     assert "sys.path.insert" in shim
+
+
+# --- Startup migrations ---------------------------------------------------- #
+def test_startup_migrations_can_be_turned_off() -> None:
+    """One process per request makes booting-to-head the wrong default.
+
+    Three stores each replay Alembic against a remote database on every cold
+    start, concurrently with every other cold start. A platform that starts a
+    fresh process per request wants that done once, elsewhere.
+    """
+    from unittest.mock import patch
+
+    from eve.config import Settings, set_settings
+    from eve.migrations import run_migrations
+
+    try:
+        set_settings(Settings(run_migrations_on_startup=False))
+        with patch("alembic.command.upgrade") as upgrade:
+            run_migrations(connection=None)
+        assert not upgrade.called, "the gate did not stop the upgrade"
+
+        set_settings(Settings(run_migrations_on_startup=True))
+        with patch("alembic.command.upgrade") as upgrade:
+            run_migrations(connection=None)
+        assert upgrade.called, "the default must still migrate on boot"
+    finally:
+        set_settings(None)
+
+
+def test_the_alembic_cli_is_not_gated_by_that_setting() -> None:
+    """What makes turning it off safe: the CLI still migrates.
+
+    The stores reach Alembic through eve.migrations.run_migrations, which reads
+    the setting. `alembic upgrade head` goes through env.py and never touches
+    that function, so the deploy step works regardless.
+    """
+    env_py = (ROOT / "src" / "eve" / "migrations" / "env.py").read_text()
+    # env.py drives Alembic's own context API. What it must not do is call the
+    # package-level helper, which is where the setting is read.
+    assert "run_migrations_on_startup" not in env_py
+    assert "from eve.migrations import run_migrations" not in env_py
+    assert re.search(r"^\s*context\.run_migrations\(\)", env_py, re.M), (
+        "env.py no longer drives the migration itself"
+    )

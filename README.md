@@ -277,6 +277,13 @@ make migrate                      # as a separate deploy step
 make migration m="add credits"    # new revision
 ```
 
+That default suits a long-lived process: one startup, one migration. It is wrong
+where a platform starts a fresh process per request, because the three stores
+each replay Alembic against a remote database on every cold start, concurrently
+with every other cold start. Set `EVE_RUN_MIGRATIONS_ON_STARTUP=false` there and
+run `make migrate` once per deploy. Only the startup path is gated; the CLI
+migrates regardless, which is what makes turning it off safe.
+
 Revisions 0001-0003 tolerate a database that predates Alembic. Write anything
 from 0004 on strictly.
 
@@ -404,6 +411,7 @@ each shared backend on.
 | Var | Default | Meaning |
 |---|---|---|
 | `WORKSPACE_DB_URL` | `""` | Postgres URL. Empty uses a SQLite file |
+| `RUN_MIGRATIONS_ON_STARTUP` | `true` | Bring the schema to head on boot. Set `false` where a fresh process starts per request, and run `alembic upgrade head` as a deploy step instead |
 | `WORKSPACE_ID` | `default` | Which workspace this process reads and writes |
 | `S3_BUCKET` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `""` | All three switch storage to S3/R2 |
 | `S3_ENDPOINT` | `""` | Blank for AWS. Set for R2, MinIO or Spaces |

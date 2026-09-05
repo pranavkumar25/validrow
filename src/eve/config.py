@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     # Empty -> a SQLite file inside local_storage_dir, so a fresh checkout has
     # durable history with nothing to configure.
     workspace_db_url: str = ""
+    # The app brings the database to head when it boots, which is right for a
+    # long-lived process: one startup, one migration, and a deploy needs no
+    # separate step. It is wrong for a platform that starts a fresh process per
+    # request. Three stores each replay Alembic against a remote database on
+    # every cold start, concurrently with every other cold start, which is slow
+    # where it is not a lock fight. Set this false there and run
+    # `alembic upgrade head` once as a deploy step instead.
+    run_migrations_on_startup: bool = True
 
     # Which workspace this process reads and writes. Every row in `jobs` and
     # `addresses` carries it, so two tenants can share one database without
